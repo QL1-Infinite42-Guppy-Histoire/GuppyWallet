@@ -10,7 +10,7 @@ import {
 } from "../components/controls";
 import {
   Card,
-  PrototypeWarning,
+
   Screen,
   Title,
   TokenIcon,
@@ -168,7 +168,6 @@ export default function TokenListScreen() {
   return (
     <Screen>
       <Title>{t("tokens.title")}</Title>
-      <PrototypeWarning />
       <Field
         value={query}
         onChangeText={setQuery}

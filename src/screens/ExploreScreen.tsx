@@ -1,7 +1,7 @@
 import React from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Body, Heading } from "../components/controls";
-import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
+import { Card, Screen, Title, colors } from "../components/ui";
 import { DAPP_LINKS } from "../config/chains";
 import { useI18n } from "../context/LanguageContext";
 
@@ -77,7 +77,6 @@ export default function ExploreScreen() {
   return (
     <Screen>
       <Title>{t("tab.explore")}</Title>
-      <PrototypeWarning />
 
       <Card>
         <Heading>{t("explore.links")}</Heading>

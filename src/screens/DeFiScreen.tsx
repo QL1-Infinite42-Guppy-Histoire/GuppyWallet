@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import BridgeSection from "../components/BridgeSection";
 import FlukeSection from "../components/FlukeSection";
 import { SegmentedTabs } from "../components/controls";
-import { PrototypeWarning, Screen, Title } from "../components/ui";
+import { Screen, Title } from "../components/ui";
 import { useI18n } from "../context/LanguageContext";
 import StakingScreen from "./StakingScreen";
 import SwapScreen from "./SwapScreen";
@@ -45,18 +45,8 @@ export default function DeFiScreen() {
       {tab === "swap" ? <SwapScreen view="swap" embedded /> : null}
       {tab === "lp" ? <SwapScreen view="lp" embedded /> : null}
       {tab === "staking" ? <StakingScreen embedded /> : null}
-      {tab === "bridge" ? (
-        <>
-          <PrototypeWarning />
-          <BridgeSection />
-        </>
-      ) : null}
-      {tab === "fluke" ? (
-        <>
-          <PrototypeWarning />
-          <FlukeSection />
-        </>
-      ) : null}
+      {tab === "bridge" ? <BridgeSection /> : null}
+      {tab === "fluke" ? <FlukeSection /> : null}
     </Screen>
   );
 }

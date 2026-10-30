@@ -31,7 +31,7 @@ import {
 import {
   Card,
   GRADIENT,
-  PrototypeWarning,
+
   Screen,
   Title,
   TokenIcon,
@@ -648,7 +648,6 @@ export default function SwapScreen({
   return (
     <Screen embedded={embedded}>
       {embedded ? null : <Title>Swap</Title>}
-      <PrototypeWarning />
       {modal}
 
       {/* chain segmented control */}

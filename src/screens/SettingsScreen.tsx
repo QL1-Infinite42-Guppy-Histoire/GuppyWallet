@@ -11,7 +11,7 @@ import {
 import {
   Card,
   DontPanic,
-  PrototypeWarning,
+
   Screen,
   Title,
   colors,
@@ -98,7 +98,6 @@ export default function SettingsScreen() {
   return (
     <Screen>
       <Title>{t("tab.settings")}</Title>
-      <PrototypeWarning />
 
       {wallet.pendingPhrase ? (
         <Card>

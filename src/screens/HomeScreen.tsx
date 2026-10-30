@@ -11,7 +11,7 @@ import {
   DontPanic,
   GRADIENT,
   GRADIENT_DEEP,
-  PrototypeWarning,
+
   Screen,
   colors,
 } from "../components/ui";
@@ -133,7 +133,6 @@ export default function HomeScreen() {
         ) : null}
       </View>
       <Text style={styles.catchphrase}>{t("home.catchphrase")}</Text>
-      <PrototypeWarning />
       <ReceiveModal
         visible={receiveOpen}
         onClose={() => setReceiveOpen(false)}

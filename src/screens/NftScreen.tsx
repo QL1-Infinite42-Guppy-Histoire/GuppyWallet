@@ -9,7 +9,7 @@ import {
   PrimaryButton,
   SegmentedTabs,
 } from "../components/controls";
-import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
+import { Card, Screen, Title, colors } from "../components/ui";
 import { INFINITE_NFTS } from "../config/chains";
 import { useI18n } from "../context/LanguageContext";
 import { useWallet } from "../context/WalletContext";
@@ -154,7 +154,6 @@ export default function NftScreen() {
   return (
     <Screen>
       <Title>{t("tab.nft")}</Title>
-      <PrototypeWarning />
       {modal}
       <SegmentedTabs
         options={[

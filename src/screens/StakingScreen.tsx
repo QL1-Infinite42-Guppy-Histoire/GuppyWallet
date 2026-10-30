@@ -11,7 +11,7 @@ import {
   PercentChips,
   PrimaryButton,
 } from "../components/controls";
-import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
+import { Card, Screen, Title, colors } from "../components/ui";
 import { INFINITE } from "../config/chains";
 import { useWallet } from "../context/WalletContext";
 import { useBalances } from "../context/BalancesContext";
@@ -404,7 +404,6 @@ export default function StakingScreen({
   return (
     <Screen embedded={embedded}>
       {embedded ? null : <Title>ステーキング</Title>}
-      <PrototypeWarning />
       {modal}
 
       <Card>
