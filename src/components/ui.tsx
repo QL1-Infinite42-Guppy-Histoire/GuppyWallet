@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useI18n } from "../context/LanguageContext";
@@ -103,25 +104,97 @@ export function TokenIcon({
 }
 
 /**
- * Deterministic starfield (seeded pattern — stable across renders, no
- * Math.random, no image assets). A few soft nebula glows + ~120 stars.
+ * Deterministic galaxy background (seeded pattern — stable across
+ * renders, no Math.random, no image assets, fully static). ~200 stars
+ * with varied size/brightness and a few colored ones, soft nebula
+ * glows (concentric circles faking a radial falloff) and a subtle
+ * top/bottom vignette over the #050B1B void.
  */
-const STARS = Array.from({ length: 120 }, (_, i) => {
+const STAR_COLORS = [
+  "#FFFFFF",
+  "#FFFFFF",
+  "#FFFFFF",
+  "#7FB2FF", // blue
+  "#C99BFF", // purple
+  "#FF9BD5", // pink
+  "#8FE8FF", // cyan
+  "#F5C542", // gold
+];
+const STARS = Array.from({ length: 200 }, (_, i) => {
   const x = (i * 37.31 + (i % 5) * 11.7) % 100;
   const y = (i * 53.77 + (i % 7) * 17.3) % 100;
-  const size = i % 11 === 0 ? 2.4 : i % 4 === 0 ? 1.7 : 1.1;
-  const opacity = 0.18 + ((i * 29) % 62) / 100;
-  const gold = i % 13 === 0;
-  return { x, y, size, opacity, gold, key: i };
+  const size =
+    i % 23 === 0 ? 3 : i % 11 === 0 ? 2.4 : i % 4 === 0 ? 1.7 : 1.1;
+  const opacity = 0.15 + ((i * 29) % 75) / 100;
+  const color = STAR_COLORS[i % 17 === 0 ? 7 : i % 5];
+  return { x, y, size, opacity, color, key: i };
 });
+
+/** One soft nebula: three concentric discs with rising opacity. */
+function NebulaGlow({
+  size,
+  color,
+  style,
+}: {
+  size: number;
+  color: string;
+  style: object;
+}) {
+  return (
+    <View
+      style={[
+        {
+          position: "absolute",
+          width: size,
+          height: size,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        style,
+      ]}
+    >
+      <View
+        style={{
+          position: "absolute",
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: color,
+          opacity: 0.05,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          width: size * 0.64,
+          height: size * 0.64,
+          borderRadius: size * 0.32,
+          backgroundColor: color,
+          opacity: 0.06,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          width: size * 0.34,
+          height: size * 0.34,
+          borderRadius: size * 0.17,
+          backgroundColor: color,
+          opacity: 0.08,
+        }}
+      />
+    </View>
+  );
+}
 
 export function Starfield() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {/* nebula glows */}
-      <View style={[styles.nebula, styles.nebulaA]} />
-      <View style={[styles.nebula, styles.nebulaB]} />
-      <View style={[styles.nebula, styles.nebulaC]} />
+      {/* nebula glows — purple / blue / pink / cyan clouds */}
+      <NebulaGlow size={380} color="#9B35FF" style={{ top: -140, right: -120 }} />
+      <NebulaGlow size={320} color="#168BFF" style={{ top: "30%", left: -150 }} />
+      <NebulaGlow size={260} color="#FF4D79" style={{ top: "58%", right: -130 }} />
+      <NebulaGlow size={300} color="#30DFFF" style={{ bottom: -130, left: -90 }} />
       {STARS.map((s) => (
         <View
           key={s.key}
@@ -132,11 +205,20 @@ export function Starfield() {
             width: s.size,
             height: s.size,
             borderRadius: s.size / 2,
-            backgroundColor: s.gold ? colors.accent : colors.star,
+            backgroundColor: s.color,
             opacity: s.opacity,
           }}
         />
       ))}
+      {/* vignette: darken the very top and bottom edges */}
+      <LinearGradient
+        colors={["rgba(3,6,18,0.55)", "rgba(3,6,18,0)"]}
+        style={styles.vignetteTop}
+      />
+      <LinearGradient
+        colors={["rgba(3,6,18,0)", "rgba(3,6,18,0.55)"]}
+        style={styles.vignetteBottom}
+      />
     </View>
   );
 }
@@ -187,13 +269,14 @@ export function DontPanic({ compact }: { compact?: boolean }) {
   );
 }
 
-/** Shown on every screen until the app has passed a security audit. */
+/** Shown on every screen while the app is a test build. Plain words. */
 export function PrototypeWarning() {
   return (
     <View style={styles.warning}>
       <Text style={styles.warningText}>
-        ⚠️ 試作版（未監査）です。署名・送信機能は有効化されていますが、必ず少額でテストしてください。
-        リカバリーフレーズは紙に書いて保管し、誰にも教えないでください。
+        ⚠️
+        このアプリは開発中のテスト版です。大事な資産は入れず、少額でお試しください。
+        リカバリーフレーズ（復旧用の言葉）は紙に書いて保管し、誰にも教えないでください。
       </Text>
     </View>
   );
@@ -235,30 +318,19 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   warningText: { color: colors.dangerText, fontSize: 13, lineHeight: 19 },
-  nebula: { position: "absolute", borderRadius: 999 },
-  nebulaA: {
-    width: 340,
-    height: 340,
-    top: -120,
-    right: -110,
-    backgroundColor: "#168BFF",
-    opacity: 0.13,
+  vignetteTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 130,
   },
-  nebulaB: {
-    width: 280,
-    height: 280,
-    bottom: -90,
-    left: -120,
-    backgroundColor: "#9B35FF",
-    opacity: 0.11,
-  },
-  nebulaC: {
-    width: 190,
-    height: 190,
-    top: "42%",
-    right: -80,
-    backgroundColor: "#30DFFF",
-    opacity: 0.05,
+  vignetteBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 130,
   },
   dontPanicWrap: { alignItems: "center", paddingVertical: 8, gap: 4 },
   dontPanic: {
