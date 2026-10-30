@@ -39,12 +39,16 @@ import {
   deadline20Min,
   dexConfig,
   dexTokens,
+  fetchLpPositions,
   fetchSwapQuote,
   getPairAddress,
   getRouter,
   type DexToken,
+  type LpPosition,
   type SwapQuote,
 } from "../lib/dex";
+import { fetchUsdJpy } from "../lib/fx";
+import { priceOf } from "../lib/prices";
 import {
   getProvider,
   nativeGasReserve,
@@ -60,42 +64,34 @@ import {
 
 const SLIPPAGE_PRESETS = ["0.1", "0.5", "1"] as const;
 
-interface PairCheck {
-  label: string;
-  pair: string | null;
-  detail: string | null;
-}
-
-/** Major pairs probed live (factory.getPair + reserves) in the LP view. */
-const PAIR_DEFS: Record<string, [string, string][]> = {
-  infinite: [
-    ["42", "QOM"],
-    ["42", "USDT"],
-    ["42", "FISH"],
-    ["FISH", "PANIC"],
-  ],
-  ql1: [
-    ["QOM", "QSWAP"],
-    ["QOM", "ZAP"],
-    ["ZAP", "QSWAP"],
-  ],
-};
-
 export default function SwapScreen({
   view = "swap",
   embedded,
+  initialChainKey,
 }: {
-  /** "swap" renders the swap card; "lp" renders the LP card + pair checks.
-   *  All state/logic is shared — this only selects the visible section. */
+  /** "swap" renders the swap card; "lp" renders the LP card + your
+   *  liquidity. All state/logic is shared — this only selects the
+   *  visible section. */
   view?: "swap" | "lp";
   embedded?: boolean;
+  /** chain preselected by the caller (e.g. Home's chain toggle via DeFi) */
+  initialChainKey?: string;
 } = {}) {
   const wallet = useWallet();
   const { t } = useI18n();
   const balances = useBalances();
   const { startTx, modal } = useTxFlow();
 
-  const [chainKey, setChainKey] = useState<string>("infinite");
+  const [chainKey, setChainKey] = useState<string>(
+    initialChainKey ?? "infinite",
+  );
+  // Follow external preselection (Home chain toggle → DeFi → here).
+  useEffect(() => {
+    if (initialChainKey && initialChainKey !== chainKey) {
+      setChainKey(initialChainKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialChainKey]);
   const chain: ChainConfig =
     CHAINS.find((c) => c.key === chainKey) ?? CHAINS[0];
   const tokens = useMemo(() => dexTokens(chain), [chain]);
@@ -129,45 +125,44 @@ export default function SwapScreen({
   const [lpRemoveAmount, setLpRemoveAmount] = useState("");
   const [lpError, setLpError] = useState<string | null>(null);
 
-  // LP pair-existence checks (read-only; factory.getPair + reserves)
-  const [pairChecks, setPairChecks] = useState<PairCheck[] | null>(null);
-  const loadPairChecks = useCallback(async () => {
-    const defs = PAIR_DEFS[chain.key] ?? [];
-    const checks = await Promise.all(
-      defs.map(async ([sa, sb]): Promise<PairCheck> => {
-        const label = `${sa} / ${sb}`;
-        const a = tokens.find((x) => x.symbol === sa);
-        const b = tokens.find((x) => x.symbol === sb);
-        if (!a || !b) return { label, pair: null, detail: null };
-        const pair = await getPairAddress(chain, a.address, b.address);
-        if (!pair) return { label, pair: null, detail: null };
-        let detail: string | null = null;
-        try {
-          const pc = new Contract(pair, PAIR_ABI, getProvider(chain)) as any;
-          const [res, t0] = await Promise.all([
-            pc.getReserves(),
-            pc.token0(),
-          ]);
-          const aIs0 =
-            String(t0).toLowerCase() === a.address.toLowerCase();
-          const ra = aIs0 ? res[0] : res[1];
-          const rb = aIs0 ? res[1] : res[0];
-          detail = `${prettyAmount(formatUnits(ra, a.decimals))} ${sa} / ${prettyAmount(formatUnits(rb, b.decimals))} ${sb}`;
-        } catch {
-          detail = null;
-        }
-        return { label, pair, detail };
-      }),
-    );
-    setPairChecks(checks);
-  }, [chain, tokens]);
+  // Your own LP positions on the selected chain's DEX (read-only scan:
+  // factory.getPair + LP balanceOf for every listed-token pair).
+  const [lpPositions, setLpPositions] = useState<LpPosition[] | null>(null);
+  const [lpJpyRate, setLpJpyRate] = useState<number | null>(null);
+  const loadLpPositions = useCallback(async () => {
+    const address = wallet.info?.evmAddress;
+    if (!address) {
+      setLpPositions([]);
+      return;
+    }
+    const [positions, rate] = await Promise.all([
+      fetchLpPositions(chain, address).catch(() => [] as LpPosition[]),
+      fetchUsdJpy().catch(() => null),
+    ]);
+    setLpPositions(positions);
+    setLpJpyRate(rate);
+  }, [chain, wallet.info?.evmAddress]);
 
   useEffect(() => {
     if (view === "lp") {
-      setPairChecks(null);
-      loadPairChecks().catch(() => setPairChecks([]));
+      setLpPositions(null);
+      loadLpPositions().catch(() => setLpPositions([]));
     }
-  }, [view, loadPairChecks]);
+  }, [view, loadLpPositions]);
+
+  /** JPY estimate for one LP position, when both sides are priced. */
+  const lpPositionJpy = (p: LpPosition): number | null => {
+    const priceMap = chain.key === "infinite" ? balances.prices : balances.ql1Prices;
+    if (!priceMap || !lpJpyRate) return null;
+    const priceA = priceOf(priceMap, p.tokenA.isNative && chain.key === "infinite" ? null : p.tokenA.address);
+    const priceB = priceOf(priceMap, p.tokenB.isNative && chain.key === "infinite" ? null : p.tokenB.address);
+    if (!priceA.reliable || priceA.usd === null || !priceB.reliable || priceB.usd === null)
+      return null;
+    const usd =
+      Number(p.amountAFormatted) * priceA.usd +
+      Number(p.amountBFormatted) * priceB.usd;
+    return usd * lpJpyRate;
+  };
 
   const slippageBps = useMemo(() => {
     const pct = Number(slippage);
@@ -608,31 +603,61 @@ export default function SwapScreen({
     </Pressable>
   );
 
-  const pairPanel = (
+  const lpPositionsPanel = (
     <Card>
-      <Heading>{t("defi.lpPairs")}</Heading>
-      {pairChecks === null ? (
-        <Body>{t("common.loading")}</Body>
-      ) : (
-        pairChecks.map((c) => (
-          <React.Fragment key={c.label}>
-            <InfoRow
-              label={c.label}
-              value={c.pair ? t("defi.lpPairExists") : t("defi.lpPairNone")}
-            />
-            {c.pair && c.detail ? (
-              <Body>プールの中身: {c.detail}</Body>
-            ) : null}
-          </React.Fragment>
-        ))
-      )}
-      {chain.key === "infinite" ? (
+      <Heading>{t("defi.yourLiquidity")}</Heading>
+      {!wallet.info ? (
         <Body>
-          42 / QOM のペアはあります。ただし、42をそのまま預ける方法は
-          まだ確認できていないため、この組み合わせでは預けられません。
+          ウォレットを作ると、預けている分がここに表示されます。
         </Body>
+      ) : lpPositions === null ? (
+        <Body>{t("common.loading")}</Body>
+      ) : lpPositions.length === 0 ? (
+        <Body>{t("defi.noLiquidity")}</Body>
+      ) : (
+        <>
+          <Body>{t("defi.yourLiquidityNote")}</Body>
+          {lpPositions.map((p) => {
+            const jpy = lpPositionJpy(p);
+            return (
+              <View key={p.pairAddress} style={styles.lpPosition}>
+                <Text style={styles.lpPairName}>
+                  {p.tokenA.symbol} / {p.tokenB.symbol}
+                </Text>
+                <InfoRow
+                  label="プールの割合"
+                  value={
+                    p.sharePct > 0 && p.sharePct < 0.01
+                      ? "0.01%未満"
+                      : `${p.sharePct.toFixed(2)}%`
+                  }
+                />
+                <InfoRow
+                  label={p.tokenA.symbol}
+                  value={prettyAmount(p.amountAFormatted)}
+                />
+                <InfoRow
+                  label={p.tokenB.symbol}
+                  value={prettyAmount(p.amountBFormatted)}
+                />
+                <InfoRow
+                  label="預けた分量"
+                  value={prettyAmount(p.lpFormatted)}
+                />
+                {jpy !== null ? (
+                  <InfoRow
+                    label="円での目安"
+                    value={`約 ¥${Math.round(jpy).toLocaleString("ja-JP")}`}
+                  />
+                ) : null}
+              </View>
+            );
+          })}
+        </>
+      )}
+      {wallet.info ? (
+        <PrimaryButton label={t("common.refresh")} onPress={loadLpPositions} />
       ) : null}
-      <PrimaryButton label={t("common.refresh")} onPress={loadPairChecks} />
     </Card>
   );
 
@@ -652,7 +677,7 @@ export default function SwapScreen({
               onPress={() => setChainKey(c.key)}
             >
               <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                {c.key === "infinite" ? "Infinite" : "QL1"}
+                {c.displayName}
               </Text>
             </Pressable>
           );
@@ -841,7 +866,7 @@ export default function SwapScreen({
       {/* ------- LP (unchanged flows, restyled container) ------- */}
       {view === "lp" ? (
         <>
-          {pairPanel}
+          {lpPositionsPanel}
           <Card>
         <Heading>流動性を提供</Heading>
         <Body>2つの通貨を預けて、交換の手数料をもらえます。</Body>
@@ -982,6 +1007,14 @@ export default function SwapScreen({
 
 const styles = StyleSheet.create({
   errorText: { color: colors.dangerText, fontSize: 13, lineHeight: 19 },
+  lpPosition: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 10,
+    marginTop: 10,
+    gap: 2,
+  },
+  lpPairName: { color: colors.text, fontSize: 15, fontWeight: "700" },
   segmented: {
     flexDirection: "row",
     backgroundColor: colors.panel,

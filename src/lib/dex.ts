@@ -39,6 +39,7 @@ export const PAIR_ABI = [
   "function getReserves() view returns (uint256 reserve0, uint256 reserve1, uint32 blockTimestampLast)",
   "function token0() view returns (address)",
   "function balanceOf(address account) view returns (uint256)",
+  "function totalSupply() view returns (uint256)",
 ] as const;
 
 export interface DexToken {
@@ -269,6 +270,109 @@ export async function fetchSwapQuote(
     path,
     routeLabel: path.map((t) => t.symbol).join(" → "),
   };
+}
+
+export interface LpPosition {
+  pairAddress: string;
+  tokenA: DexToken;
+  tokenB: DexToken;
+  /** LP tokens held (raw) */
+  lpRaw: bigint;
+  lpFormatted: string;
+  /** share of the pool, in percent (0–100) */
+  sharePct: number;
+  /** underlying amounts this share represents (raw, in tokenA/tokenB) */
+  amountA: bigint;
+  amountB: bigint;
+  amountAFormatted: string;
+  amountBFormatted: string;
+}
+
+/**
+ * The owner's own LP positions on the chain's DEX: every candidate pair
+ * formed by the listed tokens is resolved through the factory and the
+ * owner's LP-token balance is read; only balances > 0 are returned,
+ * enriched with pool share and underlying amounts from reserves.
+ * Read-only and total failure-tolerant: any pair that errors is skipped,
+ * so an owner with no positions simply gets an empty list.
+ */
+export async function fetchLpPositions(
+  chain: ChainConfig,
+  owner: string,
+): Promise<LpPosition[]> {
+  const provider = getProvider(chain);
+  const factory = getFactory(chain);
+  // Unique pair-key addresses (QL1 lists WQOM twice: native anchor and
+  // ERC-20 entry — same address, keep the first/native representation).
+  const byAddress = new Map<string, DexToken>();
+  for (const t of dexTokens(chain)) {
+    const key = t.address.toLowerCase();
+    if (!byAddress.has(key)) byAddress.set(key, t);
+  }
+  const tokens = [...byAddress.values()];
+  const combos: { a: DexToken; b: DexToken }[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    for (let j = i + 1; j < tokens.length; j++) {
+      combos.push({ a: tokens[i], b: tokens[j] });
+    }
+  }
+  const pairAddrs: string[] = await Promise.all(
+    combos.map(({ a, b }) =>
+      factory.getPair(a.address, b.address).catch(() => ZeroAddress),
+    ),
+  );
+  const existing = combos
+    .map((c, i) => ({ ...c, pair: pairAddrs[i] }))
+    .filter((x) => x.pair && x.pair !== ZeroAddress);
+  const balances: bigint[] = await Promise.all(
+    existing.map((x) =>
+      (new Contract(x.pair, PAIR_ABI, provider) as any)
+        .balanceOf(owner)
+        .then((v: any) => BigInt(v))
+        .catch(() => 0n),
+    ),
+  );
+  const held = existing
+    .map((x, i) => ({ ...x, lp: balances[i] }))
+    .filter((x) => x.lp > 0n);
+  const positions = await Promise.all(
+    held.map(async (x): Promise<LpPosition | null> => {
+      try {
+        const pair = new Contract(x.pair, PAIR_ABI, provider) as any;
+        const [reserves, token0, totalSupply] = await Promise.all([
+          pair.getReserves(),
+          pair.token0(),
+          pair.totalSupply(),
+        ]);
+        const supply = BigInt(totalSupply);
+        if (supply === 0n) return null;
+        const aIsToken0 =
+          String(token0).toLowerCase() === x.a.address.toLowerCase();
+        const reserveA = BigInt(aIsToken0 ? reserves[0] : reserves[1]);
+        const reserveB = BigInt(aIsToken0 ? reserves[1] : reserves[0]);
+        const amountA = (reserveA * x.lp) / supply;
+        const amountB = (reserveB * x.lp) / supply;
+        return {
+          pairAddress: x.pair,
+          tokenA: x.a,
+          tokenB: x.b,
+          lpRaw: x.lp,
+          lpFormatted: formatUnits(x.lp, 18),
+          sharePct:
+            (Number(formatUnits(x.lp, 18)) /
+              Number(formatUnits(supply, 18))) *
+            100,
+          amountA,
+          amountB,
+          amountAFormatted: formatUnits(amountA, x.a.decimals),
+          amountBFormatted: formatUnits(amountB, x.b.decimals),
+        };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return positions.filter((p): p is LpPosition => p !== null);
 }
 
 /** Apply slippage (in basis points) to a quoted output. */
