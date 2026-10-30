@@ -1,159 +1,134 @@
+import { formatUnits } from "ethers";
 import React from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import { explorerAddressUrl } from "../lib/balances";
+import { StyleSheet, Text, View } from "react-native";
 import { useBalances } from "../context/BalancesContext";
 import { priceOf } from "../lib/prices";
 import { prettyAmount } from "../lib/onchain";
-import { Card, TokenIcon, colors } from "./ui";
+import { TokenIcon, colors } from "./ui";
+
+/** Format a JPY amount the way consumer wallets do: ¥12,345 / ¥13.76. */
+export function formatJpy(v: number): string {
+  return `¥${v.toLocaleString("ja-JP", {
+    maximumFractionDigits: v < 100 ? 2 : 0,
+  })}`;
+}
+
+interface RowData {
+  key: string;
+  symbol: string;
+  chainName: string;
+  amountText: string;
+  jpyValue: number | null;
+  usdValue: number | null;
+}
 
 /**
- * Renders the last balance fetch: native balance cards per chain, plus a
- * token list per chain (with DEX-derived USD estimates on Infinite when
- * a reliable price route exists).
+ * Plain Phantom-style token list for Home: icon, name, amount held,
+ * and the JPY value on the right. Prices use the same DEX-reserve USD
+ * estimates as the totals (unreliable ones are excluded, exactly as
+ * before) — they just carry no labels here. No technical details
+ * (those live in Settings → 詳細情報）.
  */
-export function BalanceResults() {
-  const { results, tokenResults, prices, address } = useBalances();
+export function BalanceResults({ jpyRate }: { jpyRate: number | null }) {
+  const { results, tokenResults, prices } = useBalances();
   if (!results) return null;
+
+  const rows: RowData[] = [];
+  const failedChains: string[] = [];
+  let anyTokenError = false;
+
+  for (const r of results) {
+    if (!r.ok) {
+      failedChains.push(r.chain.displayName);
+      continue;
+    }
+    // native coin row
+    const nativeAmount = Number(r.formatted);
+    let nativeUsd: number | null = null;
+    if (r.chain.key === "infinite") {
+      const p = priceOf(prices, null);
+      if (p.usd !== null && p.reliable) nativeUsd = nativeAmount * p.usd;
+    }
+    rows.push({
+      key: `${r.chain.key}:native`,
+      symbol: r.symbol,
+      chainName: r.chain.displayName,
+      amountText: `${prettyAmount(r.formatted)} ${r.symbol}`,
+      usdValue: nativeUsd,
+      jpyValue: nativeUsd !== null && jpyRate !== null ? nativeUsd * jpyRate : null,
+    });
+    // token rows for this chain
+    for (const t of tokenResults ?? []) {
+      if (!t.ok) {
+        if (t.chainKey === r.chain.key) anyTokenError = true;
+        continue;
+      }
+      if (t.balance.chainKey !== r.chain.key || t.balance.address === null) {
+        continue;
+      }
+      let usd: number | null = null;
+      if (r.chain.key === "infinite") {
+        const p = priceOf(prices, t.balance.address);
+        if (p.usd !== null && p.reliable) {
+          usd =
+            Number(formatUnits(t.balance.raw, t.balance.decimals)) * p.usd;
+        }
+      }
+      rows.push({
+        key: `${r.chain.key}:${t.balance.address}`,
+        symbol: t.balance.symbol,
+        chainName: r.chain.displayName,
+        amountText: `${prettyAmount(t.balance.formatted)} ${t.balance.symbol}`,
+        usdValue: usd,
+        jpyValue: usd !== null && jpyRate !== null ? usd * jpyRate : null,
+      });
+    }
+  }
+
   return (
-    <>
-      {results.map((r) => {
-        const tokens = (tokenResults ?? []).filter(
-          (t) =>
-            t.ok &&
-            t.balance.chainKey === r.chain.key &&
-            t.balance.address !== null,
-        );
-        const tokenErrors = (tokenResults ?? []).filter(
-          (t) => !t.ok && t.chainKey === r.chain.key,
-        );
-        return (
-          <Card key={r.chain.key}>
-            <Text style={styles.chainName}>
-              {r.chain.displayName}（Chain ID {r.chain.evmChainId}）
-            </Text>
-            {r.ok ? (
-              <>
-                <View style={styles.nativeRow}>
-                  <TokenIcon symbol={r.symbol} size={44} />
-                  <View style={styles.nativeRight}>
-                    <Text style={styles.balance}>
-                      {prettyAmount(r.formatted)} {r.symbol}
-                    </Text>
-                    <Text style={styles.meta}>ネイティブ通貨</Text>
-                  </View>
-                </View>
-                {r.chain.key === "infinite"
-                  ? (() => {
-                      const p = priceOf(prices, null);
-                      return p.usd !== null && p.reliable ? (
-                        <Text style={styles.meta}>
-                          参考価格: 1 {r.symbol} ≈ ${p.usd.toFixed(2)}（
-                          {p.route}）
-                        </Text>
-                      ) : null;
-                    })()
-                  : null}
-                <Text style={styles.meta}>
-                  RPC: {r.rpcUrl}
-                  {"\n"}Block: {r.blockNumber}
-                </Text>
-                {address ? (
-                  <Pressable
-                    onPress={() =>
-                      Linking.openURL(explorerAddressUrl(r.chain, address))
-                    }
-                  >
-                    <Text style={styles.link}>エクスプローラーで見る ↗</Text>
-                  </Pressable>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <Text style={styles.errorText}>取得に失敗しました</Text>
-                <Text style={styles.meta}>
-                  RPC: {r.rpcUrl}
-                  {"\n"}
-                  {r.error}
-                </Text>
-              </>
-            )}
-            {tokens.length > 0 ? (
-              <View style={styles.tokenList}>
-                <Text style={styles.tokenHeader}>トークン</Text>
-                {tokens.map((t) =>
-                  t.ok ? (
-                    <View key={t.balance.address} style={styles.tokenRow}>
-                      <View style={styles.tokenLeft}>
-                        <TokenIcon symbol={t.balance.symbol} size={38} />
-                        <Text style={styles.tokenSymbol}>
-                          {t.balance.symbol}
-                        </Text>
-                      </View>
-                      <View style={styles.tokenRight}>
-                        <Text style={styles.tokenAmount}>
-                          {t.balance.formatted}
-                        </Text>
-                        {r.chain.key === "infinite"
-                          ? (() => {
-                              const p = priceOf(prices, t.balance.address);
-                              const value =
-                                p.usd !== null && p.reliable
-                                  ? Number(t.balance.formatted.replace(/,/g, "")) *
-                                    p.usd
-                                  : null;
-                              return (
-                                <Text style={styles.tokenUsd}>
-                                  {value !== null && value > 0
-                                    ? `≈ $${value.toFixed(2)}`
-                                    : p.usd !== null && !p.reliable
-                                      ? "価格不確実"
-                                      : ""}
-                                </Text>
-                              );
-                            })()
-                          : null}
-                      </View>
-                    </View>
-                  ) : null,
-                )}
-                {tokenErrors.length > 0 ? (
-                  <Text style={styles.meta}>
-                    一部トークンの取得に失敗しました（
-                    {tokenErrors
-                      .map((t) => (!t.ok ? t.symbol : ""))
-                      .filter(Boolean)
-                      .join(", ")}
-                    ）
-                  </Text>
-                ) : null}
-              </View>
+    <View style={styles.list}>
+      {rows.map((row) => (
+        <View key={row.key} style={styles.row}>
+          <TokenIcon symbol={row.symbol} size={42} />
+          <View style={styles.left}>
+            <Text style={styles.symbol}>{row.symbol}</Text>
+            <Text style={styles.chainName}>{row.chainName}</Text>
+          </View>
+          <View style={styles.right}>
+            <Text style={styles.amount}>{row.amountText}</Text>
+            {row.jpyValue !== null ? (
+              <Text style={styles.value}>{formatJpy(row.jpyValue)}</Text>
+            ) : row.usdValue !== null ? (
+              <Text style={styles.value}>${row.usdValue.toFixed(2)}</Text>
             ) : null}
-          </Card>
-        );
-      })}
-    </>
+          </View>
+        </View>
+      ))}
+      {failedChains.map((name) => (
+        <Text key={name} style={styles.note}>
+          {name} の残高を読み込めませんでした
+        </Text>
+      ))}
+      {anyTokenError ? (
+        <Text style={styles.note}>一部のトークンを読み込めませんでした</Text>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  chainName: { color: colors.muted, fontSize: 13, fontWeight: "600" },
-  nativeRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  nativeRight: { flex: 1, gap: 2 },
-  balance: { color: colors.text, fontSize: 26, fontWeight: "800" },
-  meta: { color: colors.muted, fontSize: 12, lineHeight: 17 },
-  link: { color: colors.accent, fontSize: 13 },
-  errorText: { color: colors.dangerText, fontSize: 15, fontWeight: "600" },
-  tokenList: { marginTop: 10, gap: 2 },
-  tokenHeader: { color: colors.muted, fontSize: 12, fontWeight: "600" },
-  tokenRow: {
+  list: { gap: 2 },
+  row: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 6,
+    gap: 12,
+    paddingVertical: 8,
   },
-  tokenLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  tokenSymbol: { color: colors.text, fontSize: 15, fontWeight: "700" },
-  tokenRight: { alignItems: "flex-end" },
-  tokenAmount: { color: colors.text, fontSize: 15, fontWeight: "600" },
-  tokenUsd: { color: colors.muted, fontSize: 11 },
+  left: { flex: 1, gap: 1 },
+  symbol: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  chainName: { color: colors.muted, fontSize: 11 },
+  right: { alignItems: "flex-end", gap: 1 },
+  amount: { color: colors.text, fontSize: 15, fontWeight: "600" },
+  value: { color: colors.muted, fontSize: 12 },
+  note: { color: colors.muted, fontSize: 12, paddingVertical: 4 },
 });
