@@ -30,20 +30,20 @@ const ja = {
   "common.fetchFailed": "取得に失敗しました",
 
   "home.catchphrase": "ひとつのウォレットに、無限の可能性を。",
-  "home.totalBalance": "総資産（推定）",
+  "home.account": "アカウント",
+  "home.totalBalance": "総資産",
   "home.send": "送金",
   "home.receive": "受取",
   "home.swap": "Swap",
   "home.tokens": "トークン",
   "home.history": "最近の取引",
   "home.historyEmpty": "取引履歴はまだありません。",
-  "home.historyNote":
-    "履歴は各チェーンのエクスプローラーAPIから取得しています。",
+  "home.historyNote": "履歴は自動で取得しています。",
   "home.priceUnavailable": "価格未取得",
   "home.change24h": "24h変動",
-  "home.stakingStatus": "運用状況（ステーキング）",
+  "home.stakingStatus": "ステーキング",
   "home.stakingStatusBody":
-    "Infinite側はステーキングプリコンパイル（0x0800）が稼働中です。バリデータ一覧・委任・st42は「DeFi」タブのステーキングで確認できます。",
+    "42を預けて報酬をもらえます。預けたり引き出したりは「DeFi」タブのステーキングからできます。",
   "home.chains": "対応チェーン",
   "home.network": "ネットワーク",
 
@@ -52,8 +52,8 @@ const ja = {
   "tokens.all": "すべて",
   "tokens.addCustom": "カスタムトークンを追加",
   "tokens.addCustomNote":
-    "コントラクトアドレスを貼ると、そのチェーンのRPCから名前・シンボル・小数桁を読み取って追加します。",
-  "tokens.contractPlaceholder": "コントラクトアドレス 0x…",
+    "トークンのアドレス（0x…）を貼ると、名前などを自動で読み取って追加します。",
+  "tokens.contractPlaceholder": "トークンのアドレス 0x…",
   "tokens.add": "追加する",
   "tokens.remove": "このトークンを削除",
   "tokens.custom": "カスタム",
@@ -67,7 +67,7 @@ const ja = {
   "defi.staking": "ステーキング",
   "defi.bridge": "Bridge",
   "defi.fluke": "Fluke",
-  "defi.lpPairs": "主要ペアの存在確認（オンチェーン）",
+  "defi.lpPairs": "主なペア",
   "defi.lpPairExists": "ペアあり",
   "defi.lpPairNone": "ペアなし",
 
@@ -75,7 +75,7 @@ const ja = {
   "explore.links": "エコシステム",
   "explore.block": "ブロック",
   "explore.explorer": "エクスプローラーで見る ↗",
-  "explore.qnsEnded": "QNSの新規登録（ミント）は終了しています。",
+  "explore.qnsEnded": "QNS（.qomドメイン）の新規登録は終了しています。",
   "explore.linkWarning":
     "外部サイトで秘密鍵やニーモニックの入力を求められたら、絶対に入力しないでください。",
 
@@ -87,8 +87,7 @@ const ja = {
   "nft.totalSupply": "総供給",
   "nft.yourTokens": "保有トークン",
   "nft.none": "保有トークンは見つかりませんでした。",
-  "nft.apiNote":
-    "保有トークンの一覧はエクスプローラーAPIから取得しています。取得できない場合は保有数のみ表示します。",
+  "nft.apiNote": "一覧は自動で取得しています。取得できない場合は、個数だけ表示します。",
   "guide.score": "スコア",
   "guide.tier": "ティア",
   "guide.emblem": "エンブレム",
@@ -96,15 +95,15 @@ const ja = {
   "guide.starlight": "Starlight",
   "guide.registered": "登録済み",
   "guide.notRegistered": "未登録",
-  "guide.earned": "獲得見込み",
-  "guide.burned": "バーン済み",
+  "guide.earned": "ためた報酬",
+  "guide.burned": "消した分",
   "guide.forms": "フォーム数",
   "qns.ownedTitle": "保有ドメイン（.qom）",
   "qns.ownedNone":
     "このアドレスが所有する .qom ドメインは見つかりませんでした。",
   "qns.lookupTitle": "ドメインを調べる",
   "qns.lookupNote":
-    "名前（例: startup）から所有者と状態をオンチェーンで確認します。新規登録は終了しています。",
+    "名前（例: startup）を入れると、持ち主を調べられます。新規登録は終了しています。",
   "qns.lookupPlaceholder": "名前（.qom は不要）",
   "qns.lookup": "調べる",
   "qns.owner": "所有者",
@@ -112,8 +111,7 @@ const ja = {
   "qns.permanent": "永久（期限なし）",
   "qns.available": "未登録の名前です（新規登録は終了しています）",
   "qns.yours": "あなたのドメインです",
-  "qns.enumerateNote":
-    "一覧はQL1エクスプローラーAPIから取得しています。",
+  "qns.enumerateNote": "一覧は自動で取得しています。",
 
   "settings.wallet": "ウォレット管理",
   "settings.language": "言語 / Language",
@@ -122,9 +120,14 @@ const ja = {
   "settings.about": "このアプリについて",
   "settings.catchphrase": "One Wallet. Infinite Possibilities.",
   "settings.version": "バージョン",
+  "settings.details": "詳細情報",
+  "settings.detailsNote":
+    "ふだんは見なくて大丈夫な、接続先などの技術情報です。",
+  "settings.priceNote":
+    "価格は取引所の相場から自動で計算しています。実際の取引額と異なることがあります。",
   "settings.security": "セキュリティ",
   "settings.securityBody":
-    "秘密鍵・リカバリーフレーズは端末の安全領域（SecureStore）にのみ保存され、外部に送信されることはありません。未監査のプロトタイプですので、利用は少額からにしてください。",
+    "秘密鍵とリカバリーフレーズ（復旧用の言葉）は、あなたのスマホの中の安全な場所にだけ保存され、外部に送られることはありません。このアプリは開発中のテスト版です。大事な資産は入れず、少額でお試しください。",
 } as const;
 
 export type I18nKey = keyof typeof ja;
@@ -152,19 +155,20 @@ const en: Record<I18nKey, string> = {
   "common.fetchFailed": "Failed to fetch",
 
   "home.catchphrase": "One Wallet. Infinite Possibilities.",
-  "home.totalBalance": "Total Balance (estimated)",
+  "home.account": "Account",
+  "home.totalBalance": "Total Balance",
   "home.send": "Send",
   "home.receive": "Receive",
   "home.swap": "Swap",
   "home.tokens": "Tokens",
   "home.history": "Recent Activity",
   "home.historyEmpty": "No transactions yet.",
-  "home.historyNote": "History is loaded from each chain's explorer API.",
+  "home.historyNote": "History loads automatically.",
   "home.priceUnavailable": "Price N/A",
   "home.change24h": "24h",
   "home.stakingStatus": "Staking Status",
   "home.stakingStatusBody":
-    "The Infinite staking precompile (0x0800) is live. Validators, delegation and st42 live under DeFi → Staking.",
+    "Stake 42 to earn rewards. Deposit and withdraw under DeFi → Staking.",
   "home.chains": "Networks",
   "home.network": "Network",
 
@@ -173,8 +177,8 @@ const en: Record<I18nKey, string> = {
   "tokens.all": "All",
   "tokens.addCustom": "Add Custom Token",
   "tokens.addCustomNote":
-    "Paste a contract address and the app reads its name, symbol and decimals from that chain's RPC.",
-  "tokens.contractPlaceholder": "Contract address 0x…",
+    "Paste a token's address (0x…) and the app reads its name and details automatically.",
+  "tokens.contractPlaceholder": "Token address 0x…",
   "tokens.add": "Add",
   "tokens.remove": "Remove this token",
   "tokens.custom": "Custom",
@@ -188,7 +192,7 @@ const en: Record<I18nKey, string> = {
   "defi.staking": "Staking",
   "defi.bridge": "Bridge",
   "defi.fluke": "Fluke",
-  "defi.lpPairs": "Major pair check (on-chain)",
+  "defi.lpPairs": "Main pairs",
   "defi.lpPairExists": "Pair exists",
   "defi.lpPairNone": "No pair",
 
@@ -196,7 +200,7 @@ const en: Record<I18nKey, string> = {
   "explore.links": "Ecosystem",
   "explore.block": "Block",
   "explore.explorer": "View in explorer ↗",
-  "explore.qnsEnded": "New QNS registrations (minting) have ended.",
+  "explore.qnsEnded": "New QNS (.qom domain) registrations have ended.",
   "explore.linkWarning":
     "Never enter your private key or recovery phrase on an external site.",
 
@@ -209,7 +213,7 @@ const en: Record<I18nKey, string> = {
   "nft.yourTokens": "Your tokens",
   "nft.none": "No tokens found.",
   "nft.apiNote":
-    "Token lists come from the explorer API; if unavailable, only counts are shown.",
+    "The list loads automatically; if it can't, only counts are shown.",
   "guide.score": "Score",
   "guide.tier": "Tier",
   "guide.emblem": "Emblem",
@@ -217,14 +221,14 @@ const en: Record<I18nKey, string> = {
   "guide.starlight": "Starlight",
   "guide.registered": "Registered",
   "guide.notRegistered": "Not registered",
-  "guide.earned": "Earned (est.)",
+  "guide.earned": "Rewards earned",
   "guide.burned": "Burned",
   "guide.forms": "Forms",
   "qns.ownedTitle": "Your domains (.qom)",
   "qns.ownedNone": "No .qom domains owned by this address were found.",
   "qns.lookupTitle": "Look up a domain",
   "qns.lookupNote":
-    "Check a name's owner and status on-chain (e.g. “startup”). New registrations have ended.",
+    "Enter a name (e.g. “startup”) to see who owns it. New registrations have ended.",
   "qns.lookupPlaceholder": "Name (without .qom)",
   "qns.lookup": "Look up",
   "qns.owner": "Owner",
@@ -232,7 +236,7 @@ const en: Record<I18nKey, string> = {
   "qns.permanent": "Permanent (no expiry)",
   "qns.available": "Unregistered name (registration has ended)",
   "qns.yours": "This is your domain",
-  "qns.enumerateNote": "The list is loaded from the QL1 explorer API.",
+  "qns.enumerateNote": "The list loads automatically.",
 
   "settings.wallet": "Wallet Management",
   "settings.language": "言語 / Language",
@@ -241,9 +245,14 @@ const en: Record<I18nKey, string> = {
   "settings.about": "About",
   "settings.catchphrase": "One Wallet. Infinite Possibilities.",
   "settings.version": "Version",
+  "settings.details": "Details",
+  "settings.detailsNote":
+    "Technical connection details — you don't need these day to day.",
+  "settings.priceNote":
+    "Prices are calculated automatically from market data and may differ from actual trade amounts.",
   "settings.security": "Security",
   "settings.securityBody":
-    "Private keys and recovery phrases are stored only in the device's secure storage (SecureStore) and are never transmitted. This is an unaudited prototype — start with small amounts.",
+    "Your private key and recovery phrase are stored only in a safe place on your phone and are never sent anywhere. This app is a test build — please don't keep important assets in it, and start with small amounts.",
 };
 
 export const DICT: Record<Lang, Record<I18nKey, string>> = { ja, en };
