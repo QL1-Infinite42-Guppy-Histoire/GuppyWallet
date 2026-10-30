@@ -1,6 +1,7 @@
 import { formatUnits, parseUnits } from "ethers";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text } from "react-native";
+import BridgeInboundSection from "./BridgeInboundSection";
 import { useTxFlow } from "./ConfirmTx";
 import {
   Body,
@@ -10,6 +11,7 @@ import {
   InfoRow,
   PercentChips,
   PrimaryButton,
+  SegmentedTabs,
 } from "./controls";
 import { Card, colors } from "./ui";
 import { useBalances } from "../context/BalancesContext";
@@ -27,16 +29,19 @@ import {
 } from "../lib/zaphod";
 
 /**
- * Zaphod Bridge (Hyperlane), native in-app sends from Infinite via the
- * verified BridgeRouters. QL1-origin sends stay READ-ONLY: the route
- * table is shown, but sending from QL1 is disabled until a live
- * delivery test has been done (research/ZAPHOD_FRONTEND.md caveat).
+ * Zaphod Bridge (Hyperlane), native in-app sends via the verified
+ * BridgeRouters. Two directions: 「42 Chainから送る」 (outbound, below)
+ * and 「42 Chainへ送る」 (BSC / Ethereum → 42 Chain, BridgeInboundSection).
+ * QL1-origin sends stay READ-ONLY: the route table is shown, but
+ * sending from QL1 is disabled until a live delivery test has been
+ * done (research/ZAPHOD_FRONTEND.md caveat).
  */
 export default function BridgeSection() {
   const wallet = useWallet();
   const balances = useBalances();
   const address = wallet.info?.evmAddress ?? null;
   const { startTx, modal } = useTxFlow();
+  const [direction, setDirection] = useState<"out" | "in">("out");
 
   const [symbol, setSymbol] = useState<string>(
     BRIDGE_ROUTERS_INFINITE[0].symbol,
@@ -195,6 +200,21 @@ export default function BridgeSection() {
       {modal}
       <Card>
         <Heading>ブリッジ</Heading>
+        <SegmentedTabs
+          options={[
+            { key: "out", label: "42 Chainから送る" },
+            { key: "in", label: "42 Chainへ送る" },
+          ]}
+          value={direction}
+          onChange={(k) => setDirection(k as "out" | "in")}
+        />
+      </Card>
+      {direction === "in" ? (
+        <BridgeInboundSection startTx={startTx} />
+      ) : null}
+      {direction === "out" ? (
+      <>
+      <Card>
         <Body>
           別のチェーンへ通貨を送ります。届くまで少し時間が
           かかることがあります。これは片道の送信です。送ったあとの
@@ -309,6 +329,8 @@ export default function BridgeSection() {
           使えるようにします。今はまだ送れません。
         </Body>
       </Card>
+      </>
+      ) : null}
     </>
   );
 }

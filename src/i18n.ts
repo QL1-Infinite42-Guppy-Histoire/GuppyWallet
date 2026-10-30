@@ -72,7 +72,6 @@ const ja = {
   "defi.yourLiquidityNote":
     "取引の場に預けている通貨の一覧です。取り出すときは、下のフォームからどうぞ。",
 
-  "home.chainTotal": "合計",
 
   "explore.chainStatus": "チェーン状態",
   "explore.links": "エコシステム",
@@ -200,7 +199,6 @@ const en: Record<I18nKey, string> = {
   "defi.yourLiquidityNote":
     "The tokens you've supplied to the markets. Use the form below to withdraw.",
 
-  "home.chainTotal": "Total",
 
   "explore.chainStatus": "Chain Status",
   "explore.links": "Ecosystem",

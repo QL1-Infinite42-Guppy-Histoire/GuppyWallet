@@ -9,12 +9,18 @@ import {
 import type { TxJob } from "../components/ConfirmTx";
 import {
   BRIDGE_PAIRS_QL1,
+  BRIDGE_SOURCE_CHAINS,
   INFINITE,
   INFINITE_CONTRACTS,
   INFINITE_NFTS,
   INFINITE_TOKENS,
+  type BridgeSourceChain,
 } from "../config/chains";
-import { ERC20_READ_ABI, getProvider } from "./onchain";
+import {
+  ERC20_READ_ABI,
+  getProvider,
+  type ProviderChainLike,
+} from "./onchain";
 import {
   estimateOrFallback,
   gasCostNative,
@@ -585,7 +591,7 @@ export const BRIDGE_ROUTERS_INFINITE: BridgeRouterEntry[] = [
 ];
 
 export const BRIDGE_DESTINATIONS = [
-  { domain: 766, label: "QL1（QOM Layer One）" },
+  { domain: 766, label: "QL1" },
   { domain: 1, label: "Ethereum" },
   { domain: 56, label: "BNB Smart Chain" },
 ] as const;
@@ -619,13 +625,15 @@ export interface BridgeRouterState {
 
 export async function fetchBridgeRouterState(
   routerAddress: string,
+  chainLike: ProviderChainLike = INFINITE,
+  destinations: readonly { domain: number; label: string }[] = BRIDGE_DESTINATIONS,
 ): Promise<BridgeRouterState> {
-  const router = getBridgeRouter(routerAddress);
+  const router = getBridgeRouter(routerAddress, getProvider(chainLike));
   const token: string = await router.token();
   const tokenContract = new Contract(
     token,
     ERC20_READ_ABI,
-    getProvider(INFINITE),
+    getProvider(chainLike),
   ) as any;
   const [symbol, decimals, version, paused, feeBps, feeFlat, min, max] =
     await Promise.all([
@@ -639,14 +647,14 @@ export async function fetchBridgeRouterState(
       safe<bigint>(router.maxTransferAmount()),
     ]);
   const dec = Number(decimals);
-  const destinations: BridgeDestinationQuote[] = [];
-  for (const d of BRIDGE_DESTINATIONS) {
+  const destQuotes: BridgeDestinationQuote[] = [];
+  for (const d of destinations) {
     const allowed = await safe<boolean>(
       router.allowedDestinations(d.domain),
     );
     if (!allowed) continue;
     const q = await safe<any>(router.quoteNative(d.domain, "0x"));
-    destinations.push({
+    destQuotes.push({
       domain: d.domain,
       totalNativeRaw: q ? (q.totalNative ?? q[2]) : null,
       totalNativeFormatted: q ? formatUnits(q.totalNative ?? q[2], 18) : null,
@@ -668,7 +676,7 @@ export async function fetchBridgeRouterState(
     maxRaw: max,
     maxFormatted:
       max !== null && max < NO_CAP ? formatUnits(max, dec) : null,
-    destinations,
+    destinations: destQuotes,
   };
 }
 
@@ -680,6 +688,9 @@ export interface BridgeQuote {
   totalRequiredRaw: bigint;
   totalNativeRaw: bigint;
   totalNativeFormatted: string;
+  /** false when quoteNative reverted and totalNative fell back to 0
+   *  (only possible with `nativeOptional` — the older BSC/ETH routers) */
+  nativeQuoteOk: boolean;
 }
 
 export async function fetchBridgeQuote(
@@ -687,16 +698,21 @@ export async function fetchBridgeQuote(
   domain: number,
   amountRaw: bigint,
   tokenDecimals: number,
+  chainLike: ProviderChainLike = INFINITE,
+  opts?: { nativeOptional?: boolean },
 ): Promise<BridgeQuote> {
-  const router = getBridgeRouter(routerAddress);
-  const [qb, qn] = await Promise.all([
-    router.quoteBridge(amountRaw),
-    router.quoteNative(domain, "0x"),
-  ]);
+  const router = getBridgeRouter(routerAddress, getProvider(chainLike));
+  const qb = await router.quoteBridge(amountRaw);
+  // The v1.1/v1.2 routers on BSC/Ethereum REVERT quoteNative (verified
+  // on-chain 2026-10-30); the official frontend catches that and sends
+  // with value 0. `nativeOptional` mirrors that behaviour exactly.
+  const qn = opts?.nativeOptional
+    ? await safe<any>(router.quoteNative(domain, "0x"))
+    : await router.quoteNative(domain, "0x");
   const forward: bigint = qb.forwardAmount ?? qb[0];
   const fee: bigint = qb.fee ?? qb[1];
   const totalRequired: bigint = qb.totalRequired ?? qb[2];
-  const totalNative: bigint = qn.totalNative ?? qn[2];
+  const totalNative: bigint = qn ? (qn.totalNative ?? qn[2]) : 0n;
   return {
     forwardRaw: forward,
     forwardFormatted: formatUnits(forward, tokenDecimals),
@@ -705,6 +721,7 @@ export async function fetchBridgeQuote(
     totalRequiredRaw: totalRequired,
     totalNativeRaw: totalNative,
     totalNativeFormatted: formatUnits(totalNative, 18),
+    nativeQuoteOk: qn !== null && qn !== undefined,
   };
 }
 
@@ -764,6 +781,149 @@ export function bridgeSendJob(args: {
       const totalGas = approval.estimate + gas;
       return {
         gasEstimateText: await gasCostNative(signer, totalGas, "42"),
+        send: async () => {
+          const hashes: string[] = [];
+          if (approval.needed) hashes.push(await approval.send());
+          hashes.push(await sendAndWait(signer, tx));
+          return hashes;
+        },
+      };
+    },
+  };
+}
+
+// ------------------------------------------------------- Bridge inbound
+// BSC / Ethereum → 42 Chain. Router addresses come from the official
+// bridge registry (bridge.zaphod.one /api/state, fetched 2026-10-30)
+// and EVERY entry below was verified on-chain the same day via public
+// RPCs: getCode non-empty, VERSION() answered, token()/underlying()
+// match the registry exactly, allowedDestinations(421018) == true,
+// paused() == false, quoteBridge() answers (fee 0, forward quoted in
+// source-token units). These routers are v1.1.0/v1.2.0: quoteNative()
+// reverts, and the official frontend's own send flow catches that and
+// sends transferRemote with value 0 (page chunk, verified) — the
+// inbound job mirrors that. Unverified future entries must be added
+// with `verified: false` and render as 「準備中」 (never sendable).
+
+export interface BridgeInboundEntry {
+  chain: BridgeSourceChain;
+  symbol: string;
+  router: string;
+  verified: boolean;
+}
+
+const bscChain = BRIDGE_SOURCE_CHAINS.find((c) => c.key === "bsc")!;
+const ethChain = BRIDGE_SOURCE_CHAINS.find((c) => c.key === "ethereum")!;
+
+export const BRIDGE_INBOUND: BridgeInboundEntry[] = [
+  { chain: bscChain, symbol: "USDT", router: "0x2f136BaA37Eb5711483D295944EeDa01c4142dA0", verified: true },
+  { chain: bscChain, symbol: "USDC", router: "0x4F69A9cF19C7B291b1A2A5dA30B8Ce873d7849fa", verified: true },
+  { chain: ethChain, symbol: "USDT", router: "0x56d962fD360bA872115e77E3316909037bfB7E7E", verified: true },
+  { chain: ethChain, symbol: "USDC", router: "0x1613e840ef053a3eAcB3278F3982489354CA8199", verified: true },
+  { chain: ethChain, symbol: "WBTC", router: "0xF2ecB173b63699C49ace3faae80af5ce677af015", verified: true },
+];
+
+/** Destination Hyperlane domain for inbound sends: 42 Chain's EVM id. */
+export const BRIDGE_INBOUND_DOMAIN = 421018;
+/** All bridged tokens are 18-decimal on 42 Chain. */
+const BRIDGE_INBOUND_DST_DECIMALS = 18;
+
+/**
+ * Mirror of the official frontend's amount adjustment: amounts are
+ * passed to transferRemote in SOURCE-token units, truncated down so
+ * they are exactly representable in the destination's decimals.
+ */
+export function truncateToDstDecimals(
+  amountRaw: bigint,
+  srcDecimals: number,
+  dstDecimals: number = BRIDGE_INBOUND_DST_DECIMALS,
+): bigint {
+  if (dstDecimals >= srcDecimals) return amountRaw;
+  const step = 10n ** BigInt(srcDecimals - dstDecimals);
+  return (amountRaw / step) * step;
+}
+
+/** The user's native + token balances on a bridge source chain. */
+export async function fetchBridgeSourceBalances(
+  entry: BridgeInboundEntry,
+  tokenAddress: string,
+  owner: string,
+): Promise<{ nativeRaw: bigint; tokenRaw: bigint }> {
+  const provider = getProvider(entry.chain);
+  const token = new Contract(tokenAddress, ERC20_READ_ABI, provider) as any;
+  const [nativeRaw, tokenRaw] = await Promise.all([
+    provider.getBalance(owner),
+    token.balanceOf(owner).then((v: any) => BigInt(v)),
+  ]);
+  return { nativeRaw: BigInt(nativeRaw), tokenRaw };
+}
+
+export function bridgeInboundSendJob(args: {
+  entry: BridgeInboundEntry;
+  tokenAddress: string;
+  tokenDecimals: number;
+  recipient: string;
+  amountRaw: bigint;
+  amountFormatted: string;
+}): TxJob {
+  const { entry } = args;
+  const recipient = getAddress(args.recipient);
+  const recipientBytes32 = zeroPadValue(recipient, 32);
+  const amount = truncateToDstDecimals(args.amountRaw, args.tokenDecimals);
+  return {
+    title: `ブリッジ — ${entry.symbol} を 42 Chain へ送る`,
+    chain: entry.chain,
+    lines: [
+      { label: "アクション", value: "42 Chainへ送る" },
+      {
+        label: "トークン",
+        value: `${args.amountFormatted} ${entry.symbol}`,
+      },
+      { label: "送り元", value: entry.chain.displayName },
+      { label: "送り先", value: recipient },
+      { label: "ルーター", value: entry.router },
+      {
+        label: "注意",
+        value:
+          "片道の送信です。届くまで時間がかかる場合があります。",
+      },
+    ],
+    prepare: async (signer: Wallet) => {
+      // Fresh quote at signing time; quoteNative may revert on these
+      // routers → the native fee falls back to 0, exactly like the
+      // official frontend (see fetchBridgeQuote / nativeOptional).
+      const quote = await fetchBridgeQuote(
+        entry.router,
+        BRIDGE_INBOUND_DOMAIN,
+        amount,
+        args.tokenDecimals,
+        entry.chain,
+        { nativeOptional: true },
+      );
+      const approval = await planExactApproval(
+        signer,
+        args.tokenAddress,
+        entry.router,
+        amount,
+      );
+      const router = getBridgeRouter(entry.router, signer);
+      const data: string = router.interface.encodeFunctionData(
+        "transferRemote",
+        [BRIDGE_INBOUND_DOMAIN, recipientBytes32, amount],
+      );
+      const tx = {
+        to: entry.router,
+        data,
+        value: quote.totalNativeRaw,
+      };
+      const gas = await estimateOrFallback(signer, tx, 400000n);
+      const totalGas = approval.estimate + gas;
+      return {
+        gasEstimateText: await gasCostNative(
+          signer,
+          totalGas,
+          entry.chain.nativeSymbol,
+        ),
         send: async () => {
           const hashes: string[] = [];
           if (approval.needed) hashes.push(await approval.send());
