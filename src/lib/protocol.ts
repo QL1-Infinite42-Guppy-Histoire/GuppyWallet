@@ -3,8 +3,6 @@ import {
   INFINITE,
   INFINITE_NFTS,
   INFINITE_TOKENS,
-  QL1,
-  QL1_CONTRACTS,
 } from "../config/chains";
 import { getProvider } from "./onchain";
 import { valoperFromHex } from "./walletCrypto";
@@ -17,7 +15,10 @@ import { valoperFromHex } from "./walletCrypto";
  *    and it answers the full St42Vault ABI with a live rate/supply.
  *    INFINITE_CONTRACTS.st42Vault (0x0F93…) answers the same ABI but is
  *    dormant (rate 0/0, supply 0) — probed 2026-10-30.
- *  - QL1 QNS controller (permanent name purchases), Infinite NFT collections.
+ *  - Infinite NFT collections.
+ * QNS note: new .qom registrations (mint) have ENDED (user-confirmed
+ * 2026-10-30), so all QNS register/price code was removed. The QNS
+ * contract addresses remain in chains.ts as reference config only.
  */
 
 export const ST42_ADDRESS =
@@ -263,62 +264,4 @@ export async function fetchNftCollections(
       };
     }),
   );
-}
-
-// ------------------------------------------------------------------ QNS
-
-export const QNS_CONTROLLER_ABI = [
-  "function available(string name) view returns (bool)",
-  "function valid(string name) view returns (bool)",
-  // One-time buy-out price for a PERMANENT registration (never expires).
-  // Verified on-chain 2026-10-30: sending permanentRentPrice(name) with
-  // permanent=true passes the controller's price check, while
-  // permanentRentPrice-1 wei reverts with InsufficientValue().
-  "function permanentRentPrice(string name) view returns (uint256)",
-  "function PERMANENT() view returns (uint256)",
-  "function defaultResolver() view returns (address)",
-  "function register(string name, address owner, address resolver, bool setReverse, bool permanent) payable",
-] as const;
-
-export function getQnsController(signerOrProvider?: any): any {
-  return new Contract(
-    QL1_CONTRACTS.qnsRegistrarController,
-    QNS_CONTROLLER_ABI,
-    signerOrProvider ?? getProvider(QL1),
-  );
-}
-
-export interface QnsCheck {
-  name: string;
-  valid: boolean | null;
-  available: boolean | null;
-  /** one-time PERMANENT purchase price (permanentRentPrice), raw wei */
-  priceRaw: bigint | null;
-  priceFormatted: string | null;
-}
-
-export async function checkQnsName(rawName: string): Promise<QnsCheck> {
-  const name = rawName.trim().toLowerCase().replace(/\.qom$/, "");
-  const controller = getQnsController();
-  const check: QnsCheck = {
-    name,
-    valid: null,
-    available: null,
-    priceRaw: null,
-    priceFormatted: null,
-  };
-  if (!name) return check;
-  const safe = async <T,>(p: Promise<T>): Promise<T | null> => {
-    try {
-      return await p;
-    } catch {
-      return null;
-    }
-  };
-  check.valid = await safe<boolean>(controller.valid(name));
-  check.available = await safe<boolean>(controller.available(name));
-  const price = await safe<bigint>(controller.permanentRentPrice(name));
-  check.priceRaw = price;
-  check.priceFormatted = price !== null ? formatUnits(price, 18) : null;
-  return check;
 }

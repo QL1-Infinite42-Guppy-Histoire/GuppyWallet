@@ -122,8 +122,9 @@ export const QL1_TOKENS = [
 ] as const;
 
 /** Verified contracts found on the QL1 explorer (scan.qom.network, 2026-10-30).
- *  QNS = QOM Domains system. Names are sold as PERMANENT purchases
- *  (one-time `permanentRentPrice`, never expires) per the user, 2026-10-30. */
+ *  QNS = QOM Domains system. New .qom registrations (mint) have ENDED
+ *  (user-confirmed 2026-10-30); the QNS addresses below are kept as
+ *  reference config only — the app has no registration flow. */
 export const QL1_CONTRACTS = {
   qnsDomains: "0xDCbF4614152a22D1883Ba3929c668B978A3be548", // QOM Domains (QNS) / QNSBaseRegistrar (verified)
   qnsRegistrarController: "0x4d9FE3F0EE6Fe1645DD537EC59a0a328f7148372", // QNSRegistrarController (verified; casing fixed to valid EIP-55 checksum 2026-10-30 — same address bytes)
@@ -141,7 +142,7 @@ export const QL1_CONTRACTS = {
 export const CHAINS: ChainConfig[] = [INFINITE, QL1];
 
 /** External service links (information only — swaps run natively in-app
- *  against the confirmed DEX routers; no aggregator is used). */
+ *  against the confirmed DEX routers). */
 export const DAPP_LINKS = {
   flukeGuide: "https://fluke.zaphod.one",
   nft: "https://nft.zaphod.one",
@@ -151,6 +152,5 @@ export const DAPP_LINKS = {
   console: "https://console.infinitedrive.xyz/",
   driveStats: "https://drivestats.online/",
   hub: "https://hub.infinitedrive.xyz/",
-  staking: "https://staking.zaphod.one",
   fishDisk: "https://fishdisk.com",
 } as const;

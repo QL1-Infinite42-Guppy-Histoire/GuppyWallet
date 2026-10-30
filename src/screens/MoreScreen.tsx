@@ -1,29 +1,18 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text } from "react-native";
-import { useTxFlow, type TxJob } from "../components/ConfirmTx";
 import {
   Body,
-  DisabledButton,
-  Field,
   Heading,
   InfoRow,
   PrimaryButton,
 } from "../components/controls";
 import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
-import { DAPP_LINKS, QL1, QL1_CONTRACTS } from "../config/chains";
+import { DAPP_LINKS } from "../config/chains";
 import { useWallet } from "../context/WalletContext";
 import {
-  checkQnsName,
   fetchNftCollections,
-  getQnsController,
   type NftCollectionState,
-  type QnsCheck,
 } from "../lib/protocol";
-import {
-  estimateOrFallback,
-  gasCostNative,
-  sendAndWait,
-} from "../lib/tx";
 
 interface Entry {
   label: string;
@@ -66,14 +55,9 @@ const ENTRIES: Entry[] = [
 
 export default function MoreScreen() {
   const wallet = useWallet();
-  const { startTx, modal } = useTxFlow();
   const address = wallet.info?.evmAddress ?? null;
 
   const [nfts, setNfts] = useState<NftCollectionState[] | null>(null);
-  const [qnsInput, setQnsInput] = useState("");
-  const [qns, setQns] = useState<QnsCheck | null>(null);
-  const [qnsError, setQnsError] = useState<string | null>(null);
-  const [qnsLoading, setQnsLoading] = useState(false);
 
   const loadNfts = useCallback(async () => {
     try {
@@ -87,65 +71,10 @@ export default function MoreScreen() {
     loadNfts();
   }, [loadNfts]);
 
-  const handleCheckQns = async () => {
-    setQnsError(null);
-    setQnsLoading(true);
-    try {
-      setQns(await checkQnsName(qnsInput));
-    } catch (e) {
-      setQns(null);
-      setQnsError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setQnsLoading(false);
-    }
-  };
-
-  const qnsRegisterJob = (): TxJob | null => {
-    if (!qns || qns.available !== true || qns.priceRaw === null) return null;
-    const name = qns.name;
-    const price = qns.priceRaw;
-    return {
-      title: ".qom ドメイン永久取得",
-      chain: QL1,
-      lines: [
-        { label: "アクション", value: "QNSドメインを永久取得（買い切り）" },
-        { label: "ドメイン", value: `${name}.qom` },
-        {
-          label: "価格（一回払い）",
-          value: `${qns.priceFormatted ?? "?"} QOM`,
-        },
-        { label: "有効期限", value: "なし（永久・更新不要）" },
-        { label: "コントラクト", value: QL1_CONTRACTS.qnsRegistrarController },
-      ],
-      prepare: async (signer) => {
-        const controller = getQnsController(signer);
-        const owner = await signer.getAddress();
-        const resolver: string = await controller.defaultResolver();
-        const tx = {
-          to: QL1_CONTRACTS.qnsRegistrarController,
-          value: price,
-          data: controller.interface.encodeFunctionData("register", [
-            name,
-            owner,
-            resolver,
-            false,
-            true, // permanent: one-time purchase, never expires
-          ]),
-        };
-        const gas = await estimateOrFallback(signer, tx, 500000n);
-        return {
-          gasEstimateText: await gasCostNative(signer, gas, "QOM"),
-          send: async () => [await sendAndWait(signer, tx)],
-        };
-      },
-    };
-  };
-
   return (
     <Screen>
       <Title>その他</Title>
       <PrototypeWarning />
-      {modal}
 
       <Card>
         <Heading>NFTコレクション（Infinite）</Heading>
@@ -174,62 +103,8 @@ export default function MoreScreen() {
       </Card>
 
       <Card>
-        <Heading>QNS（.qom ドメイン・永久取得）</Heading>
-        <Body>
-          .qom ドメインは一回払いの永久取得です（有効期限なし・更新不要）。
-          取得したい名前を入力すると、空き状況と永久取得価格（ネイティブQOM）を
-          コントラクトに直接問い合わせます。
-        </Body>
-        <Field
-          value={qnsInput}
-          onChangeText={setQnsInput}
-          placeholder="例: alice（.qom は不要）"
-        />
-        <PrimaryButton
-          label="空き状況を確認"
-          onPress={handleCheckQns}
-          loading={qnsLoading}
-        />
-        {qnsError ? <Text style={styles.errorText}>{qnsError}</Text> : null}
-        {qns && qns.name ? (
-          <>
-            <InfoRow label="ドメイン" value={`${qns.name}.qom`} />
-            <InfoRow
-              label="形式チェック"
-              value={
-                qns.valid === null ? "—" : qns.valid ? "有効" : "無効な形式"
-              }
-            />
-            <InfoRow
-              label="空き状況"
-              value={
-                qns.available === null
-                  ? "—"
-                  : qns.available
-                    ? "取得可能"
-                    : "取得済み"
-              }
-            />
-            <InfoRow
-              label="永久取得価格（一回払い）"
-              value={
-                qns.priceFormatted ? `${qns.priceFormatted} QOM` : "—"
-              }
-            />
-            <InfoRow label="有効期限" value="なし（永久・更新不要）" />
-            {qns.available ? (
-              <PrimaryButton
-                label="この名前を永久取得する"
-                onPress={() => {
-                  const job = qnsRegisterJob();
-                  if (job) startTx(job);
-                }}
-              />
-            ) : (
-              <DisabledButton label="登録できません（取得済み／無効）" />
-            )}
-          </>
-        ) : null}
+        <Heading>QNS（.qom ドメイン）</Heading>
+        <Body>QNSの新規登録（ミント）は終了しています。</Body>
       </Card>
 
       <Card>
@@ -266,6 +141,5 @@ const styles = StyleSheet.create({
   note: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   link: { color: colors.accent, fontSize: 13 },
   todo: { color: colors.dangerText, fontSize: 13, lineHeight: 19 },
-  errorText: { color: colors.dangerText, fontSize: 13, lineHeight: 19 },
   addr: { color: colors.muted, fontSize: 11, lineHeight: 15 },
 });
