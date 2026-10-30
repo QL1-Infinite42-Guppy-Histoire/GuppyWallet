@@ -105,6 +105,39 @@ export function ChipPicker({
   );
 }
 
+/** The four amount presets used everywhere an amount is chosen. */
+export const PERCENT_PRESETS = [25, 50, 75, 100] as const;
+
+/**
+ * Shared 25% / 50% / 75% / MAX chips for amount inputs. The parent
+ * computes the amount from the relevant balance (see percentOfBalance
+ * in lib/onchain) — MAX handling (e.g. gas reserve) is the parent's job.
+ */
+export function PercentChips({
+  onSelect,
+  disabled,
+}: {
+  onSelect: (pct: number) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <View style={styles.pctRow}>
+      {PERCENT_PRESETS.map((pct) => (
+        <Pressable
+          key={pct}
+          style={[styles.pctChip, disabled && styles.pctChipDisabled]}
+          onPress={() => onSelect(pct)}
+          disabled={disabled}
+        >
+          <Text style={styles.pctChipText}>
+            {pct === 100 ? "MAX" : `${pct}%`}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.infoRow}>
@@ -145,6 +178,16 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   chipText: { color: colors.text, fontSize: 13 },
   chipTextActive: { color: "#0B0F19", fontWeight: "700" },
+  pctRow: { flexDirection: "row", gap: 6, alignItems: "center" },
+  pctChip: {
+    borderColor: colors.panelBorder,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  pctChipDisabled: { opacity: 0.4 },
+  pctChipText: { color: colors.muted, fontSize: 11, fontWeight: "700" },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",

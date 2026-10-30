@@ -172,8 +172,54 @@ export interface SwapQuote {
   amountOutFormatted: string;
   /** 1 unit of `from` in units of `to`, as a display number */
   rate: number;
+  /** spot rate from raw pair reserves (no fee / no impact), if computable */
+  spotRate: number | null;
+  /** % worse than spot (fee + price impact combined), if computable */
+  priceImpactPct: number | null;
   path: DexToken[];
   routeLabel: string;
+}
+
+/**
+ * Walk the path's pair reserves to get the zero-fee spot output for
+ * `amountIn`. Returns null when any hop's reserves cannot be read.
+ */
+async function spotAmountOut(
+  chain: ChainConfig,
+  path: DexToken[],
+  amountIn: bigint,
+): Promise<bigint | null> {
+  try {
+    const factory = getFactory(chain);
+    let current = amountIn;
+    for (let i = 0; i < path.length - 1; i++) {
+      const pairAddr: string = await factory.getPair(
+        path[i].address,
+        path[i + 1].address,
+      );
+      if (!pairAddr || pairAddr === ZeroAddress) return null;
+      const pair = new Contract(
+        pairAddr,
+        PAIR_ABI,
+        getProvider(chain),
+      ) as any;
+      const [reserves, token0] = await Promise.all([
+        pair.getReserves(),
+        pair.token0(),
+      ]);
+      const r0: bigint = reserves[0];
+      const r1: bigint = reserves[1];
+      const inIsToken0 =
+        String(token0).toLowerCase() === path[i].address.toLowerCase();
+      const rIn = inIsToken0 ? r0 : r1;
+      const rOut = inIsToken0 ? r1 : r0;
+      if (rIn === 0n || rOut === 0n) return null;
+      current = (current * rOut) / rIn;
+    }
+    return current;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchSwapQuote(
@@ -205,11 +251,21 @@ export async function fetchSwapQuote(
   const amountOut = amounts[amounts.length - 1];
   const inNum = Number(formatUnits(amountIn, from.decimals));
   const outNum = Number(formatUnits(amountOut, to.decimals));
+  const spotOut = await spotAmountOut(chain, path, amountIn);
+  let spotRate: number | null = null;
+  let priceImpactPct: number | null = null;
+  if (spotOut !== null && spotOut > 0n) {
+    const spotNum = Number(formatUnits(spotOut, to.decimals));
+    spotRate = inNum > 0 ? spotNum / inNum : null;
+    priceImpactPct = spotNum > 0 ? (1 - outNum / spotNum) * 100 : null;
+  }
   return {
     amountIn,
     amountOut,
     amountOutFormatted: formatUnits(amountOut, to.decimals),
     rate: inNum > 0 ? outNum / inNum : 0,
+    spotRate,
+    priceImpactPct,
     path,
     routeLabel: path.map((t) => t.symbol).join(" → "),
   };

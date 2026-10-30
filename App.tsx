@@ -5,7 +5,7 @@ import React from "react";
 import { Text } from "react-native";
 import { colors } from "./src/components/ui";
 import { WalletProvider } from "./src/context/WalletContext";
-import { WatchAddressProvider } from "./src/context/WatchAddressContext";
+import { BalancesProvider } from "./src/context/BalancesContext";
 import DashboardScreen from "./src/screens/DashboardScreen";
 import MoreScreen from "./src/screens/MoreScreen";
 import StakingScreen from "./src/screens/StakingScreen";
@@ -23,7 +23,7 @@ function tabIcon(symbol: string) {
 export default function App() {
   return (
     <WalletProvider>
-      <WatchAddressProvider>
+      <BalancesProvider>
         <NavigationContainer>
         <StatusBar style="light" />
         <Tab.Navigator
@@ -62,7 +62,7 @@ export default function App() {
           />
         </Tab.Navigator>
         </NavigationContainer>
-      </WatchAddressProvider>
+      </BalancesProvider>
     </WalletProvider>
   );
 }

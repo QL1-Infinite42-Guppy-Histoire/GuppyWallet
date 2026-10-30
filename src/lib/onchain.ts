@@ -62,6 +62,42 @@ export function formatTokenAmount(raw: bigint, decimals: number): string {
   return prettyAmount(formatUnits(raw, decimals));
 }
 
+/**
+ * Amount string for a percentage of a raw balance (25/50/75/100 chips).
+ * `reserve` (raw units) is subtracted only at 100% — used to keep a gas
+ * buffer back when MAX-ing a native-coin amount.
+ */
+export function percentOfBalance(
+  raw: bigint,
+  pct: number,
+  decimals: number,
+  reserve: bigint = 0n,
+): string {
+  let amount = (raw * BigInt(pct)) / 100n;
+  if (pct >= 100 && reserve > 0n) {
+    amount = amount > reserve ? amount - reserve : 0n;
+  }
+  return formatUnits(amount, decimals);
+}
+
+/**
+ * Estimated native-coin cost of a transaction, for MAX calculations:
+ * current fee data × the caller's gas-limit assumption, +20% headroom.
+ * Returns 0 when fee data is unavailable (MAX then uses full balance).
+ */
+export async function nativeGasReserve(
+  chain: ChainConfig,
+  gasLimit: bigint,
+): Promise<bigint> {
+  try {
+    const fee = await getProvider(chain).getFeeData();
+    const price = fee.maxFeePerGas ?? fee.gasPrice ?? 0n;
+    return (price * gasLimit * 12n) / 10n;
+  } catch {
+    return 0n;
+  }
+}
+
 async function fetchNative(
   chain: ChainConfig,
   address: string,

@@ -8,13 +8,18 @@ import {
   Field,
   Heading,
   InfoRow,
+  PercentChips,
   PrimaryButton,
 } from "../components/controls";
 import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
-import { INFINITE, QL1, QL1_TOKENS } from "../config/chains";
+import { INFINITE } from "../config/chains";
 import { useWallet } from "../context/WalletContext";
-import { useWatchAddress } from "../context/WatchAddressContext";
-import { prettyAmount } from "../lib/onchain";
+import { useBalances } from "../context/BalancesContext";
+import {
+  nativeGasReserve,
+  percentOfBalance,
+  prettyAmount,
+} from "../lib/onchain";
 import {
   DISTRIBUTION_ABI,
   DISTRIBUTION_PRECOMPILE,
@@ -25,31 +30,45 @@ import {
   fetchSt42State,
   fetchTicket,
   fetchValidators,
-  fetchZapStakingState,
   getSt42Vault,
-  getZapStaking,
   type St42State,
   type TicketInfo,
   type ValidatorInfo,
-  type ZapStakingState,
 } from "../lib/protocol";
-import {
-  estimateOrFallback,
-  gasCostNative,
-  planExactApproval,
-  sendAndWait,
-} from "../lib/tx";
-
-function fmtTs(ts: number | null): string {
-  if (!ts) return "—";
-  return new Date(ts * 1000).toLocaleString("ja-JP");
-}
+import { estimateOrFallback, gasCostNative, sendAndWait } from "../lib/tx";
 
 export default function StakingScreen() {
   const wallet = useWallet();
-  const watch = useWatchAddress();
+  const balances = useBalances();
   const { startTx, modal } = useTxFlow();
-  const address = watch.effectiveAddress;
+  const address = wallet.info?.evmAddress ?? null;
+
+  /** Own-wallet native 42 balance (raw), for percentage chips. */
+  const native42 = balances.tokenResults?.find(
+    (t) => t.ok && t.balance.chainKey === "infinite" && t.balance.address === null,
+  );
+  const native42Raw =
+    native42 && native42.ok ? native42.balance.raw : null;
+
+  const apply42Percent = async (
+    setter: (v: string) => void,
+    gasLimit: bigint,
+    pct: number,
+  ) => {
+    if (native42Raw === null) return;
+    const reserve =
+      pct === 100 ? await nativeGasReserve(INFINITE, gasLimit) : 0n;
+    setter(percentOfBalance(native42Raw, pct, 18, reserve));
+  };
+
+  const applySharesPercent = (
+    setter: (v: string) => void,
+    shares: bigint | null,
+    pct: number,
+  ) => {
+    if (shares === null) return;
+    setter(percentOfBalance(shares, pct, 18));
+  };
 
   const [validators, setValidators] = useState<ValidatorInfo[] | null>(null);
   const [validatorTotal, setValidatorTotal] = useState<number | null>(null);
@@ -66,10 +85,6 @@ export default function StakingScreen() {
   const [exitShares, setExitShares] = useState("");
   const [ticketIdText, setTicketIdText] = useState("");
   const [ticket, setTicket] = useState<TicketInfo | null>(null);
-
-  const [zap, setZap] = useState<ZapStakingState | null>(null);
-  const [zapError, setZapError] = useState<string | null>(null);
-  const [zapAmount, setZapAmount] = useState("");
 
   const loadValidators = useCallback(async () => {
     setValLoading(true);
@@ -101,19 +116,10 @@ export default function StakingScreen() {
     }
   }, [address]);
 
-  const loadZap = useCallback(async () => {
-    try {
-      setZap(await fetchZapStakingState(address));
-    } catch (e) {
-      setZapError(e instanceof Error ? e.message : String(e));
-    }
-  }, [address]);
-
   useEffect(() => {
     loadValidators();
     loadSt42();
-    loadZap();
-  }, [loadValidators, loadSt42, loadZap]);
+  }, [loadValidators, loadSt42]);
 
   const selectedValidator = validators?.find(
     (v) => v.valoper === selectedValoper,
@@ -387,98 +393,6 @@ export default function StakingScreen() {
     }
   };
 
-  const zapStakeJob = (): TxJob | null => {
-    let amount: bigint;
-    try {
-      amount = parseUnits(zapAmount, 18);
-      if (amount <= 0n) throw new Error("zero");
-    } catch {
-      setZapError("ステーク数量を確認してください。");
-      return null;
-    }
-    const zapToken = QL1_TOKENS[0];
-    return {
-      title: "ZAPをステーク",
-      chain: QL1,
-      lines: [
-        { label: "アクション", value: "ZapStakingにZAPをステーク" },
-        { label: "数量", value: `${zapAmount} ZAP` },
-        { label: "コントラクト", value: "ZapStaking（QL1）" },
-      ],
-      prepare: async (signer) => {
-        const staking = getZapStaking(signer);
-        const senders: (() => Promise<string>)[] = [];
-        let gas = 0n;
-        const approval = await planExactApproval(
-          signer,
-          zapToken.address,
-          await staking.getAddress(),
-          amount,
-        );
-        if (approval.needed) {
-          gas += approval.estimate;
-          senders.push(approval.send);
-        }
-        const tx = {
-          to: await staking.getAddress(),
-          data: staking.interface.encodeFunctionData("stake", [amount]),
-        };
-        gas += await estimateOrFallback(signer, tx, 300000n);
-        senders.push(() => sendAndWait(signer, tx));
-        return {
-          gasEstimateText: await gasCostNative(signer, gas, "QOM"),
-          send: async () => {
-            const hashes: string[] = [];
-            for (const s of senders) hashes.push(await s());
-            return hashes;
-          },
-        };
-      },
-    };
-  };
-
-  const zapSimpleJob = (action: "unstake" | "claim"): TxJob => {
-    const stakingAddress = "ZapStaking（QL1）";
-    return {
-      title: action === "unstake" ? "ZAPをアンステーク" : "ZAP報酬を請求",
-      chain: QL1,
-      lines: [
-        {
-          label: "アクション",
-          value:
-            action === "unstake"
-              ? "全額アンステーク（報酬額が確定しベスティング開始）"
-              : "報酬を請求（ベスティング済み分のみ受取、未経過分はバーン）",
-        },
-        ...(action === "claim" && zap
-          ? [
-              {
-                label: "受取見込み",
-                value: `${zap.claimReceivedFormatted ?? "—"} ZAP`,
-              },
-              {
-                label: "バーン見込み ⚠️",
-                value: `${zap.claimBurnedFormatted ?? "—"} ZAP`,
-              },
-            ]
-          : []),
-        { label: "コントラクト", value: stakingAddress },
-      ],
-      prepare: async (signer) => {
-        const staking = getZapStaking(signer);
-        const tx = {
-          to: await staking.getAddress(),
-          data: staking.interface.encodeFunctionData(action, []),
-        };
-        const gas = await estimateOrFallback(signer, tx, 300000n);
-        return {
-          gasEstimateText: await gasCostNative(signer, gas, "QOM"),
-          send: async () => [await sendAndWait(signer, tx)],
-        };
-      },
-    };
-  };
-
   return (
     <Screen>
       <Title>ステーキング</Title>
@@ -528,6 +442,14 @@ export default function StakingScreen() {
               placeholder="数量（42）"
               keyboardType="decimal-pad"
             />
+            <PercentChips
+              onSelect={(pct) => apply42Percent(setStakeAmount, 300000n, pct)}
+              disabled={native42Raw === null}
+            />
+            <Body>
+              割合チップはウォレットの42残高が基準です（MAX時はガス代を残します）。
+              委任解除・再委任では委任中の数量が上限になります。
+            </Body>
             <PrimaryButton
               label="委任する"
               onPress={() => {
@@ -623,6 +545,10 @@ export default function StakingScreen() {
           placeholder="預ける数量（42）"
           keyboardType="decimal-pad"
         />
+        <PercentChips
+          onSelect={(pct) => apply42Percent(setDepositAmount, 400000n, pct)}
+          disabled={native42Raw === null}
+        />
         <PrimaryButton
           label="42を預けてst42を受け取る"
           onPress={() => {
@@ -635,6 +561,12 @@ export default function StakingScreen() {
           onChangeText={setRedeemShares}
           placeholder="出金申請する数量（st42）"
           keyboardType="decimal-pad"
+        />
+        <PercentChips
+          onSelect={(pct) =>
+            applySharesPercent(setRedeemShares, st42?.yourShares ?? null, pct)
+          }
+          disabled={!st42?.yourShares}
         />
         <PrimaryButton
           label="出金を申請する（チケット発行）"
@@ -652,6 +584,12 @@ export default function StakingScreen() {
           onChangeText={setExitShares}
           placeholder="即時出金する数量（st42・手数料あり）"
           keyboardType="decimal-pad"
+        />
+        <PercentChips
+          onSelect={(pct) =>
+            applySharesPercent(setExitShares, st42?.yourShares ?? null, pct)
+          }
+          disabled={!st42?.yourShares}
         />
         <PrimaryButton
           label="即時出金する"
@@ -687,90 +625,6 @@ export default function StakingScreen() {
             if (job) startTx(job);
           }}
         />
-      </Card>
-
-      <Card>
-        <Heading>ZAPステーキング（QL1・ZapStaking）</Heading>
-        {zap ? (
-          <>
-            <InfoRow
-              label="シーズン"
-              value={
-                zap.seasonActive === null
-                  ? "—"
-                  : zap.seasonActive
-                    ? "開催中"
-                    : "終了／未開始"
-              }
-            />
-            <InfoRow
-              label="ステーク締切"
-              value={fmtTs(zap.windowClose)}
-            />
-            <InfoRow label="シーズン終了" value={fmtTs(zap.seasonEnd)} />
-            <InfoRow
-              label="総ステーク"
-              value={
-                zap.totalStakedFormatted
-                  ? `${prettyAmount(zap.totalStakedFormatted)} ZAP`
-                  : "—"
-              }
-            />
-            <InfoRow
-              label="報酬プール"
-              value={
-                zap.rewardPoolFormatted
-                  ? `${prettyAmount(zap.rewardPoolFormatted)} ZAP`
-                  : "—"
-              }
-            />
-            <InfoRow
-              label="あなたのステーク"
-              value={
-                zap.yourStakeFormatted
-                  ? `${prettyAmount(zap.yourStakeFormatted)} ZAP`
-                  : "アドレス未設定"
-              }
-            />
-            <InfoRow
-              label="未請求の報酬見込み"
-              value={
-                zap.yourPendingFormatted
-                  ? `${prettyAmount(zap.yourPendingFormatted)} ZAP`
-                  : "—"
-              }
-            />
-          </>
-        ) : (
-          <Body>読み込み中…</Body>
-        )}
-        {zapError ? <Text style={styles.errorText}>{zapError}</Text> : null}
-        <PrimaryButton label="状態を更新" onPress={loadZap} />
-        <Field
-          value={zapAmount}
-          onChangeText={setZapAmount}
-          placeholder="ステークする数量（ZAP）"
-          keyboardType="decimal-pad"
-        />
-        <PrimaryButton
-          label="ZAPをステーク"
-          onPress={() => {
-            const job = zapStakeJob();
-            if (job) startTx(job);
-          }}
-        />
-        <PrimaryButton
-          label="アンステーク（全額）"
-          onPress={() => startTx(zapSimpleJob("unstake"))}
-        />
-        <PrimaryButton
-          label="報酬を請求（claim）"
-          onPress={() => startTx(zapSimpleJob("claim"))}
-        />
-        <Body>
-          ⚠️ claimを早く行うと、ベスティング未経過分の報酬はバーン（消却）
-          されます。確認画面に受取見込みとバーン見込みを表示します。
-        </Body>
       </Card>
 
       <Card>

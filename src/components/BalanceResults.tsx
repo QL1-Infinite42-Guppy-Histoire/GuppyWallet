@@ -1,7 +1,7 @@
 import React from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { explorerAddressUrl } from "../lib/balances";
-import { useWatchAddress } from "../context/WatchAddressContext";
+import { useBalances } from "../context/BalancesContext";
 import { priceOf } from "../lib/prices";
 import { prettyAmount } from "../lib/onchain";
 import { Card, colors } from "./ui";
@@ -12,7 +12,7 @@ import { Card, colors } from "./ui";
  * a reliable price route exists).
  */
 export function BalanceResults() {
-  const { results, tokenResults, prices, effectiveAddress } = useWatchAddress();
+  const { results, tokenResults, prices, address } = useBalances();
   if (!results) return null;
   return (
     <>
@@ -51,12 +51,10 @@ export function BalanceResults() {
                   RPC: {r.rpcUrl}
                   {"\n"}Block: {r.blockNumber}
                 </Text>
-                {effectiveAddress ? (
+                {address ? (
                   <Pressable
                     onPress={() =>
-                      Linking.openURL(
-                        explorerAddressUrl(r.chain, effectiveAddress),
-                      )
+                      Linking.openURL(explorerAddressUrl(r.chain, address))
                     }
                   >
                     <Text style={styles.link}>エクスプローラーで見る ↗</Text>

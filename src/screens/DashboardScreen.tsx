@@ -3,15 +3,24 @@ import React from "react";
 import { StyleSheet, Text } from "react-native";
 import { CHAINS } from "../config/chains";
 import { BalanceResults } from "../components/BalanceResults";
-import { Body, Heading } from "../components/controls";
-import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
+import { Body, Heading, PrimaryButton } from "../components/controls";
+import {
+  Card,
+  DontPanic,
+  PrototypeWarning,
+  Screen,
+  Title,
+  colors,
+} from "../components/ui";
 import { useWallet } from "../context/WalletContext";
-import { useWatchAddress } from "../context/WatchAddressContext";
+import { useBalances } from "../context/BalancesContext";
 import { priceOf } from "../lib/prices";
 
 export default function DashboardScreen() {
-  const { tokenResults, prices, results, effectiveAddress } = useWatchAddress();
+  const { tokenResults, prices, results, loading, refresh, address } =
+    useBalances();
   const wallet = useWallet();
+  const hasWallet = wallet.info !== null;
 
   // Estimated USD total: Infinite-side holdings with a reliable
   // DEX-reserve price only. Unpriced / unreliable tokens are excluded
@@ -36,46 +45,61 @@ export default function DashboardScreen() {
 
   return (
     <Screen>
+      <DontPanic />
       <Title>Dashboard</Title>
       <PrototypeWarning />
-      <Card>
-        <Heading>推定総額（USD）</Heading>
-        {hasData ? (
-          <>
-            <Text style={styles.total}>${total.toFixed(2)}</Text>
-            <Body>
-              推定値（DEXプール由来）です。流動性の薄いプールの準備金比率から
-              計算しているため、実際の市場価格とは異なる場合があります。
-              {excludedCount > 0
-                ? `価格を取得できない／信頼性が低いトークン ${excludedCount} 件は総額に含めていません。`
-                : ""}
-              {pricedCount === 0 && excludedCount === 0
-                ? "価格付きの残高はまだありません。"
-                : ""}
-            </Body>
-          </>
-        ) : (
+      {!hasWallet ? (
+        <Card>
+          <DontPanic compact />
           <Body>
-            {effectiveAddress
-              ? "「ウォレット」タブで残高を取得すると、ここに推定総額が表示されます。"
-              : "アドレスを入力するかウォレットを作成すると、残高と推定総額が表示されます。アドレスの入力と取得は「ウォレット」タブで行います。"}
+            まだウォレットがありません。「ウォレット」タブで新規作成するか、
+            リカバリーフレーズ／秘密鍵をインポートすると、あなたの残高が
+            ここに表示されます。
           </Body>
-        )}
-        {wallet.info ? (
+        </Card>
+      ) : (
+        <Card>
+          <Heading>推定総額（USD）</Heading>
+          {hasData ? (
+            <>
+              <Text style={styles.total}>${total.toFixed(2)}</Text>
+              <Body>
+                推定値（DEXプール由来）です。流動性の薄いプールの準備金比率から
+                計算しているため、実際の市場価格とは異なる場合があります。
+                {excludedCount > 0
+                  ? `価格を取得できない／信頼性が低いトークン ${excludedCount} 件は総額に含めていません。`
+                  : ""}
+                {pricedCount === 0 && excludedCount === 0
+                  ? "価格付きの残高はまだありません。"
+                  : ""}
+              </Body>
+            </>
+          ) : (
+            <Body>
+              {loading
+                ? "残高を取得しています…"
+                : "残高はまだ取得されていません。下のボタンで取得できます。"}
+            </Body>
+          )}
           <Body>
-            ウォレット: {wallet.info.evmAddress.slice(0, 10)}…
-            {wallet.info.evmAddress.slice(-6)}（
+            ウォレット: {wallet.info!.evmAddress.slice(0, 10)}…
+            {wallet.info!.evmAddress.slice(-6)}（
             {wallet.unlocked ? "ロック解除中" : "ロック中"}）
           </Body>
-        ) : null}
-      </Card>
+          <PrimaryButton
+            label={hasData ? "残高を更新" : "残高を取得"}
+            onPress={refresh}
+            loading={loading}
+          />
+        </Card>
+      )}
       <BalanceResults />
       <Card>
         <Heading>運用状況（ステーキング）</Heading>
         <Body>
           Infinite側はステーキングプリコンパイル（0x0800）が稼働中です。
-          バリデータ一覧・委任・st42・ZAPステーキングの状態は
-          「ステーキング」タブで確認できます。
+          バリデータ一覧・委任・st42の状態は「ステーキング」タブで
+          確認できます。
         </Body>
       </Card>
       <Card>
@@ -89,6 +113,11 @@ export default function DashboardScreen() {
               : " / Cosmos Chain ID は未確認"}
           </Body>
         ))}
+        {address ? null : (
+          <Body>
+            ※ 答えは 42。でも残高はウォレットを作らないと分かりません。
+          </Body>
+        )}
       </Card>
     </Screen>
   );

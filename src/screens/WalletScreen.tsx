@@ -9,18 +9,23 @@ import {
   DisabledButton,
   Field,
   Heading,
+  PercentChips,
   PrimaryButton,
 } from "../components/controls";
 import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
 import { useWallet } from "../context/WalletContext";
-import { useWatchAddress } from "../context/WatchAddressContext";
+import { useBalances } from "../context/BalancesContext";
 import {
   CHAINS,
   INFINITE_TOKENS,
   QL1_TOKENS,
   type ChainConfig,
 } from "../config/chains";
-import { ERC20_WRITE_ABI } from "../lib/onchain";
+import {
+  ERC20_WRITE_ABI,
+  nativeGasReserve,
+  percentOfBalance,
+} from "../lib/onchain";
 import {
   estimateOrFallback,
   gasCostNative,
@@ -30,7 +35,7 @@ import { Contract } from "ethers";
 
 export default function WalletScreen() {
   const wallet = useWallet();
-  const watch = useWatchAddress();
+  const balances = useBalances();
   const { startTx, modal } = useTxFlow();
 
   const [phraseInput, setPhraseInput] = useState("");
@@ -68,6 +73,31 @@ export default function WalletScreen() {
   }, [sendChain]);
   const sendToken =
     sendTokens.find((t) => t.key === sendTokenKey) ?? sendTokens[0];
+
+  /** Percentage chips for the send amount, from the token's balance. */
+  const sendBalanceEntry = balances.tokenResults?.find((t) => {
+    if (!t.ok || t.balance.chainKey !== sendChain.key) return false;
+    if (sendToken.address === null) return t.balance.address === null;
+    return (
+      t.balance.address?.toLowerCase() === sendToken.address.toLowerCase()
+    );
+  });
+  const applySendPercent = async (pct: number) => {
+    if (!sendBalanceEntry || !sendBalanceEntry.ok) return;
+    // MAX on the native coin keeps a plain-transfer gas reserve back.
+    const reserve =
+      pct === 100 && sendToken.address === null
+        ? await nativeGasReserve(sendChain, 21000n)
+        : 0n;
+    setAmount(
+      percentOfBalance(
+        sendBalanceEntry.balance.raw,
+        pct,
+        sendToken.decimals,
+        reserve,
+      ),
+    );
+  };
 
   const handleCreate = async () => {
     setFormError(null);
@@ -304,6 +334,10 @@ export default function WalletScreen() {
             placeholder={`数量（${sendToken.symbol}）`}
             keyboardType="decimal-pad"
           />
+          <PercentChips
+            onSelect={applySendPercent}
+            disabled={!sendBalanceEntry?.ok}
+          />
           <PrimaryButton label="確認画面へ（送金）" onPress={handleSend} />
           <Body>
             送信前に、チェーン・送信先・数量・ガス代を確認画面で必ず確認してください。
@@ -311,25 +345,22 @@ export default function WalletScreen() {
         </Card>
       ) : null}
 
-      <Card>
-        <Heading>アドレスをウォッチ（読み取り専用）</Heading>
-        <Body>
-          公開アドレスを貼ると残高を実際のRPCから取得します（ウォレットの
-          アドレスがある場合はそちらが優先されます）。
-          秘密鍵やニーモニックはここに入力しないでください。
-        </Body>
-        <Field
-          value={watch.address}
-          onChangeText={watch.setAddress}
-          placeholder="0x…"
-        />
-        {watch.error ? <Text style={styles.errorText}>{watch.error}</Text> : null}
-        <PrimaryButton
-          label="残高を取得"
-          onPress={watch.refresh}
-          loading={watch.loading}
-        />
-      </Card>
+      {wallet.info ? (
+        <Card>
+          <Heading>残高（マイウォレット）</Heading>
+          <Body>
+            あなたのウォレットの残高を実際のRPCから取得します。
+          </Body>
+          {balances.error ? (
+            <Text style={styles.errorText}>{balances.error}</Text>
+          ) : null}
+          <PrimaryButton
+            label="残高を取得／更新"
+            onPress={balances.refresh}
+            loading={balances.loading}
+          />
+        </Card>
+      ) : null}
 
       <BalanceResults />
 

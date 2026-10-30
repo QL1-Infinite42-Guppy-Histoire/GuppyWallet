@@ -122,14 +122,11 @@ export const QL1_TOKENS = [
 ] as const;
 
 /** Verified contracts found on the QL1 explorer (scan.qom.network, 2026-10-30).
- *  QNS = QOM Domains system. ZapStaking: ABI (research/CONTRACT_SPECS.md)
- *  shows season-based ZAP staking for ZAP rewards with a vesting lock —
- *  early claim burns the unvested part. Still not labelled "Zaphod" on
- *  the explorer; treat the app link as name-based until MT confirms. */
+ *  QNS = QOM Domains system. Names are sold as PERMANENT purchases
+ *  (one-time `permanentRentPrice`, never expires) per the user, 2026-10-30. */
 export const QL1_CONTRACTS = {
   qnsDomains: "0xDCbF4614152a22D1883Ba3929c668B978A3be548", // QOM Domains (QNS) / QNSBaseRegistrar (verified)
   qnsRegistrarController: "0x4d9FE3F0EE6Fe1645DD537EC59a0a328f7148372", // QNSRegistrarController (verified; casing fixed to valid EIP-55 checksum 2026-10-30 — same address bytes)
-  zapStaking: "0xF52d49c0bb3b0e51E37Af2b21C2F13A097155aD2", // ZapStaking (verified; ABI read, see CONTRACT_SPECS.md)
   // QomSwap (QL1's main DEX, Uniswap V2 style) — proven on-chain
   // 2026-10-30 (research/QL1_DEX.md): pair.factory() == dexFactory,
   // factory.getPair(QSWAP, WQOM) == pair, router.factory() == dexFactory,
@@ -143,9 +140,9 @@ export const QL1_CONTRACTS = {
 
 export const CHAINS: ChainConfig[] = [INFINITE, QL1];
 
-/** dApps to open in the in-app browser (Phase 0-2) before native integration. */
+/** External service links (information only — swaps run natively in-app
+ *  against the confirmed DEX routers; no aggregator is used). */
 export const DAPP_LINKS = {
-  swap: "https://app.zaphod.one",
   flukeGuide: "https://fluke.zaphod.one",
   nft: "https://nft.zaphod.one",
   bridge: "https://bridge.zaphod.one",

@@ -11,7 +11,7 @@ import {
 } from "../components/controls";
 import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
 import { DAPP_LINKS, QL1, QL1_CONTRACTS } from "../config/chains";
-import { useWatchAddress } from "../context/WatchAddressContext";
+import { useWallet } from "../context/WalletContext";
 import {
   checkQnsName,
   fetchNftCollections,
@@ -53,13 +53,6 @@ const ENTRIES: Entry[] = [
       "Flukeのゲームコントラクトが公開情報から特定できないため、アプリ内実行は未実装です（情報不足／TODO）。",
   },
   {
-    label: "Zaphod Swap（アグリゲーター）",
-    description: "Zaphodのスワップ画面",
-    url: DAPP_LINKS.swap,
-    todoNote:
-      "アグリゲーターのルーティング先が未確認のため、アプリ内実行は未実装です（情報不足／TODO）。Swapタブは各DEXに直接接続しています。",
-  },
-  {
     label: "DontPanic Finance",
     description: "Infinite 側 DEX（Swap / LP の参照実装）",
     url: DAPP_LINKS.dontPanicDex,
@@ -72,9 +65,9 @@ const ENTRIES: Entry[] = [
 ];
 
 export default function MoreScreen() {
-  const watch = useWatchAddress();
+  const wallet = useWallet();
   const { startTx, modal } = useTxFlow();
-  const address = watch.effectiveAddress;
+  const address = wallet.info?.evmAddress ?? null;
 
   const [nfts, setNfts] = useState<NftCollectionState[] | null>(null);
   const [qnsInput, setQnsInput] = useState("");
@@ -112,21 +105,16 @@ export default function MoreScreen() {
     const name = qns.name;
     const price = qns.priceRaw;
     return {
-      title: ".qom ドメイン登録",
+      title: ".qom ドメイン永久取得",
       chain: QL1,
       lines: [
-        { label: "アクション", value: "QNSドメイン登録（レンタル）" },
+        { label: "アクション", value: "QNSドメインを永久取得（買い切り）" },
         { label: "ドメイン", value: `${name}.qom` },
         {
-          label: "価格",
+          label: "価格（一回払い）",
           value: `${qns.priceFormatted ?? "?"} QOM`,
         },
-        {
-          label: "期間",
-          value: qns.durationSeconds
-            ? `約${Math.round(qns.durationSeconds / 86400)}日`
-            : "—",
-        },
+        { label: "有効期限", value: "なし（永久・更新不要）" },
         { label: "コントラクト", value: QL1_CONTRACTS.qnsRegistrarController },
       ],
       prepare: async (signer) => {
@@ -141,7 +129,7 @@ export default function MoreScreen() {
             owner,
             resolver,
             false,
-            false,
+            true, // permanent: one-time purchase, never expires
           ]),
         };
         const gas = await estimateOrFallback(signer, tx, 500000n);
@@ -186,9 +174,10 @@ export default function MoreScreen() {
       </Card>
 
       <Card>
-        <Heading>QNS（.qom ドメイン）</Heading>
+        <Heading>QNS（.qom ドメイン・永久取得）</Heading>
         <Body>
-          取得したい名前を入力すると、空き状況と価格（ネイティブQOM）を
+          .qom ドメインは一回払いの永久取得です（有効期限なし・更新不要）。
+          取得したい名前を入力すると、空き状況と永久取得価格（ネイティブQOM）を
           コントラクトに直接問い合わせます。
         </Body>
         <Field
@@ -222,22 +211,15 @@ export default function MoreScreen() {
               }
             />
             <InfoRow
-              label="価格"
+              label="永久取得価格（一回払い）"
               value={
                 qns.priceFormatted ? `${qns.priceFormatted} QOM` : "—"
               }
             />
-            <InfoRow
-              label="レンタル期間"
-              value={
-                qns.durationSeconds
-                  ? `約${Math.round(qns.durationSeconds / 86400)}日`
-                  : "—"
-              }
-            />
+            <InfoRow label="有効期限" value="なし（永久・更新不要）" />
             {qns.available ? (
               <PrimaryButton
-                label="この名前を登録する"
+                label="この名前を永久取得する"
                 onPress={() => {
                   const job = qnsRegisterJob();
                   if (job) startTx(job);
@@ -248,6 +230,16 @@ export default function MoreScreen() {
             )}
           </>
         ) : null}
+      </Card>
+
+      <Card>
+        <Heading>このガイドについて</Heading>
+        <Body>
+          DON'T PANIC — このウォレットは、Infinite Drivechain と QL1 のための
+          銀河ヒッチハイカー向けガイドです。生命、宇宙、そして万物についての
+          答えは 42。タオル（TOWEL）もちゃんとトークン一覧に入っています。
+          慌てず、少額からどうぞ。
+        </Body>
       </Card>
 
       <Text style={styles.note}>
