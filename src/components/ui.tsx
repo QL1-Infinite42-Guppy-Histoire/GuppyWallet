@@ -33,8 +33,8 @@ export function PrototypeWarning() {
   return (
     <View style={styles.warning}>
       <Text style={styles.warningText}>
-        ⚠️ 試作版（未監査）です。本物の資金・本物のニーモニックは絶対に入力しないでください。
-        現在できるのは公開アドレスの残高照会だけです。
+        ⚠️ 試作版（未監査）です。署名・送信機能は有効化されていますが、必ず少額でテストしてください。
+        リカバリーフレーズは紙に書いて保管し、誰にも教えないでください。
       </Text>
     </View>
   );

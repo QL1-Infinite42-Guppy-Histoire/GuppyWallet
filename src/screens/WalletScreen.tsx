@@ -1,101 +1,374 @@
-import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-} from "react-native";
+import { isAddress, parseUnits } from "ethers";
+import React, { useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { BalanceResults } from "../components/BalanceResults";
+import { useTxFlow, type TxJob } from "../components/ConfirmTx";
+import {
+  Body,
+  ChipPicker,
+  DisabledButton,
+  Field,
+  Heading,
+  PrimaryButton,
+} from "../components/controls";
 import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
+import { useWallet } from "../context/WalletContext";
 import { useWatchAddress } from "../context/WatchAddressContext";
 import {
-  WALLET_CREATION_ENABLED,
-  hasStoredWalletMarker,
-  isBiometricAvailable,
-} from "../lib/walletStore";
+  CHAINS,
+  INFINITE_TOKENS,
+  QL1_TOKENS,
+  type ChainConfig,
+} from "../config/chains";
+import { ERC20_WRITE_ABI } from "../lib/onchain";
+import {
+  estimateOrFallback,
+  gasCostNative,
+  sendAndWait,
+} from "../lib/tx";
+import { Contract } from "ethers";
 
 export default function WalletScreen() {
-  const { address, setAddress, loading, error, refresh } = useWatchAddress();
-  const [biometric, setBiometric] = useState<boolean | null>(null);
-  const [hasMarker, setHasMarker] = useState<boolean | null>(null);
+  const wallet = useWallet();
+  const watch = useWatchAddress();
+  const { startTx, modal } = useTxFlow();
 
-  useEffect(() => {
-    isBiometricAvailable().then(setBiometric).catch(() => setBiometric(false));
-    hasStoredWalletMarker().then(setHasMarker).catch(() => setHasMarker(false));
-  }, []);
+  const [phraseInput, setPhraseInput] = useState("");
+  const [keyInput, setKeyInput] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [phraseChecked, setPhraseChecked] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+
+  // send form
+  const [sendChainKey, setSendChainKey] = useState<string>("infinite");
+  const [sendTokenKey, setSendTokenKey] = useState<string>("native");
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+
+  const sendChain: ChainConfig =
+    CHAINS.find((c) => c.key === sendChainKey) ?? CHAINS[0];
+  const sendTokens = useMemo(() => {
+    const list = sendChain.key === "infinite" ? INFINITE_TOKENS : QL1_TOKENS;
+    return [
+      {
+        key: "native",
+        label: sendChain.nativeSymbol,
+        symbol: sendChain.nativeSymbol,
+        address: null as string | null,
+        decimals: sendChain.nativeDecimals,
+      },
+      ...list.map((t) => ({
+        key: t.address,
+        label: t.symbol,
+        symbol: t.symbol,
+        address: t.address as string | null,
+        decimals: t.decimals,
+      })),
+    ];
+  }, [sendChain]);
+  const sendToken =
+    sendTokens.find((t) => t.key === sendTokenKey) ?? sendTokens[0];
+
+  const handleCreate = async () => {
+    setFormError(null);
+    try {
+      await wallet.createWallet();
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleImportPhrase = async () => {
+    setFormError(null);
+    try {
+      await wallet.importPhrase(phraseInput);
+      setPhraseInput("");
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleImportKey = async () => {
+    setFormError(null);
+    try {
+      await wallet.importPrivateKey(keyInput);
+      setKeyInput("");
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleSend = () => {
+    setFormError(null);
+    if (!isAddress(recipient.trim())) {
+      setFormError("送信先アドレス（0x…）が正しくありません。");
+      return;
+    }
+    let value: bigint;
+    try {
+      value = parseUnits(amount, sendToken.decimals);
+      if (value <= 0n) throw new Error("zero");
+    } catch {
+      setFormError("数量を確認してください。");
+      return;
+    }
+    const chain = sendChain;
+    const token = sendToken;
+    const to = recipient.trim();
+    const job: TxJob = {
+      title: "送金",
+      chain,
+      lines: [
+        { label: "アクション", value: `${token.symbol} を送金` },
+        { label: "送信先", value: to },
+        { label: "数量", value: `${amount} ${token.symbol}` },
+        {
+          label: "コントラクト",
+          value: token.address ?? "（ネイティブ送金）",
+        },
+      ],
+      prepare: async (signer) => {
+        let tx;
+        if (token.address === null) {
+          tx = { to, value };
+        } else {
+          const contract = new Contract(token.address, ERC20_WRITE_ABI, signer) as any;
+          tx = {
+            to: token.address,
+            data: contract.interface.encodeFunctionData("transfer", [to, value]),
+          };
+        }
+        const gas = await estimateOrFallback(
+          signer,
+          tx,
+          token.address === null ? 21000n : 65000n,
+        );
+        return {
+          gasEstimateText: await gasCostNative(signer, gas, chain.nativeSymbol),
+          send: async () => [await sendAndWait(signer, tx)],
+        };
+      },
+    };
+    startTx(job);
+  };
 
   return (
     <Screen>
       <Title>ウォレット</Title>
       <PrototypeWarning />
+      {modal}
+
+      {wallet.pendingPhrase ? (
+        <Card>
+          <Heading>リカバリーフレーズ（1回だけ表示）</Heading>
+          <Text style={styles.phraseWarning}>
+            ⚠️ このフレーズはウォレットの全資産への鍵です。紙に書いて安全な場所に保管し、
+            スクリーンショット・クラウド・他人への共有は絶対にしないでください。
+            この画面を閉じると二度と表示されません。
+          </Text>
+          <Text style={styles.phrase}>{wallet.pendingPhrase}</Text>
+          <Pressable
+            style={styles.checkRow}
+            onPress={() => setPhraseChecked((v) => !v)}
+          >
+            <Text style={styles.checkBox}>{phraseChecked ? "☑" : "☐"}</Text>
+            <Text style={styles.bodyFlex}>
+              紙に書き写して保管しました。フレーズを失うと資産を復元できません。
+            </Text>
+          </Pressable>
+          <PrimaryButton
+            label="確認して閉じる"
+            onPress={() => {
+              if (phraseChecked) wallet.confirmPhraseSaved();
+            }}
+          />
+          {!phraseChecked ? (
+            <Body>チェックを入れると閉じられます。</Body>
+          ) : null}
+        </Card>
+      ) : null}
 
       <Card>
-        <Text style={styles.heading}>アドレスをウォッチ（読み取り専用）</Text>
-        <Text style={styles.body}>
-          公開アドレスを貼ると、42（Infinite）と QOM（QL1）の残高を実際のRPCから取得します。
+        <Heading>マイウォレット</Heading>
+        {!wallet.info ? (
+          <>
+            <Body>
+              ウォレットを作成するか、既存のリカバリーフレーズ／秘密鍵をインポートできます。
+              鍵は端末の安全領域（SecureStore＝Android Keystore）にだけ保存され、
+              外部に送信されることはありません。
+            </Body>
+            <PrimaryButton
+              label="新しいウォレットを作成"
+              onPress={handleCreate}
+              loading={wallet.busy}
+            />
+            <Text style={styles.subHeading}>リカバリーフレーズでインポート</Text>
+            <Field
+              value={phraseInput}
+              onChangeText={setPhraseInput}
+              placeholder="単語をスペース区切りで入力（12/24語）"
+            />
+            <PrimaryButton
+              label="フレーズをインポート"
+              onPress={handleImportPhrase}
+              loading={wallet.busy}
+            />
+            <Text style={styles.subHeading}>秘密鍵でインポート</Text>
+            <Field
+              value={keyInput}
+              onChangeText={setKeyInput}
+              placeholder="0x…（64桁の16進数）"
+            />
+            <PrimaryButton
+              label="秘密鍵をインポート"
+              onPress={handleImportKey}
+              loading={wallet.busy}
+            />
+          </>
+        ) : (
+          <>
+            <Body>
+              状態: {wallet.unlocked ? "ロック解除中（5分で自動ロック）" : "ロック中"}
+              {"\n"}種類:{" "}
+              {wallet.info.kind === "mnemonic"
+                ? "リカバリーフレーズ（BIP-39, m/44'/60'/0'/0/0）"
+                : "秘密鍵"}
+            </Body>
+            <Text style={styles.addrLabel}>EVMアドレス（両チェーン共通）</Text>
+            <Text style={styles.addr}>{wallet.info.evmAddress}</Text>
+            <Text style={styles.addrLabel}>Cosmosアドレス（Infinite・表示のみ）</Text>
+            <Text style={styles.addr}>{wallet.info.infiniteAddress}</Text>
+            <Text style={styles.addrLabel}>Cosmosアドレス（QL1・表示のみ）</Text>
+            <Text style={styles.addr}>{wallet.info.qomAddress}</Text>
+            {wallet.unlocked ? (
+              <PrimaryButton label="ロックする" onPress={wallet.lock} />
+            ) : (
+              <PrimaryButton
+                label="生体認証でロック解除"
+                onPress={() => wallet.unlock()}
+              />
+            )}
+            {confirmRemove ? (
+              <>
+                <Text style={styles.phraseWarning}>
+                  ⚠️ ウォレットをこの端末から削除します。リカバリーフレーズを
+                  保管していない場合、資産に二度とアクセスできなくなります。
+                </Text>
+                <PrimaryButton
+                  label="本当に削除する（生体認証）"
+                  onPress={async () => {
+                    await wallet.removeWallet();
+                    setConfirmRemove(false);
+                  }}
+                />
+                <Pressable onPress={() => setConfirmRemove(false)}>
+                  <Text style={styles.cancelText}>やめる</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable onPress={() => setConfirmRemove(true)}>
+                <Text style={styles.removeText}>ウォレットを削除する</Text>
+              </Pressable>
+            )}
+          </>
+        )}
+        {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+      </Card>
+
+      {wallet.info ? (
+        <Card>
+          <Heading>送金（EVM）</Heading>
+          <Body>チェーン</Body>
+          <ChipPicker
+            options={CHAINS.map((c) => ({ key: c.key, label: c.displayName }))}
+            value={sendChainKey}
+            onChange={(k) => {
+              setSendChainKey(k);
+              setSendTokenKey("native");
+            }}
+          />
+          <Body>トークン</Body>
+          <ChipPicker
+            options={sendTokens.map((t) => ({ key: t.key, label: t.label }))}
+            value={sendToken.key}
+            onChange={setSendTokenKey}
+          />
+          <Field
+            value={recipient}
+            onChangeText={setRecipient}
+            placeholder="送信先アドレス 0x…"
+          />
+          <Field
+            value={amount}
+            onChangeText={setAmount}
+            placeholder={`数量（${sendToken.symbol}）`}
+            keyboardType="decimal-pad"
+          />
+          <PrimaryButton label="確認画面へ（送金）" onPress={handleSend} />
+          <Body>
+            送信前に、チェーン・送信先・数量・ガス代を確認画面で必ず確認してください。
+          </Body>
+        </Card>
+      ) : null}
+
+      <Card>
+        <Heading>アドレスをウォッチ（読み取り専用）</Heading>
+        <Body>
+          公開アドレスを貼ると残高を実際のRPCから取得します（ウォレットの
+          アドレスがある場合はそちらが優先されます）。
           秘密鍵やニーモニックはここに入力しないでください。
-        </Text>
-        <TextInput
-          style={styles.input}
-          value={address}
-          onChangeText={setAddress}
+        </Body>
+        <Field
+          value={watch.address}
+          onChangeText={watch.setAddress}
           placeholder="0x…"
-          placeholderTextColor={colors.muted}
-          autoCapitalize="none"
-          autoCorrect={false}
         />
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        <Pressable style={styles.button} onPress={refresh} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#0B0F19" />
-          ) : (
-            <Text style={styles.buttonText}>残高を取得</Text>
-          )}
-        </Pressable>
+        {watch.error ? <Text style={styles.errorText}>{watch.error}</Text> : null}
+        <PrimaryButton
+          label="残高を取得"
+          onPress={watch.refresh}
+          loading={watch.loading}
+        />
       </Card>
 
       <BalanceResults />
 
       <Card>
-        <Text style={styles.heading}>ウォレットの作成／インポート</Text>
-        <Text style={styles.body}>
-          この試作版では無効化しています（WALLET_CREATION_ENABLED ={" "}
-          {String(WALLET_CREATION_ENABLED)}）。鍵保管の置き場所（SecureStore＝Android
-          Keystore）と生体認証ゲートの土台だけを用意してあります。監査を通すまでは
-          本物のニーモニックを扱う機能は有効にしません。
-        </Text>
-        <Text style={styles.body}>
-          生体認証が使える端末か: {biometric === null ? "確認中…" : biometric ? "はい" : "いいえ"}
-          {"\n"}保存済みウォレットの目印: {hasMarker ? "あり" : "なし"}
-        </Text>
-        <Pressable style={[styles.button, styles.buttonDisabled]} disabled>
-          <Text style={styles.buttonText}>作成／インポート（準備中）</Text>
-        </Pressable>
+        <Heading>QL1 / Cosmos側の送金・ステーキング</Heading>
+        <Body>
+          Cosmosトランザクションの署名経路はまだ接続していません（情報不足／TODO）。
+          上記の bech32 アドレス（qom1… / infinite1…）は表示のみです。
+          QL1の委任は公式手順では Cosmos tx 方式のため、対応は今後の課題です。
+        </Body>
+        <DisabledButton label="Cosmos送金（準備中）" />
       </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  heading: { color: colors.text, fontSize: 16, fontWeight: "600" },
-  body: { color: colors.muted, fontSize: 14, lineHeight: 20 },
-  input: {
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
+  subHeading: {
     color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
     fontSize: 14,
+    fontWeight: "600",
+    marginTop: 6,
   },
-  button: {
-    backgroundColor: colors.accent,
+  bodyFlex: { color: colors.muted, fontSize: 13, lineHeight: 19, flex: 1 },
+  phrase: {
+    color: colors.accent,
+    fontSize: 16,
+    lineHeight: 26,
+    fontWeight: "600",
+    backgroundColor: "#0B0F19",
     borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
+    padding: 12,
   },
-  buttonDisabled: { opacity: 0.4 },
-  buttonText: { color: "#0B0F19", fontSize: 15, fontWeight: "700" },
+  phraseWarning: { color: colors.dangerText, fontSize: 13, lineHeight: 19 },
+  checkRow: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
+  checkBox: { color: colors.accent, fontSize: 18 },
+  addrLabel: { color: colors.muted, fontSize: 12, marginTop: 4 },
+  addr: { color: colors.text, fontSize: 12, lineHeight: 17 },
   errorText: { color: colors.dangerText, fontSize: 13 },
+  removeText: { color: colors.dangerText, fontSize: 14, textAlign: "center" },
+  cancelText: { color: colors.muted, fontSize: 14, textAlign: "center" },
 });

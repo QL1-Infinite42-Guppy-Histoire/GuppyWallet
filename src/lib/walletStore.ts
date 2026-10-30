@@ -2,24 +2,41 @@ import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 
 /**
- * ⚠️ PROTOTYPE STUB — UNAUDITED. DO NOT USE WITH REAL FUNDS. ⚠️
+ * Wallet secret storage.
  *
- * This file defines the *shape* of wallet key storage only:
- *  - where a seed would live (expo-secure-store, backed by Android Keystore)
- *  - how unlock would be gated (device biometrics / PIN)
+ * The mnemonic / private key is stored ONLY here, inside expo-secure-store
+ * (Android Keystore-backed, WHEN_UNLOCKED_THIS_DEVICE_ONLY). It is never
+ * written to AsyncStorage, files, logs, or sent anywhere. A separate
+ * "public info" record (kind + addresses only — no secret) lets the UI
+ * show the wallet's addresses while the key itself stays locked.
  *
- * Wallet creation / import is intentionally DISABLED below
- * (WALLET_CREATION_ENABLED = false). There is deliberately no code path in
- * this prototype that saves a real mnemonic, derives keys, signs, or sends.
- * Enabling any of that requires, at minimum:
- *  1. an audited BIP-39/44 implementation + crypto polyfill review for RN,
- *  2. MT's confirmed derivation paths for qom1… / infinite1… addresses,
- *  3. a separate security review.
+ * ⚠️ Still an UNAUDITED prototype: the user explicitly opted in to real
+ * signing on 2026-10-30. Keep amounts small.
  */
 
-export const WALLET_CREATION_ENABLED = false as const;
+export const WALLET_CREATION_ENABLED = true as const;
 
-const STORAGE_KEY_WALLET_MARKER = "prototype.wallet.marker.v1";
+const SECRET_KEY = "wallet.secret.v1";
+const PUBLIC_KEY = "wallet.public.v1";
+const HAS_SENT_KEY = "wallet.hasSentTx.v1";
+const STORE_OPTIONS = {
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+} as const;
+
+export type WalletKind = "mnemonic" | "privateKey";
+
+export interface WalletPublicInfo {
+  kind: WalletKind;
+  evmAddress: string;
+  /** bech32 display addresses derived from the same key */
+  infiniteAddress: string;
+  qomAddress: string;
+}
+
+interface WalletSecret {
+  kind: WalletKind;
+  secret: string;
+}
 
 export async function isBiometricAvailable(): Promise<boolean> {
   const [hasHardware, isEnrolled] = await Promise.all([
@@ -30,7 +47,9 @@ export async function isBiometricAvailable(): Promise<boolean> {
 }
 
 /** Gate a sensitive action behind device biometrics / device PIN. */
-export async function authenticate(reason = "ウォレットのロックを解除"): Promise<boolean> {
+export async function authenticate(
+  reason = "ウォレットのロックを解除",
+): Promise<boolean> {
   const result = await LocalAuthentication.authenticateAsync({
     promptMessage: reason,
     // Fall back to the device PIN/passcode when biometrics are unavailable.
@@ -39,27 +58,60 @@ export async function authenticate(reason = "ウォレットのロックを解�
   return result.success;
 }
 
-/** True only if a previous (future, audited) flow stored a wallet marker. */
-export async function hasStoredWalletMarker(): Promise<boolean> {
-  const marker = await SecureStore.getItemAsync(STORAGE_KEY_WALLET_MARKER, {
-    keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-  });
-  return marker !== null;
+export async function getWalletPublicInfo(): Promise<WalletPublicInfo | null> {
+  const raw = await SecureStore.getItemAsync(PUBLIC_KEY, STORE_OPTIONS);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as WalletPublicInfo;
+  } catch {
+    return null;
+  }
 }
 
-function disabledError(): Error {
-  return new Error(
-    "ウォレットの作成／インポートはこの試作版では無効です。" +
-      "未監査のコードに本物のニーモニックを入れないでください。",
+export async function hasStoredWalletMarker(): Promise<boolean> {
+  return (await getWalletPublicInfo()) !== null;
+}
+
+export async function saveWallet(
+  kind: WalletKind,
+  secret: string,
+  info: WalletPublicInfo,
+): Promise<void> {
+  const secretRecord: WalletSecret = { kind, secret };
+  await SecureStore.setItemAsync(
+    SECRET_KEY,
+    JSON.stringify(secretRecord),
+    STORE_OPTIONS,
+  );
+  await SecureStore.setItemAsync(
+    PUBLIC_KEY,
+    JSON.stringify(info),
+    STORE_OPTIONS,
   );
 }
 
-/** STUB — always throws while WALLET_CREATION_ENABLED is false. */
-export async function createWalletStub(): Promise<never> {
-  throw disabledError();
+export async function loadWalletSecret(): Promise<WalletSecret | null> {
+  const raw = await SecureStore.getItemAsync(SECRET_KEY, STORE_OPTIONS);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as WalletSecret;
+  } catch {
+    return null;
+  }
 }
 
-/** STUB — always throws while WALLET_CREATION_ENABLED is false. */
-export async function importWalletStub(_mnemonic: string): Promise<never> {
-  throw disabledError();
+export async function deleteWallet(): Promise<void> {
+  await SecureStore.deleteItemAsync(SECRET_KEY, STORE_OPTIONS);
+  await SecureStore.deleteItemAsync(PUBLIC_KEY, STORE_OPTIONS);
+  await SecureStore.deleteItemAsync(HAS_SENT_KEY, STORE_OPTIONS);
+}
+
+/** True once the user has successfully sent at least one transaction. */
+export async function getHasSentTx(): Promise<boolean> {
+  const v = await SecureStore.getItemAsync(HAS_SENT_KEY, STORE_OPTIONS);
+  return v === "1";
+}
+
+export async function markHasSentTx(): Promise<void> {
+  await SecureStore.setItemAsync(HAS_SENT_KEY, "1", STORE_OPTIONS);
 }

@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { Text } from "react-native";
 import { colors } from "./src/components/ui";
+import { WalletProvider } from "./src/context/WalletContext";
 import { WatchAddressProvider } from "./src/context/WatchAddressContext";
 import DashboardScreen from "./src/screens/DashboardScreen";
 import MoreScreen from "./src/screens/MoreScreen";
@@ -21,8 +22,9 @@ function tabIcon(symbol: string) {
 
 export default function App() {
   return (
-    <WatchAddressProvider>
-      <NavigationContainer>
+    <WalletProvider>
+      <WatchAddressProvider>
+        <NavigationContainer>
         <StatusBar style="light" />
         <Tab.Navigator
           screenOptions={{
@@ -59,7 +61,8 @@ export default function App() {
             options={{ title: "その他", tabBarIcon: tabIcon("☰") }}
           />
         </Tab.Navigator>
-      </NavigationContainer>
-    </WatchAddressProvider>
+        </NavigationContainer>
+      </WatchAddressProvider>
+    </WalletProvider>
   );
 }
