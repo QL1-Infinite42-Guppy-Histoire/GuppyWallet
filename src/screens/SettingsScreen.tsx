@@ -175,9 +175,9 @@ export default function SettingsScreen() {
                 ? "リカバリーフレーズ"
                 : "秘密鍵"}
             </Body>
-            <Text style={styles.addrLabel}>アドレス（Infinite / QL1 共通）</Text>
+            <Text style={styles.addrLabel}>アドレス（42 Chain / QL1 共通）</Text>
             <Text style={styles.addr}>{wallet.info.evmAddress}</Text>
-            <Text style={styles.addrLabel}>アドレス（Infinite・別形式）</Text>
+            <Text style={styles.addrLabel}>アドレス（42 Chain・別形式）</Text>
             <Text style={styles.addr}>{wallet.info.infiniteAddress}</Text>
             <Text style={styles.addrLabel}>アドレス（QL1・別形式）</Text>
             <Text style={styles.addr}>{wallet.info.qomAddress}</Text>
@@ -196,7 +196,7 @@ export default function SettingsScreen() {
                   保管していない場合、資産に二度とアクセスできなくなります。
                 </Text>
                 <PrimaryButton
-                  label="本当に削除する（生体認証）"
+                  label="本当に削除する"
                   onPress={async () => {
                     await wallet.removeWallet();
                     setConfirmRemove(false);
@@ -259,7 +259,7 @@ export default function SettingsScreen() {
         <Body>{t("settings.detailsNote")}</Body>
         {CHAINS.map((c) => (
           <View key={c.key} style={styles.detailBlock}>
-            <Text style={styles.subHeading}>{c.displayName}</Text>
+            <Text style={styles.subHeading}>{c.formalName}</Text>
             <InfoRow label="EVM Chain ID" value={String(c.evmChainId)} />
             <InfoRow
               label="Cosmos Chain ID"
@@ -320,7 +320,7 @@ export default function SettingsScreen() {
           {"\n"}
           {t("settings.version")}: {APP_VERSION}
           {"\n"}
-          このウォレットは Infinite Drivechain と QL1 のための
+          このウォレットは 42 Chain と QL1 のための
           銀河ヒッチハイカー向けガイドです。生命、宇宙、そして万物についての
           答えは 42。タオル（TOWEL）もちゃんとトークン一覧に入っています。
           慌てず、少額からどうぞ。

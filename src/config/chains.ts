@@ -7,7 +7,10 @@
 
 export interface ChainConfig {
   key: "infinite" | "ql1";
+  /** Short user-facing name ("42 Chain" / "QL1") — used everywhere in the UI. */
   displayName: string;
+  /** Formal chain name; shown only inside Settings「詳細情報」. */
+  formalName: string;
   /** EVM chain id (decimal) */
   evmChainId: number;
   /** Cosmos SDK chain id, if known */
@@ -22,7 +25,8 @@ export interface ChainConfig {
 
 export const INFINITE: ChainConfig = {
   key: "infinite",
-  displayName: "Infinite Drive",
+  displayName: "42 Chain",
+  formalName: "Infinite Drivechain",
   evmChainId: 421018,
   cosmosChainId: "infinite_421018-1",
   nativeSymbol: "42",
@@ -128,7 +132,8 @@ export const BRIDGE_PAIRS_QL1 = [
 
 export const QL1: ChainConfig = {
   key: "ql1",
-  displayName: "QOM Layer One (QL1)",
+  displayName: "QL1",
+  formalName: "QOM Layer One (QL1)",
   evmChainId: 766,
   // Confirmed 2026-10-30 (research/CHAIN_DATA.md): chain ID from the QL1
   // genesis at rpc.foxxone.one + official validator guide; base denom
@@ -185,6 +190,47 @@ export const QL1_CONTRACTS = {
 } as const;
 
 export const CHAINS: ChainConfig[] = [INFINITE, QL1];
+
+/** Signer-only chain configs for the bridge's inbound direction
+ *  (BSC / Ethereum → 42 Chain). These chains are NOT part of the wallet's
+ *  balance/home features — they exist only so the bridge can read the
+ *  user's balances there and sign transferRemote on the source chain via
+ *  the Zaphod BridgeRouter contracts (see lib/zaphod.ts BRIDGE_INBOUND).
+ *  Public RPCs are the same ones the official bridge site uses
+ *  (bridge.zaphod.one /api/state, checked 2026-10-30). */
+export interface BridgeSourceChain {
+  key: "bsc" | "ethereum";
+  displayName: string;
+  shortName: string;
+  evmChainId: number;
+  nativeSymbol: string;
+  nativeDecimals: number;
+  evmRpcUrls: string[];
+  explorerUrl: string;
+}
+
+export const BRIDGE_SOURCE_CHAINS: BridgeSourceChain[] = [
+  {
+    key: "bsc",
+    displayName: "BNB Smart Chain",
+    shortName: "BSC",
+    evmChainId: 56,
+    nativeSymbol: "BNB",
+    nativeDecimals: 18,
+    evmRpcUrls: ["https://bsc-rpc.publicnode.com", "https://bsc-dataseed.bnbchain.org"],
+    explorerUrl: "https://bscscan.com",
+  },
+  {
+    key: "ethereum",
+    displayName: "Ethereum",
+    shortName: "ETH",
+    evmChainId: 1,
+    nativeSymbol: "ETH",
+    nativeDecimals: 18,
+    evmRpcUrls: ["https://ethereum-rpc.publicnode.com", "https://eth.drpc.org"],
+    explorerUrl: "https://etherscan.io",
+  },
+];
 
 /** External service links (information only — swaps run natively in-app
  *  against the confirmed DEX routers). */

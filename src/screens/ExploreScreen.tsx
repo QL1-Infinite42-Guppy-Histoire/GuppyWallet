@@ -16,13 +16,13 @@ interface Entry {
 // in Settings → 詳細情報, not here.
 const ENTRIES: Entry[] = [
   {
-    label: "Infinite Drivechain",
+    label: "42 Chain",
     description: "プロジェクトの公式リンク集",
     url: DAPP_LINKS.projectHub,
   },
   {
     label: "Hub",
-    description: "Infinite のポータルサイト",
+    description: "42 Chain のポータルサイト",
     url: DAPP_LINKS.hub,
   },
   {
@@ -103,7 +103,7 @@ export default function ExploreScreen() {
       <Card>
         <Heading>このガイドについて</Heading>
         <Body>
-          DON'T PANIC — このウォレットは、Infinite Drivechain と QL1 のための
+          DON'T PANIC — このウォレットは、42 Chain と QL1 のための
           銀河ヒッチハイカー向けガイドです。生命、宇宙、そして万物についての
           答えは 42。タオル（TOWEL）もちゃんとトークン一覧に入っています。
           慌てず、少額からどうぞ。

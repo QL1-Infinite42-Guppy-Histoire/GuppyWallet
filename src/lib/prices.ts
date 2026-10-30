@@ -1,5 +1,13 @@
 import { Contract, ZeroAddress, formatUnits } from "ethers";
-import { INFINITE, INFINITE_CONTRACTS, INFINITE_TOKENS } from "../config/chains";
+import {
+  INFINITE,
+  INFINITE_CONTRACTS,
+  INFINITE_TOKENS,
+  QL1,
+  QL1_CONTRACTS,
+  QL1_TOKENS,
+  type ChainConfig,
+} from "../config/chains";
 import { getProvider } from "./onchain";
 
 /**
@@ -38,30 +46,35 @@ export interface TokenPrice {
 }
 
 export type InfinitePrices = Map<string, TokenPrice>;
+export type Ql1Prices = Map<string, TokenPrice>;
 
 const NO_PRICE: TokenPrice = { usd: null, route: null, reliable: false };
 
 interface PairQuote {
-  /** price of `base` denominated in `quote` (both 18 decimals here) */
+  /** price of `base` denominated in `quote` (whole-token units) */
   price: number;
   /** USD depth of the quote side of the pool */
   depthUsd: number;
 }
 
 async function pairQuote(
+  chain: ChainConfig,
   pairAddress: string,
   base: string,
   quote: string,
   quoteUsd: number,
+  baseDecimals = 18,
+  quoteDecimals = 18,
 ): Promise<PairQuote | null> {
   try {
-    const pair = new Contract(pairAddress, PAIR_ABI, getProvider(INFINITE)) as any;
+    const pair = new Contract(pairAddress, PAIR_ABI, getProvider(chain)) as any;
     const [token0, reserves] = await Promise.all([
       pair.token0() as Promise<string>,
       pair.getReserves(),
     ]);
-    const r0 = Number(formatUnits(reserves[0], 18));
-    const r1 = Number(formatUnits(reserves[1], 18));
+    const baseIs0Pre = token0.toLowerCase() === base.toLowerCase();
+    const r0 = Number(formatUnits(reserves[0], baseIs0Pre ? baseDecimals : quoteDecimals));
+    const r1 = Number(formatUnits(reserves[1], baseIs0Pre ? quoteDecimals : baseDecimals));
     if (r0 <= 0 || r1 <= 0) return null;
     const baseIs0 = token0.toLowerCase() === base.toLowerCase();
     const baseReserve = baseIs0 ? r0 : r1;
@@ -94,7 +107,7 @@ export async function fetchInfinitePrices(): Promise<InfinitePrices> {
   ) as any;
 
   // Anchor: 42 in USD from the 42/USDT pair (USDT treated as $1).
-  const anchor = await pairQuote(PAIR_42_USDT, NATIVE_PLACEHOLDER, USDT_ADDRESS, 1);
+  const anchor = await pairQuote(INFINITE, PAIR_42_USDT, NATIVE_PLACEHOLDER, USDT_ADDRESS, 1);
   const price42 = anchor?.price ?? null;
   prices.set("native", {
     usd: price42,
@@ -120,10 +133,10 @@ export async function fetchInfinitePrices(): Promise<InfinitePrices> {
         getPair(factory, token.address, NATIVE_PLACEHOLDER),
       ]);
       const direct = directPair
-        ? await pairQuote(directPair, token.address, USDT_ADDRESS, 1)
+        ? await pairQuote(INFINITE, directPair, token.address, USDT_ADDRESS, 1)
         : null;
       const via = viaPair
-        ? await pairQuote(viaPair, token.address, NATIVE_PLACEHOLDER, price42)
+        ? await pairQuote(INFINITE, viaPair, token.address, NATIVE_PLACEHOLDER, price42)
         : null;
       const viaUsd = via ? via.price * price42 : null;
 
@@ -170,10 +183,76 @@ export async function fetchInfinitePrices(): Promise<InfinitePrices> {
 
 /** Price lookup helper: key is the token contract address or "native". */
 export function priceOf(
-  prices: InfinitePrices | null,
+  prices: Map<string, TokenPrice> | null,
   address: string | null,
 ): TokenPrice {
   if (!prices) return NO_PRICE;
   if (address === null) return prices.get("native") ?? NO_PRICE;
   return prices.get(address.toLowerCase()) ?? NO_PRICE;
+}
+
+/**
+ * QL1-side USD prices. There is no QOM/USD market on QL1 itself, so the
+ * anchor is the bridged QOM price on 42 Chain (same asset, priced there
+ * via the DEX routes above — the caller passes its reliable USD price,
+ * or null when 42 Chain pricing failed). Every other QL1 token is priced
+ * from its QomSwap pair against WQOM: usd = (QOM per token) × qomUsd.
+ * Single-route only, mirroring the Infinite rule (a lone direct route is
+ * accepted; nothing is invented when no pair exists — e.g. ZAP has no
+ * QomSwap pair and stays unpriced).
+ */
+export async function fetchQl1Prices(
+  qomUsd: number | null,
+  extraTokens: { address: string; symbol: string; decimals: number }[] = [],
+): Promise<Ql1Prices> {
+  const prices: Ql1Prices = new Map();
+  const wqom = QL1_TOKENS.find((t) => t.symbol === "WQOM")!;
+  const anchorPrice: TokenPrice =
+    qomUsd !== null
+      ? { usd: qomUsd, route: "42 ChainのQOM価格", reliable: true }
+      : NO_PRICE;
+  prices.set("native", anchorPrice);
+  prices.set(wqom.address.toLowerCase(), {
+    usd: qomUsd,
+    route: qomUsd !== null ? "QOMと同じ価格（包んだQOM）" : null,
+    reliable: qomUsd !== null,
+  });
+
+  const listed = new Set(QL1_TOKENS.map((t) => t.address.toLowerCase()));
+  const targets = [
+    ...QL1_TOKENS.filter((t) => t.symbol !== "WQOM").map((t) => ({
+      address: t.address as string,
+      symbol: t.symbol as string,
+      decimals: t.decimals as number,
+    })),
+    ...extraTokens.filter((t) => !listed.has(t.address.toLowerCase())),
+  ];
+  if (qomUsd === null) {
+    for (const t of targets) prices.set(t.address.toLowerCase(), NO_PRICE);
+    return prices;
+  }
+  const factory = new Contract(
+    QL1_CONTRACTS.dexFactory,
+    FACTORY_ABI,
+    getProvider(QL1),
+  ) as any;
+  await Promise.all(
+    targets.map(async (token) => {
+      const key = token.address.toLowerCase();
+      const pair = await getPair(factory, token.address, wqom.address);
+      const quote = pair
+        ? await pairQuote(QL1, pair, token.address, wqom.address, qomUsd, token.decimals, 18)
+        : null;
+      if (quote) {
+        prices.set(key, {
+          usd: quote.price * qomUsd,
+          route: `${token.symbol}→QOMプール`,
+          reliable: true,
+        });
+      } else {
+        prices.set(key, NO_PRICE);
+      }
+    }),
+  );
+  return prices;
 }

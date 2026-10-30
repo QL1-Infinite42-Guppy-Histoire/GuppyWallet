@@ -1,6 +1,7 @@
+import { useRoute } from "@react-navigation/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Contract, isAddress, parseUnits } from "ethers";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Modal,
   Platform,
@@ -60,12 +61,22 @@ export default function SendScreen() {
   const wallet = useWallet();
   const balances = useBalances();
   const { startTx, modal } = useTxFlow();
+  const route = useRoute<any>();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const [formError, setFormError] = useState<string | null>(null);
 
-  // send form
-  const [sendChainKey, setSendChainKey] = useState<string>("infinite");
+  // send form — the chain can be preselected from Home's chain toggle
+  const [sendChainKey, setSendChainKey] = useState<string>(
+    (route.params?.chain as string) ?? "infinite",
+  );
+  useEffect(() => {
+    const c = route.params?.chain as string | undefined;
+    if (c && (c === "infinite" || c === "ql1")) {
+      setSendChainKey(c);
+      setSendTokenKey("native");
+    }
+  }, [route.params?.chain]);
   const [sendTokenKey, setSendTokenKey] = useState<string>("native");
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");

@@ -67,9 +67,12 @@ const ja = {
   "defi.staking": "ステーキング",
   "defi.bridge": "Bridge",
   "defi.fluke": "Fluke",
-  "defi.lpPairs": "主なペア",
-  "defi.lpPairExists": "ペアあり",
-  "defi.lpPairNone": "ペアなし",
+  "defi.yourLiquidity": "あなたの流動性",
+  "defi.noLiquidity": "まだ流動性を提供していません",
+  "defi.yourLiquidityNote":
+    "取引の場に預けている通貨の一覧です。取り出すときは、下のフォームからどうぞ。",
+
+  "home.chainTotal": "合計",
 
   "explore.chainStatus": "チェーン状態",
   "explore.links": "エコシステム",
@@ -82,7 +85,7 @@ const ja = {
   "nft.tabNft": "NFT",
   "nft.tabGuide": "Guide",
   "nft.tabQns": "QNS",
-  "nft.collections": "コレクション（Infinite）",
+  "nft.collections": "コレクション（42 Chain）",
   "nft.ownedCount": "あなたの保有数",
   "nft.totalSupply": "総供給",
   "nft.yourTokens": "保有トークン",
@@ -192,9 +195,12 @@ const en: Record<I18nKey, string> = {
   "defi.staking": "Staking",
   "defi.bridge": "Bridge",
   "defi.fluke": "Fluke",
-  "defi.lpPairs": "Main pairs",
-  "defi.lpPairExists": "Pair exists",
-  "defi.lpPairNone": "No pair",
+  "defi.yourLiquidity": "Your liquidity",
+  "defi.noLiquidity": "You haven't provided liquidity yet",
+  "defi.yourLiquidityNote":
+    "The tokens you've supplied to the markets. Use the form below to withdraw.",
+
+  "home.chainTotal": "Total",
 
   "explore.chainStatus": "Chain Status",
   "explore.links": "Ecosystem",
@@ -207,7 +213,7 @@ const en: Record<I18nKey, string> = {
   "nft.tabNft": "NFT",
   "nft.tabGuide": "Guide",
   "nft.tabQns": "QNS",
-  "nft.collections": "Collections (Infinite)",
+  "nft.collections": "Collections (42 Chain)",
   "nft.ownedCount": "You own",
   "nft.totalSupply": "Total supply",
   "nft.yourTokens": "Your tokens",

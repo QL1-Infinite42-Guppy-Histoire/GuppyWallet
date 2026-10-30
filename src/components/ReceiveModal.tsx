@@ -23,9 +23,9 @@ import { colors } from "./ui";
 type RecvKind = "evm-infinite" | "evm-ql1" | "cosmos-infinite" | "cosmos-ql1";
 
 const OPTIONS: { key: RecvKind; label: string }[] = [
-  { key: "evm-infinite", label: "Infinite" },
+  { key: "evm-infinite", label: "42 Chain" },
   { key: "evm-ql1", label: "QL1" },
-  { key: "cosmos-infinite", label: "Infinite（別形式）" },
+  { key: "cosmos-infinite", label: "42 Chain（別形式）" },
   { key: "cosmos-ql1", label: "QL1（別形式）" },
 ];
 
@@ -97,8 +97,8 @@ export function ReceiveModal({
                 </View>
                 <Text style={styles.note}>
                   {kind.startsWith("evm")
-                    ? "このアドレスは Infinite / QL1 のどちらにも使えます。送るチェーンを間違えないでください。"
-                    : "別形式のアドレスです。ふつうの送金には、上の「Infinite / QL1」のアドレスを使ってください。"}
+                    ? "このアドレスは 42 Chain / QL1 のどちらにも使えます。送るチェーンを間違えないでください。"
+                    : "別形式のアドレスです。ふつうの送金には、上の「42 Chain / QL1」のアドレスを使ってください。"}
                 </Text>
                 <View style={styles.qrWrap}>
                   <QRCode

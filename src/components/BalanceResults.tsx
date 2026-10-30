@@ -24,13 +24,21 @@ interface RowData {
 
 /**
  * Plain Phantom-style token list for Home: icon, name, amount held,
- * and the JPY value on the right. Prices use the same DEX-reserve USD
- * estimates as the totals (unreliable ones are excluded, exactly as
- * before) — they just carry no labels here. No technical details
- * (those live in Settings → 詳細情報）.
+ * and the JPY value on the right. Shows ONLY the chain selected on
+ * Home (chainKey). Prices use the same DEX-reserve USD estimates as
+ * the totals (unreliable ones are excluded, exactly as before) — they
+ * just carry no labels here. QL1 rows price from the QL1 map (native
+ * QOM anchored to the bridged-QOM price on 42 Chain). No technical
+ * details (those live in Settings → 詳細情報）.
  */
-export function BalanceResults({ jpyRate }: { jpyRate: number | null }) {
-  const { results, tokenResults, prices } = useBalances();
+export function BalanceResults({
+  jpyRate,
+  chainKey,
+}: {
+  jpyRate: number | null;
+  chainKey: "infinite" | "ql1";
+}) {
+  const { results, tokenResults, prices, ql1Prices } = useBalances();
   if (!results) return null;
 
   const rows: RowData[] = [];
@@ -38,15 +46,17 @@ export function BalanceResults({ jpyRate }: { jpyRate: number | null }) {
   let anyTokenError = false;
 
   for (const r of results) {
+    if (r.chain.key !== chainKey) continue;
     if (!r.ok) {
       failedChains.push(r.chain.displayName);
       continue;
     }
+    const priceMap = r.chain.key === "infinite" ? prices : ql1Prices;
     // native coin row
     const nativeAmount = Number(r.formatted);
     let nativeUsd: number | null = null;
-    if (r.chain.key === "infinite") {
-      const p = priceOf(prices, null);
+    {
+      const p = priceOf(priceMap, null);
       if (p.usd !== null && p.reliable) nativeUsd = nativeAmount * p.usd;
     }
     rows.push({
@@ -67,8 +77,8 @@ export function BalanceResults({ jpyRate }: { jpyRate: number | null }) {
         continue;
       }
       let usd: number | null = null;
-      if (r.chain.key === "infinite") {
-        const p = priceOf(prices, t.balance.address);
+      {
+        const p = priceOf(priceMap, t.balance.address);
         if (p.usd !== null && p.reliable) {
           usd =
             Number(formatUnits(t.balance.raw, t.balance.decimals)) * p.usd;

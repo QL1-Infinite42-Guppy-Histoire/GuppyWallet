@@ -10,6 +10,7 @@ import {
 } from "react-native-safe-area-context";
 import { colors } from "./src/components/ui";
 import { BalancesProvider } from "./src/context/BalancesContext";
+import { ChainSelectionProvider } from "./src/context/ChainSelectionContext";
 import { LanguageProvider, useI18n } from "./src/context/LanguageContext";
 import { WalletProvider } from "./src/context/WalletContext";
 import DeFiScreen from "./src/screens/DeFiScreen";
@@ -163,10 +164,12 @@ export default function App() {
       <LanguageProvider>
         <WalletProvider>
           <BalancesProvider>
-            <NavigationContainer>
-              <StatusBar style="dark" />
-              <TabNavigator />
-            </NavigationContainer>
+            <ChainSelectionProvider>
+              <NavigationContainer>
+                <StatusBar style="dark" />
+                <TabNavigator />
+              </NavigationContainer>
+            </ChainSelectionProvider>
           </BalancesProvider>
         </WalletProvider>
       </LanguageProvider>

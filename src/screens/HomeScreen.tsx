@@ -3,9 +3,16 @@ import { formatUnits } from "ethers";
 import React, { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { BalanceResults, formatJpy } from "../components/BalanceResults";
-import { Body, Heading, PrimaryButton } from "../components/controls";
+import {
+  Body,
+  Heading,
+  PrimaryButton,
+  SegmentedTabs,
+} from "../components/controls";
 import { ReceiveModal } from "../components/ReceiveModal";
 import { Card, DontPanic, Screen, colors } from "../components/ui";
+import { CHAINS } from "../config/chains";
+import { useChainSelection } from "../context/ChainSelectionContext";
 import { useI18n } from "../context/LanguageContext";
 import { useWallet } from "../context/WalletContext";
 import { useBalances } from "../context/BalancesContext";
@@ -40,8 +47,9 @@ function QuickAction({
  */
 export default function HomeScreen() {
   const { t, lang } = useI18n();
-  const { tokenResults, prices, results, loading, refresh, address } =
+  const { tokenResults, prices, ql1Prices, results, loading, refresh, address } =
     useBalances();
+  const { chainKey, setChainKey } = useChainSelection();
   const wallet = useWallet();
   const navigation = useNavigation<any>();
   const [receiveOpen, setReceiveOpen] = useState(false);
@@ -74,14 +82,15 @@ export default function HomeScreen() {
     };
   }, [address, tokenResults]);
 
-  // Total: Infinite-side holdings with a reliable DEX-reserve price
-  // only. Unpriced / unreliable tokens are excluded (never faked as
-  // $0) — the computation is unchanged, it just isn't labelled here.
+  // Total: holdings on the SELECTED chain with a reliable DEX-reserve
+  // price only. Unpriced / unreliable tokens are excluded (never faked
+  // as $0). QL1 prices anchor to the bridged-QOM price on 42 Chain.
+  const priceMap = chainKey === "infinite" ? prices : ql1Prices;
   let total = 0;
   if (tokenResults) {
     for (const tk of tokenResults) {
-      if (!tk.ok || tk.balance.chainKey !== "infinite") continue;
-      const p = priceOf(prices, tk.balance.address);
+      if (!tk.ok || tk.balance.chainKey !== chainKey) continue;
+      const p = priceOf(priceMap, tk.balance.address);
       const amount = Number(formatUnits(tk.balance.raw, tk.balance.decimals));
       if (p.usd !== null && p.reliable) total += amount * p.usd;
     }
@@ -129,8 +138,16 @@ export default function HomeScreen() {
         </Card>
       ) : (
         <>
-          {/* ------- hero: one big total, JPY first ------- */}
+          {/* ------- hero: chain toggle + one big total, JPY first ------- */}
           <View style={styles.hero}>
+            <SegmentedTabs
+              options={CHAINS.map((c) => ({
+                key: c.key,
+                label: c.displayName,
+              }))}
+              value={chainKey}
+              onChange={(k) => setChainKey(k as typeof chainKey)}
+            />
             <Text style={styles.heroLabel}>{t("home.totalBalance")}</Text>
             {hasData ? (
               <>
@@ -152,7 +169,7 @@ export default function HomeScreen() {
               <QuickAction
                 glyph="↑"
                 label={t("home.send")}
-                onPress={() => navigation.navigate("Send")}
+                onPress={() => navigation.navigate("Send", { chain: chainKey })}
               />
               <QuickAction
                 glyph="↓"
@@ -162,7 +179,12 @@ export default function HomeScreen() {
               <QuickAction
                 glyph="⇄"
                 label={t("home.swap")}
-                onPress={() => navigation.navigate("DeFi", { section: "swap" })}
+                onPress={() =>
+                  navigation.navigate("DeFi", {
+                    section: "swap",
+                    chain: chainKey,
+                  })
+                }
               />
             </View>
           </View>
@@ -181,7 +203,7 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
           </View>
-          <BalanceResults jpyRate={jpyRate} />
+          <BalanceResults jpyRate={jpyRate} chainKey={chainKey} />
 
           {/* ------- activity ------- */}
           <Card>

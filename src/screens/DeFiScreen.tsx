@@ -22,11 +22,20 @@ export default function DeFiScreen() {
   const [tab, setTab] = useState<DeFiSection>(
     (route.params?.section as DeFiSection) ?? "swap",
   );
+  /** chain preselected from Home's chain toggle (navigation param) */
+  const [presetChain, setPresetChain] = useState<string | undefined>(
+    route.params?.chain as string | undefined,
+  );
 
   useEffect(() => {
     const s = route.params?.section as DeFiSection | undefined;
     if (s) setTab(s);
   }, [route.params?.section]);
+
+  useEffect(() => {
+    const c = route.params?.chain as string | undefined;
+    if (c) setPresetChain(c);
+  }, [route.params?.chain]);
 
   return (
     <Screen>
@@ -42,8 +51,12 @@ export default function DeFiScreen() {
         value={tab}
         onChange={(k) => setTab(k as DeFiSection)}
       />
-      {tab === "swap" ? <SwapScreen view="swap" embedded /> : null}
-      {tab === "lp" ? <SwapScreen view="lp" embedded /> : null}
+      {tab === "swap" ? (
+        <SwapScreen view="swap" embedded initialChainKey={presetChain} />
+      ) : null}
+      {tab === "lp" ? (
+        <SwapScreen view="lp" embedded initialChainKey={presetChain} />
+      ) : null}
       {tab === "staking" ? <StakingScreen embedded /> : null}
       {tab === "bridge" ? <BridgeSection /> : null}
       {tab === "fluke" ? <FlukeSection /> : null}

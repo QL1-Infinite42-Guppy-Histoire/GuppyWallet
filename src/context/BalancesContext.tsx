@@ -8,7 +8,7 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
-import { CHAINS } from "../config/chains";
+import { CHAINS, INFINITE_TOKENS } from "../config/chains";
 import { fetchNativeBalances, type BalanceResult } from "../lib/balances";
 import {
   loadCustomTokens,
@@ -16,7 +16,13 @@ import {
   type CustomToken,
 } from "../lib/customTokens";
 import { fetchChainBalances, type TokenBalanceResult } from "../lib/onchain";
-import { fetchInfinitePrices, type InfinitePrices } from "../lib/prices";
+import {
+  fetchInfinitePrices,
+  fetchQl1Prices,
+  priceOf,
+  type InfinitePrices,
+  type Ql1Prices,
+} from "../lib/prices";
 import { useWallet } from "./WalletContext";
 
 /**
@@ -31,6 +37,8 @@ interface BalancesState {
   results: BalanceResult[] | null;
   tokenResults: TokenBalanceResult[] | null;
   prices: InfinitePrices | null;
+  /** QL1 prices, anchored to the bridged-QOM price on 42 Chain */
+  ql1Prices: Ql1Prices | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -48,6 +56,7 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
   const [results, setResults] = useState<BalanceResult[] | null>(null);
   const [tokenResults, setTokenResults] = useState<TokenBalanceResult[] | null>(null);
   const [prices, setPrices] = useState<InfinitePrices | null>(null);
+  const [ql1Prices, setQl1Prices] = useState<Ql1Prices | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [customTokens, setCustomTokens] = useState<CustomToken[]>([]);
@@ -66,6 +75,7 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
       setResults(null);
       setTokenResults(null);
       setPrices(null);
+      setQl1Prices(null);
       setError(null);
       return;
     }
@@ -86,11 +96,23 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
         ),
         fetchInfinitePrices().catch(() => null),
       ]);
+      // QL1 pricing anchors to the bridged-QOM price on 42 Chain (same
+      // asset): derive QOM's reliable USD price from the Infinite map.
+      const qomToken = INFINITE_TOKENS.find((t) => t.symbol === "QOM");
+      const qomPrice = qomToken ? priceOf(priceMap, qomToken.address) : null;
+      const qomUsd = qomPrice?.reliable ? qomPrice.usd : null;
+      const ql1Map = await fetchQl1Prices(
+        qomUsd,
+        extras
+          .filter((t) => t.chainKey === "ql1")
+          .map((t) => ({ address: t.address, symbol: t.symbol, decimals: t.decimals })),
+      ).catch(() => null);
       // ignore stale responses if the wallet changed mid-flight
       if (addressRef.current !== target) return;
       setResults(native);
       setTokenResults(perChain.flat());
       setPrices(priceMap);
+      setQl1Prices(ql1Map);
     } catch (e) {
       if (addressRef.current !== target) return;
       setError(e instanceof Error ? e.message : String(e));
@@ -109,6 +131,7 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
       setResults(null);
       setTokenResults(null);
       setPrices(null);
+      setQl1Prices(null);
       setError(null);
     }
   }, [address, refresh]);
@@ -154,6 +177,7 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
       results,
       tokenResults,
       prices,
+      ql1Prices,
       loading,
       error,
       refresh,
@@ -166,6 +190,7 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
       results,
       tokenResults,
       prices,
+      ql1Prices,
       loading,
       error,
       refresh,

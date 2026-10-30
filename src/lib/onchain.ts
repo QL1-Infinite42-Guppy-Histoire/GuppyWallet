@@ -13,7 +13,15 @@ import {
 
 const providerCache = new Map<string, JsonRpcProvider>();
 
-export function getProvider(chain: ChainConfig): JsonRpcProvider {
+/** Structural chain shape accepted by getProvider: the wallet's two
+ *  ChainConfigs and the bridge's signer-only BSC/Ethereum configs. */
+export interface ProviderChainLike {
+  key: string;
+  evmChainId: number;
+  evmRpcUrls: string[];
+}
+
+export function getProvider(chain: ProviderChainLike): JsonRpcProvider {
   const cached = providerCache.get(chain.key);
   if (cached) return cached;
   const provider = new JsonRpcProvider(chain.evmRpcUrls[0], chain.evmChainId, {
