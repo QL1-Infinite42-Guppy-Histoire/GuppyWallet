@@ -20,7 +20,7 @@ import {
   PercentChips,
   PrimaryButton,
 } from "../components/controls";
-import { Card, Screen, Title, colors } from "../components/ui";
+import { Card, Screen, colors } from "../components/ui";
 import {
   CHAINS,
   INFINITE_TOKENS,
@@ -232,7 +232,6 @@ export default function SendScreen() {
 
   return (
     <Screen>
-      <Title>{t("send.title")}</Title>
       {modal}
 
       {/* QR scanner (native only — never rendered on web) */}

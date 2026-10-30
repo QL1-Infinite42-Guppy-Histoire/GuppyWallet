@@ -13,9 +13,11 @@ import { useI18n } from "../context/LanguageContext";
  * Theme: galaxy glass (2026-10-30, user: 「ガッツリ宇宙が見える」).
  * A bold full-bleed deep-space backdrop — saturated nebulae, a dense
  * starfield and a milky-way band — is the app's visual identity.
- * Everything floats on it as TRANSLUCENT WHITE GLASS: cards at 0.86
- * white so the space visibly tints through while dark text stays
- * crisp, hero/tab bar a touch stronger, modal sheets near-opaque.
+ * Everything floats on it as TRANSLUCENT WHITE GLASS: cards at 0.62
+ * white (tuned up in transparency 2026-10-30 — the user asked for
+ * the universe to show through much more) so the space pours through
+ * while dark text stays crisp, hero/tab bar a touch stronger, modal
+ * sheets near-opaque.
  * Text rendered directly on the space uses the onSpace tokens (white);
  * text inside glass keeps the dark tokens. Simple solid blue primary,
  * plain-language UI — unchanged.
@@ -27,17 +29,17 @@ export const colors = {
   space: "#050914",
   spaceDeep: "#0A1230",
   // Glass materials (translucent white over the galaxy)
-  card: "rgba(255,255,255,0.86)",
-  cardBorder: "rgba(255,255,255,0.65)",
-  panel: "rgba(255,255,255,0.55)",
-  glassStrong: "rgba(255,255,255,0.9)", // hero + tab bar
-  glassSheet: "rgba(255,255,255,0.97)", // modal sheets
-  glassField: "rgba(255,255,255,0.75)", // text inputs
-  glassChip: "rgba(255,255,255,0.88)", // chips / segmented on the space
+  card: "rgba(255,255,255,0.62)",
+  cardBorder: "rgba(255,255,255,0.5)",
+  panel: "rgba(255,255,255,0.38)",
+  glassStrong: "rgba(255,255,255,0.72)", // hero + tab bar
+  glassSheet: "rgba(255,255,255,0.94)", // modal sheets
+  glassField: "rgba(255,255,255,0.55)", // text inputs
+  glassChip: "rgba(255,255,255,0.66)", // chips / segmented on the space
   panelBorder: "rgba(27,30,40,0.10)",
   border: "rgba(27,30,40,0.12)",
   text: "#1B1E28",
-  muted: "#6A737D",
+  muted: "#5A646E",
   accent: "#168BFF",
   accentWarm: "#B45309",
   dangerBg: "#FDECEF",
@@ -458,10 +460,10 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
     shadowColor: "#000000",
-    shadowOpacity: 0.28,
+    shadowOpacity: 0.16,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 5,
+    elevation: 3,
   },
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: "600" },
   todoItem: { color: colors.muted, fontSize: 14, lineHeight: 20 },

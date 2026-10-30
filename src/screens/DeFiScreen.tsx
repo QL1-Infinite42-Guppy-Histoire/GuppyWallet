@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import BridgeSection from "../components/BridgeSection";
 import FlukeSection from "../components/FlukeSection";
 import { SegmentedTabs } from "../components/controls";
-import { Screen, Title } from "../components/ui";
+import { Screen } from "../components/ui";
 import { useI18n } from "../context/LanguageContext";
 import StakingScreen from "./StakingScreen";
 import SwapScreen from "./SwapScreen";
@@ -39,7 +39,6 @@ export default function DeFiScreen() {
 
   return (
     <Screen>
-      <Title>{t("tab.defi")}</Title>
       <SegmentedTabs
         options={[
           { key: "swap", label: t("defi.swap") },

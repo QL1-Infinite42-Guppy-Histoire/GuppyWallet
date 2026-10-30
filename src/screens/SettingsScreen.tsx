@@ -13,7 +13,6 @@ import {
   DontPanic,
 
   Screen,
-  Title,
   colors,
 } from "../components/ui";
 import {
@@ -97,8 +96,6 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <Title>{t("tab.settings")}</Title>
-
       {wallet.pendingPhrase ? (
         <Card>
           <Heading>リカバリーフレーズ（1回だけ表示）</Heading>

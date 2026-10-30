@@ -12,7 +12,6 @@ import {
   Card,
 
   Screen,
-  Title,
   TokenIcon,
   colors,
 } from "../components/ui";
@@ -167,7 +166,6 @@ export default function TokenListScreen() {
 
   return (
     <Screen>
-      <Title>{t("tokens.title")}</Title>
       <Field
         value={query}
         onChangeText={setQuery}

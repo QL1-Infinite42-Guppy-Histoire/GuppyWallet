@@ -1,7 +1,7 @@
 import React from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { Body, Heading } from "../components/controls";
-import { Card, Screen, Title, colors } from "../components/ui";
+import { Card, Screen, colors } from "../components/ui";
 import { DAPP_LINKS } from "../config/chains";
 import { useI18n } from "../context/LanguageContext";
 
@@ -76,8 +76,6 @@ export default function ExploreScreen() {
 
   return (
     <Screen>
-      <Title>{t("tab.explore")}</Title>
-
       <Card>
         <Heading>{t("explore.links")}</Heading>
         {ENTRIES.map((e) => (

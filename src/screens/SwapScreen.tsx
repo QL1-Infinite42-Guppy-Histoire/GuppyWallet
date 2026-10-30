@@ -1043,10 +1043,10 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 0,
     shadowColor: "#000000",
-    shadowOpacity: 0.28,
+    shadowOpacity: 0.16,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 5,
+    elevation: 3,
   },
   panel: {
     backgroundColor: colors.panel,
