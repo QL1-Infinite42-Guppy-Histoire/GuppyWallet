@@ -24,10 +24,10 @@ import { LinearGradient } from "expo-linear-gradient";
 type RecvKind = "evm-infinite" | "evm-ql1" | "cosmos-infinite" | "cosmos-ql1";
 
 const OPTIONS: { key: RecvKind; label: string }[] = [
-  { key: "evm-infinite", label: "Infinite (EVM)" },
-  { key: "evm-ql1", label: "QL1 (EVM)" },
-  { key: "cosmos-infinite", label: "Infinite (Cosmos)" },
-  { key: "cosmos-ql1", label: "QL1 (Cosmos)" },
+  { key: "evm-infinite", label: "Infinite" },
+  { key: "evm-ql1", label: "QL1" },
+  { key: "cosmos-infinite", label: "Infinite（別形式）" },
+  { key: "cosmos-ql1", label: "QL1（別形式）" },
 ];
 
 export function ReceiveModal({
@@ -98,8 +98,8 @@ export function ReceiveModal({
                 </View>
                 <Text style={styles.note}>
                   {kind.startsWith("evm")
-                    ? "EVMアドレスは Infinite / QL1 の両チェーンで共通です。送金するチェーンを間違えないでください。"
-                    : "Cosmos形式のアドレスです（同じ鍵から導出）。EVM送金には上のEVMアドレスを使ってください。"}
+                    ? "このアドレスは Infinite / QL1 のどちらにも使えます。送るチェーンを間違えないでください。"
+                    : "別形式のアドレスです。ふつうの送金には、上の「Infinite / QL1」のアドレスを使ってください。"}
                 </Text>
                 <View style={styles.qrWrap}>
                   <QRCode

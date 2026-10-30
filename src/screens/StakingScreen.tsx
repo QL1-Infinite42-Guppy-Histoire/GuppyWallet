@@ -26,7 +26,6 @@ import {
   STAKING_ABI,
   STAKING_PRECOMPILE,
   ST42_ADDRESS,
-  bondStatusLabel,
   fetchSt42State,
   fetchTicket,
   fetchValidators,
@@ -106,7 +105,7 @@ export default function StakingScreen({
       }
     } catch (e) {
       setValError(
-        `バリデータ一覧の取得に失敗しました：${e instanceof Error ? e.message : String(e)}`,
+        `預け先を読み込めませんでした：${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
       setValLoading(false);
@@ -138,17 +137,17 @@ export default function StakingScreen({
       amount = parseUnits(stakeAmount, 18);
       if (amount <= 0n) throw new Error("zero");
     } catch {
-      setValError("委任数量を確認してください。");
+      setValError("数量を確認してください。");
       return null;
     }
     if (!selectedValidator) {
-      setValError("バリデータを選んでください。");
+      setValError("預け先を選んでください。");
       return null;
     }
     const labels = {
-      delegate: "委任（デリゲート）",
-      undelegate: "委任解除（アンデリゲート）",
-      redelegate: "再委任（リデリゲート）",
+      delegate: "42を預ける",
+      undelegate: "預けた42を引き出す",
+      redelegate: "預け先を変更する",
     } as const;
     return {
       title: labels[action],
@@ -156,15 +155,15 @@ export default function StakingScreen({
       lines: [
         { label: "アクション", value: labels[action] },
         {
-          label: "バリデータ",
+          label: "預け先",
           value: `${selectedValidator.moniker}`,
         },
         { label: "バリデータアドレス", value: selectedValidator.valoper },
         ...(action === "redelegate"
-          ? [{ label: "再委任先", value: dstValoper }]
+          ? [{ label: "新しい預け先", value: dstValoper }]
           : []),
         { label: "数量", value: `${stakeAmount} 42` },
-        { label: "コントラクト", value: `${STAKING_PRECOMPILE}（ステーキングプリコンパイル）` },
+        { label: "コントラクト", value: STAKING_PRECOMPILE },
       ],
       prepare: async (signer) => {
         const delegator = await signer.getAddress();
@@ -203,11 +202,11 @@ export default function StakingScreen({
   };
 
   const claimRewardsJob = (): TxJob => ({
-    title: "ステーキング報酬を請求",
+    title: "報酬を受け取る",
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "報酬請求（claimRewards）" },
-      { label: "コントラクト", value: `${DISTRIBUTION_PRECOMPILE}（配布プリコンパイル）` },
+      { label: "アクション", value: "報酬の受け取り" },
+      { label: "コントラクト", value: DISTRIBUTION_PRECOMPILE },
     ],
     prepare: async (signer) => {
       const delegator = await signer.getAddress();
@@ -234,11 +233,11 @@ export default function StakingScreen({
       value = parseUnits(depositAmount, 18);
       if (value <= 0n) throw new Error("zero");
     } catch {
-      setSt42Error("預け入れる数量を確認してください。");
+      setSt42Error("預ける数量を確認してください。");
       return null;
     }
     return {
-      title: "st42に預け入れ",
+      title: "st42に預ける",
       chain: INFINITE,
       lines: [
         { label: "アクション", value: "42を預けてst42を受け取る" },
@@ -271,19 +270,19 @@ export default function StakingScreen({
       shares = parseUnits(redeemShares, 18);
       if (shares <= 0n) throw new Error("zero");
     } catch {
-      setSt42Error("出金申請するシェア数量を確認してください。");
+      setSt42Error("引き出す数量を確認してください。");
       return null;
     }
     return {
-      title: "st42 出金申請",
+      title: "st42 引き出しの申し込み",
       chain: INFINITE,
       lines: [
-        { label: "アクション", value: "出金申請（requestRedeem）→ チケット発行" },
-        { label: "シェア", value: `${redeemShares} st42` },
+        { label: "アクション", value: "引き出しの申し込み" },
+        { label: "数量", value: `${redeemShares} st42` },
         {
-          label: "アンボンディング目安",
+          label: "受け取れるまで",
           value: st42?.unbondingDays
-            ? `約${st42.unbondingDays.toFixed(0)}日 + エポック処理`
+            ? `約${st42.unbondingDays.toFixed(0)}日`
             : "—",
         },
         { label: "コントラクト", value: ST42_ADDRESS },
@@ -309,25 +308,25 @@ export default function StakingScreen({
       shares = parseUnits(exitShares, 18);
       if (shares <= 0n) throw new Error("zero");
     } catch {
-      setSt42Error("即時出金するシェア数量を確認してください。");
+      setSt42Error("引き出す数量を確認してください。");
       return null;
     }
     const rate = st42?.rate ?? 1;
     const estOut = Number(exitShares) * rate;
     const minOut = parseUnits((estOut * 0.99).toFixed(18), 18);
     return {
-      title: "st42 即時出金",
+      title: "st42 すぐ引き出す",
       chain: INFINITE,
       lines: [
-        { label: "アクション", value: "即時出金（instantExit・手数料あり）" },
-        { label: "シェア", value: `${exitShares} st42` },
+        { label: "アクション", value: "すぐ引き出す（手数料あり）" },
+        { label: "数量", value: `${exitShares} st42` },
         {
           label: "受取見込み（手数料前）",
           value: `≈ ${estOut.toFixed(6)} 42`,
         },
         {
-          label: "最小受取",
-          value: `${formatUnits(minOut, 18)} 42（1%スリッページ）`,
+          label: "最悪でも受け取れる量",
+          value: `${formatUnits(minOut, 18)} 42`,
         },
         { label: "コントラクト", value: ST42_ADDRESS },
       ],
@@ -354,19 +353,23 @@ export default function StakingScreen({
     try {
       ticketId = BigInt(ticketIdText);
     } catch {
-      setSt42Error("チケットIDを確認してください。");
+      setSt42Error("整理券の番号を確認してください。");
       return null;
     }
     return {
-      title: "st42 出金請求",
+      title: "st42 受け取り",
       chain: INFINITE,
       lines: [
-        { label: "アクション", value: "出金請求（claim）" },
-        { label: "チケットID", value: ticketIdText },
+        { label: "アクション", value: "受け取り" },
+        { label: "整理券の番号", value: ticketIdText },
         {
-          label: "チケット状態",
+          label: "状態",
           value: ticket
-            ? `epoch ${ticket.epoch} / ${ticket.claimed ? "請求済み" : ticket.epochFinalized ? "確定済み" : "未確定"}`
+            ? ticket.claimed
+              ? "受け取り済み"
+              : ticket.epochFinalized
+                ? "受け取れます"
+                : "まだ受け取れません"
             : "未確認",
         },
         { label: "コントラクト", value: ST42_ADDRESS },
@@ -393,7 +396,7 @@ export default function StakingScreen({
     } catch (e) {
       setTicket(null);
       setSt42Error(
-        `チケットを取得できませんでした：${e instanceof Error ? e.message : String(e)}`,
+        `整理券を確認できませんでした：${e instanceof Error ? e.message : String(e)}`,
       );
     }
   };
@@ -405,25 +408,24 @@ export default function StakingScreen({
       {modal}
 
       <Card>
-        <Heading>42 ステーキング（Infinite・プリコンパイル）</Heading>
+        <Heading>ステーキング（42）</Heading>
+        <Body>42を預けて報酬をもらえます。</Body>
         {valError ? <Text style={styles.errorText}>{valError}</Text> : null}
         {validators ? (
           <>
             <Body>
-              バリデータ {validatorTotal ?? validators.length} 件（Bonded）。
-              プリコンパイル 0x0800 は稼働中です。
+              預け先は {validatorTotal ?? validators.length} 件から選べます。
             </Body>
             <View style={styles.list}>
               {validators.slice(0, 30).map((v) => (
                 <Text key={v.valoper} style={styles.validatorLine}>
                   • {v.moniker}
-                  {v.jailed ? "（jailed）" : ""} —{" "}
-                  {bondStatusLabel(v.status)} / 委任総額{" "}
+                  {v.jailed ? "（お休み中）" : ""} — みんなの預け額{" "}
                   {prettyAmount(v.tokensFormatted)} 42
                 </Text>
               ))}
             </View>
-            <Body>委任先</Body>
+            <Body>預け先</Body>
             <ChipPicker
               options={validators.map((v) => ({
                 key: v.valoper,
@@ -432,7 +434,7 @@ export default function StakingScreen({
               value={selectedValoper}
               onChange={setSelectedValoper}
             />
-            <Body>再委任先</Body>
+            <Body>新しい預け先</Body>
             <ChipPicker
               options={validators.map((v) => ({
                 key: v.valoper,
@@ -452,65 +454,65 @@ export default function StakingScreen({
               disabled={native42Raw === null}
             />
             <Body>
-              割合チップはウォレットの42残高が基準です（MAX時はガス代を残します）。
-              委任解除・再委任では委任中の数量が上限になります。
+              残高に対する割合で選べます（MAXのときは手数料分を残します）。
+              引き出すときは、預けている量が上限です。
             </Body>
             <PrimaryButton
-              label="委任する"
+              label="預ける"
               onPress={() => {
                 const job = stakingJob("delegate");
                 if (job) startTx(job);
               }}
             />
             <PrimaryButton
-              label="委任解除する"
+              label="引き出す"
               onPress={() => {
                 const job = stakingJob("undelegate");
                 if (job) startTx(job);
               }}
             />
             <PrimaryButton
-              label="再委任する"
+              label="預け先を変更する"
               onPress={() => {
                 const job = stakingJob("redelegate");
                 if (job) startTx(job);
               }}
             />
             <PrimaryButton
-              label="報酬を請求する"
+              label="報酬を受け取る"
               onPress={() => startTx(claimRewardsJob())}
             />
             <Body>
-              委任解除にはアンボンディング期間（約21日）があります。再委任は
-              委任先を変更する操作です。
+              引き出すときは、約21日待つ必要があります。
             </Body>
           </>
         ) : (
           <PrimaryButton
-            label="バリデータ一覧を取得"
+            label="預け先を読み込む"
             onPress={loadValidators}
             loading={valLoading}
           />
         )}
         {!wallet.info ? (
-          <Body>委任操作にはウォレットの作成／インポートが必要です。</Body>
+          <Body>預けたり引き出したりには、ウォレットの作成／インポートが必要です。</Body>
         ) : null}
       </Card>
 
       <Card>
-        <Heading>st42（リキッドステーキング）</Heading>
+        <Heading>st42</Heading>
+        <Body>42を預けるとst42がもらえます。預けた分は増えて戻ります。</Body>
         {st42 ? (
           <>
             <InfoRow
-              label="交換レート"
+              label="今のレート"
               value={
                 st42.rate
-                  ? `1 st42 ≈ ${st42.rate.toFixed(4)} 42${st42.rateFresh === false ? "（古い可能性）" : ""}`
+                  ? `1 st42 ≈ ${st42.rate.toFixed(4)} 42${st42.rateFresh === false ? "（少し前の値かもしれません）" : ""}`
                   : "取得不可"
               }
             />
             <InfoRow
-              label="総預かり資産"
+              label="みんなの預け額"
               value={
                 st42.totalAssetsFormatted
                   ? `${prettyAmount(st42.totalAssetsFormatted)} 42`
@@ -518,11 +520,11 @@ export default function StakingScreen({
               }
             />
             <InfoRow
-              label="APY"
-              value="未取得（年率を算出できる公式データがありません）"
+              label="年利"
+              value="未取得"
             />
             <InfoRow
-              label="アンボンディング"
+              label="引き出しにかかる日数"
               value={
                 st42.unbondingDays
                   ? `約${st42.unbondingDays.toFixed(0)}日`
@@ -534,7 +536,7 @@ export default function StakingScreen({
               value={
                 st42.yourSharesFormatted
                   ? `${prettyAmount(st42.yourSharesFormatted)} st42`
-                  : "アドレス未設定"
+                  : "ウォレットがありません"
               }
             />
             {st42.depositsPaused ? (
@@ -547,7 +549,7 @@ export default function StakingScreen({
           <Body>読み込み中…</Body>
         )}
         {st42Error ? <Text style={styles.errorText}>{st42Error}</Text> : null}
-        <PrimaryButton label="状態を更新" onPress={loadSt42} />
+        <PrimaryButton label="更新" onPress={loadSt42} />
         <Field
           value={depositAmount}
           onChangeText={setDepositAmount}
@@ -559,7 +561,7 @@ export default function StakingScreen({
           disabled={native42Raw === null}
         />
         <PrimaryButton
-          label="42を預けてst42を受け取る"
+          label="42を預ける"
           onPress={() => {
             const job = st42DepositJob();
             if (job) startTx(job);
@@ -568,7 +570,7 @@ export default function StakingScreen({
         <Field
           value={redeemShares}
           onChangeText={setRedeemShares}
-          placeholder="出金申請する数量（st42）"
+          placeholder="引き出す数量（st42）"
           keyboardType="decimal-pad"
         />
         <PercentChips
@@ -578,20 +580,20 @@ export default function StakingScreen({
           disabled={!st42?.yourShares}
         />
         <PrimaryButton
-          label="出金を申請する（チケット発行）"
+          label="引き出しを申し込む"
           onPress={() => {
             const job = st42RedeemJob();
             if (job) startTx(job);
           }}
         />
         <Body>
-          出金申請で発行されるチケットIDは、トランザクションのイベント
-          （RedeemRequested）に含まれます。エポック確定後に請求できます。
+          申し込むと「整理券（チケット）」が出ます。番号を控えてください。
+          約21日たったら、下のボタンで受け取れます。
         </Body>
         <Field
           value={exitShares}
           onChangeText={setExitShares}
-          placeholder="即時出金する数量（st42・手数料あり）"
+          placeholder="すぐ引き出す数量（st42・手数料あり）"
           keyboardType="decimal-pad"
         />
         <PercentChips
@@ -601,7 +603,7 @@ export default function StakingScreen({
           disabled={!st42?.yourShares}
         />
         <PrimaryButton
-          label="即時出金する"
+          label="すぐ引き出す"
           onPress={() => {
             const job = st42InstantExitJob();
             if (job) startTx(job);
@@ -610,25 +612,25 @@ export default function StakingScreen({
         <Field
           value={ticketIdText}
           onChangeText={setTicketIdText}
-          placeholder="チケットID"
+          placeholder="整理券の番号"
           keyboardType="decimal-pad"
         />
-        <PrimaryButton label="チケットを確認" onPress={handleCheckTicket} />
+        <PrimaryButton label="整理券を確認" onPress={handleCheckTicket} />
         {ticket ? (
           <Body>
-            所有者 {ticket.owner.slice(0, 10)}… / シェア {ticket.sharesFormatted}
-            {"\n"}epoch {ticket.epoch} /{" "}
+            数量 {ticket.sharesFormatted} st42
+            {"\n"}
             {ticket.claimed
-              ? `請求済み（${ticket.claimedAmountFormatted} 42）`
+              ? `受け取り済み（${ticket.claimedAmountFormatted} 42）`
               : ticket.epochFinalized
-                ? "確定済み（請求可能）"
+                ? "受け取れます"
                 : ticket.epochFinalized === false
-                  ? "未確定（まだ請求できません）"
-                  : "状態不明"}
+                  ? "まだ受け取れません"
+                  : "状態がわかりません"}
           </Body>
         ) : null}
         <PrimaryButton
-          label="出金を請求する（claim）"
+          label="受け取る"
           onPress={() => {
             const job = st42ClaimJob();
             if (job) startTx(job);
@@ -637,12 +639,11 @@ export default function StakingScreen({
       </Card>
 
       <Card>
-        <Heading>QOM ステーキング（QL1）</Heading>
+        <Heading>ステーキング（QOM）</Heading>
         <Body>
-          QL1のバリデータ委任は公式手順では Cosmos トランザクション方式で、
-          Cosmos署名経路はまだ接続していません（情報不足／TODO）。
+          QOMのステーキングは、このアプリではまだ使えません（準備中です）。
           {wallet.info
-            ? `あなたのQL1アドレス: ${wallet.info.qomAddress}`
+            ? `あなたのQL1用アドレス: ${wallet.info.qomAddress}`
             : ""}
         </Body>
       </Card>

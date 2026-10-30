@@ -233,7 +233,7 @@ export async function fetchSwapQuote(
   const path = await findPath(chain, from, to);
   if (!path) {
     throw new Error(
-      "このペアのルートが見つかりません（直接ペアもネイティブ経由ペアも存在しません）。",
+      "この組み合わせでは交換できません。",
     );
   }
   const router = getRouter(chain);
@@ -245,7 +245,7 @@ export async function fetchSwapQuote(
     );
   } catch {
     throw new Error(
-      "見積もりを取得できませんでした（流動性不足の可能性があります）。",
+      "見積もりを取得できませんでした（交換用の在庫が足りない可能性があります）。",
     );
   }
   const amountOut = amounts[amounts.length - 1];

@@ -214,10 +214,7 @@ export default function TokenListScreen() {
                       {r.formatted ?? t("common.unavailable")}
                     </Text>
                     <Text style={styles.usd}>
-                      {r.usdValue !== null
-                        ? `≈ $${r.usdValue.toFixed(2)}（${t("common.estimated")}）`
-                        : t("home.priceUnavailable")}
-                      {` · ${t("home.change24h")}: ${t("common.notAvailable")}`}
+                      {r.usdValue !== null ? `≈ $${r.usdValue.toFixed(2)}` : ""}
                     </Text>
                   </View>
                 </Pressable>
@@ -225,7 +222,7 @@ export default function TokenListScreen() {
                   <View style={styles.detail}>
                     <Body>
                       {t("common.address")}:{" "}
-                      {r.address ?? "（ネイティブ通貨）"}
+                      {r.address ?? "（このチェーンの通貨）"}
                     </Body>
                     {r.address ? (
                       <Pressable

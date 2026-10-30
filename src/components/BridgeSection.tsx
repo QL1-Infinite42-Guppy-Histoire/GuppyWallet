@@ -12,7 +12,6 @@ import {
   PrimaryButton,
 } from "./controls";
 import { Card, colors } from "./ui";
-import { BRIDGE_PAIRS_QL1 } from "../config/chains";
 import { useBalances } from "../context/BalancesContext";
 import { useWallet } from "../context/WalletContext";
 import { percentOfBalance, prettyAmount } from "../lib/onchain";
@@ -68,7 +67,7 @@ export default function BridgeSection() {
       );
     } catch (e) {
       setLoadError(
-        `ルーター情報の取得に失敗しました：${e instanceof Error ? e.message : String(e)}`,
+        `情報を読み込めませんでした：${e instanceof Error ? e.message : String(e)}`,
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,7 +138,7 @@ export default function BridgeSection() {
     setSendError(null);
     if (!state || !entry) return;
     if (state.paused) {
-      setSendError("このルーターは現在停止中（paused）です。");
+      setSendError("今はお休み中です。");
       return;
     }
     if (domain === null) {
@@ -147,7 +146,7 @@ export default function BridgeSection() {
       return;
     }
     if (!isValidRecipient(recipient)) {
-      setSendError("受取アドレスの形式が正しくありません。");
+      setSendError("送り先アドレスの形式が正しくありません。");
       return;
     }
     if (amountRaw === null) {
@@ -195,14 +194,12 @@ export default function BridgeSection() {
     <>
       {modal}
       <Card>
-        <Heading>Bridge（Hyperlane・アプリ内実行）</Heading>
+        <Heading>ブリッジ</Heading>
         <Body>
-          Infinite から他チェーンへの送信を、検証済み BridgeRouter
-          経由でアプリ内実行します。配送は Hyperlane
-          リレイヤーが行うため、着金まで時間がかかる場合があります。
-          これは片道送信で、アプリ内で追跡できるのは tx
-          ハッシュとエクスプローラーのみです。初めての方は必ず
-          少額でテストしてください。
+          別のチェーンへ通貨を送ります。届くまで少し時間が
+          かかることがあります。これは片道の送信です。送ったあとの
+          状況は、完了画面のリンクから確認できます。初めての方は、
+          必ず少額でテストしてください。
         </Body>
         <ChipPicker
           options={BRIDGE_ROUTERS_INFINITE.map((r) => ({
@@ -215,22 +212,22 @@ export default function BridgeSection() {
         {loadError ? <Text style={styles.error}>{loadError}</Text> : null}
         {state ? (
           <>
-            <InfoRow label="トークン" value={`${state.tokenSymbol}（${state.token}）`} />
+            <InfoRow label="トークン" value={state.tokenSymbol} />
             <InfoRow
-              label="ルーター状態"
-              value={state.paused ? "停止中（paused）" : `稼働中（v${state.version ?? "?"}）`}
+              label="状態"
+              value={state.paused ? "お休み中" : "使えます"}
             />
             <InfoRow
-              label="ブリッジ手数料"
+              label="手数料"
               value={
                 state.feeFlatRaw !== null && state.feeFlatRaw > 0n
                   ? `固定 ${prettyAmount(state.feeFlatFormatted ?? "")} ${state.tokenSymbol}`
-                  : `なし（feeBps ${state.feeBps ?? 0}）`
+                  : "なし"
               }
             />
             <InfoRow
-              label="最小 / 最大"
-              value={`${state.minFormatted ?? "—"} / ${state.maxFormatted ?? "上限なし"}`}
+              label="送れる量"
+              value={`${state.minFormatted ?? "—"} 〜 ${state.maxFormatted ?? "上限なし"}`}
             />
             <Body>送信先チェーン</Body>
             <ChipPicker
@@ -245,14 +242,14 @@ export default function BridgeSection() {
             />
             {domain !== null ? (
               <InfoRow
-                label="ネイティブ手数料（目安）"
+                label="別途かかる手数料（目安）"
                 value={`${prettyAmount(
                   state.destinations.find((d) => d.domain === domain)
                     ?.totalNativeFormatted ?? "—",
-                )} [42]`}
+                )} 42`}
               />
             ) : null}
-            <Body>受取アドレス（送信先チェーン）</Body>
+            <Body>送り先のアドレス</Body>
             <Field
               value={recipient}
               onChangeText={setRecipient}
@@ -281,24 +278,24 @@ export default function BridgeSection() {
             {quote ? (
               <>
                 <InfoRow
-                  label="到着見込み"
+                  label="届く量"
                   value={`${prettyAmount(quote.forwardFormatted)} ${state.tokenSymbol}`}
                 />
                 <InfoRow
-                  label="差し引かれる手数料"
+                  label="手数料"
                   value={`${prettyAmount(quote.feeFormatted)} ${state.tokenSymbol}`}
                 />
                 <InfoRow
-                  label="ネイティブ手数料"
-                  value={`${prettyAmount(quote.totalNativeFormatted)} [42]（送信時に上乗せ）`}
+                  label="別途の手数料"
+                  value={`${prettyAmount(quote.totalNativeFormatted)} 42`}
                 />
               </>
             ) : amountRaw !== null ? (
               <Body>見積もりを取得しています…</Body>
             ) : null}
             {sendError ? <Text style={styles.error}>{sendError}</Text> : null}
-            <PrimaryButton label="ブリッジ送信する" onPress={handleSend} />
-            <PrimaryButton label="ルーター情報を更新" onPress={load} />
+            <PrimaryButton label="送る" onPress={handleSend} />
+            <PrimaryButton label="更新" onPress={load} />
           </>
         ) : (
           <Body>読み込み中…</Body>
@@ -306,19 +303,11 @@ export default function BridgeSection() {
       </Card>
 
       <Card>
-        <Heading>QL1 → Infinite（情報のみ）</Heading>
+        <Heading>QL1から送る（準備中）</Heading>
         <Body>
-          QL1 側には BridgeRouter はなく、Hyperlane の warp
-          ルーターを直接使います。QL1 起点の配送実績を公式統計で
-          確認できないため、少額の実配送テストが完了するまで
-          QL1 からの送信は無効化しています（読み取り専用）。
+          QL1から送る方法は、ちゃんと届くか少額で試してから
+          使えるようにします。今はまだ送れません。
         </Body>
-        {BRIDGE_PAIRS_QL1.map((p) => (
-          <React.Fragment key={p.symbol}>
-            <InfoRow label={p.symbol} value={`QL1ルーター ${p.ql1Router}`} />
-            <Text style={styles.addr}>ロックボックス: {p.ql1Lockbox}</Text>
-          </React.Fragment>
-        ))}
       </Card>
     </>
   );

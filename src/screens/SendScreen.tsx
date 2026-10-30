@@ -102,7 +102,7 @@ export default function SendScreen() {
       setScanNote(null);
     } else {
       setScanNote(
-        "読み取ったQRはEVMアドレスではありませんでした。内容を確認してください。",
+        "読み取ったQRは、送金用アドレスではありませんでした。",
       );
     }
   };
@@ -168,7 +168,7 @@ export default function SendScreen() {
   const handleSend = () => {
     setFormError(null);
     if (!isAddress(recipient.trim())) {
-      setFormError("送信先アドレス（0x…）が正しくありません。");
+      setFormError("送り先のアドレスが正しくありません。");
       return;
     }
     let value: bigint;
@@ -261,7 +261,7 @@ export default function SendScreen() {
         </Card>
       ) : (
         <Card>
-          <Heading>送金（EVM）</Heading>
+          <Heading>送金</Heading>
           <Body>チェーン</Body>
           <ChipPicker
             options={CHAINS.map((c) => ({ key: c.key, label: c.displayName }))}
@@ -282,7 +282,7 @@ export default function SendScreen() {
               <Field
                 value={recipient}
                 onChangeText={setRecipient}
-                placeholder="送信先アドレス 0x…"
+                placeholder="送り先のアドレス 0x…"
               />
             </View>
             <Pressable style={styles.scanButton} onPress={openScanner}>
@@ -300,22 +300,21 @@ export default function SendScreen() {
             onSelect={applySendPercent}
             disabled={!sendBalanceEntry?.ok}
           />
-          <PrimaryButton label="確認画面へ（送金）" onPress={handleSend} />
+          <PrimaryButton label="確認画面へ" onPress={handleSend} />
           <Body>
-            送信前に、チェーン・送信先・数量・ガス代を確認画面で必ず確認してください。
+            送る前に、次の画面で送り先・金額・手数料を必ず確認してください。
           </Body>
           {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
         </Card>
       )}
 
       <Card>
-        <Heading>QL1 / Cosmos側の送金・ステーキング</Heading>
+        <Heading>QL1のもう一つの送り方（準備中）</Heading>
         <Body>
-          Cosmosトランザクションの署名経路はまだ接続していません（情報不足／TODO）。
-          bech32 アドレス（qom1… / infinite1…）への送金はこの画面ではできません。
-          QL1の委任は公式手順では Cosmos tx 方式のため、対応は今後の課題です。
+          QL1には別の送金方法もありますが、このアプリではまだ使えません。
+          qom1… / infinite1… で始まるアドレスへの送金は、この画面ではできません。
         </Body>
-        <DisabledButton label="Cosmos送金（準備中）" />
+        <DisabledButton label="この送り方は準備中" />
       </Card>
     </Screen>
   );

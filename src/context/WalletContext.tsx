@@ -120,7 +120,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     async (phrase: string) => {
       if (!isValidPhrase(phrase)) {
         throw new Error(
-          "リカバリーフレーズが正しくありません（単語またはチェックサムを確認してください）。",
+          "リカバリーフレーズが正しくありません。単語の並びを確認してください。",
         );
       }
       setBusy(true);
@@ -142,7 +142,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const importPrivateKey = useCallback(
     async (key: string) => {
       if (!isValidPrivateKey(key)) {
-        throw new Error("秘密鍵の形式が正しくありません（0x + 64桁の16進数）。");
+        throw new Error("秘密鍵の形式が正しくありません。");
       }
       setBusy(true);
       try {

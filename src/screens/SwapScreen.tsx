@@ -289,22 +289,22 @@ export default function SwapScreen({
     const minOut = applySlippage(quote.amountOut, slippageBps);
     const path = quote.path.map((t) => t.address);
     const job: TxJob = {
-      title: "スワップ",
+      title: "通貨の交換",
       chain,
       lines: [
-        { label: "アクション", value: "Swap（DEX）" },
-        { label: "ルート", value: quote.routeLabel },
+        { label: "アクション", value: "通貨の交換" },
+        { label: "経路", value: quote.routeLabel },
         {
           label: "入力",
           value: `${formatUnits(quote.amountIn, fromToken.decimals)} ${fromToken.symbol}`,
         },
         {
-          label: "見積出力",
+          label: "もらえる量（目安）",
           value: `${quote.amountOutFormatted} ${toToken.symbol}`,
         },
         {
-          label: "最小受取",
-          value: `${formatUnits(minOut, toToken.decimals)} ${toToken.symbol}（スリッページ ${slippage}%）`,
+          label: "最悪でももらえる量",
+          value: `${formatUnits(minOut, toToken.decimals)} ${toToken.symbol}（価格のずれ ${slippage}% まで）`,
         },
         { label: "コントラクト", value: routerAddress },
       ],
@@ -410,17 +410,17 @@ export default function SwapScreen({
       amountB = parseUnits(lpAmountB, lpB.decimals);
       if (amountA <= 0n || amountB <= 0n) throw new Error("zero");
     } catch {
-      setLpError("LP数量を確認してください。");
+      setLpError("数量を確認してください。");
       return;
     }
     const { router: routerAddress } = dexConfig(chain);
     const minA = applySlippage(amountA, slippageBps);
     const minB = applySlippage(amountB, slippageBps);
     const job: TxJob = {
-      title: "流動性を追加",
+      title: "流動性を預ける",
       chain,
       lines: [
-        { label: "アクション", value: "LP追加" },
+        { label: "アクション", value: "流動性を預ける" },
         { label: "ペア", value: `${lpA.symbol} / ${lpB.symbol}` },
         { label: "数量A", value: `${lpAmountA} ${lpA.symbol}` },
         { label: "数量B", value: `${lpAmountB} ${lpB.symbol}` },
@@ -509,17 +509,17 @@ export default function SwapScreen({
       liquidity = parseUnits(lpRemoveAmount, 18);
       if (liquidity <= 0n) throw new Error("zero");
     } catch {
-      setLpError("LP数量を確認してください。");
+      setLpError("数量を確認してください。");
       return;
     }
     const { router: routerAddress } = dexConfig(chain);
     const job: TxJob = {
-      title: "流動性を解除",
+      title: "流動性を引き出す",
       chain,
       lines: [
-        { label: "アクション", value: "LP解除" },
+        { label: "アクション", value: "流動性を引き出す" },
         { label: "ペア", value: `${lpA.symbol} / ${lpB.symbol}` },
-        { label: "LP数量", value: lpRemoveAmount },
+        { label: "量", value: lpRemoveAmount },
         { label: "ペアコントラクト", value: pair },
         { label: "コントラクト", value: routerAddress },
       ],
@@ -584,9 +584,9 @@ export default function SwapScreen({
   // ------------------------------------------------------------ action state
   const noPair =
     quoteError !== null &&
-    (quoteError.includes("ルートが見つかりません") ||
-      quoteError.includes("流動性不足"));
-  let actionLabel = "スワップする";
+    (quoteError.includes("この組み合わせでは交換できません") ||
+      quoteError.includes("在庫が足りない"));
+  let actionLabel = "交換する";
   let actionEnabled = false;
   if (!wallet.info) {
     actionLabel = "ウォレットを作成／インポートしてください";
@@ -599,7 +599,7 @@ export default function SwapScreen({
   } else if (quoteError) {
     actionLabel = "見積もりを取得できません";
   } else if (quote) {
-    actionLabel = "スワップする";
+    actionLabel = "交換する";
     actionEnabled = true;
   }
 
@@ -629,21 +629,16 @@ export default function SwapScreen({
               label={c.label}
               value={c.pair ? t("defi.lpPairExists") : t("defi.lpPairNone")}
             />
-            {c.pair ? (
-              <Body>
-                {c.pair}
-                {c.detail ? `\nプール残高: ${c.detail}` : ""}
-              </Body>
+            {c.pair && c.detail ? (
+              <Body>プールの中身: {c.detail}</Body>
             ) : null}
           </React.Fragment>
         ))
       )}
       {chain.key === "infinite" ? (
         <Body>
-          42 / QOM
-          ペアは実際に存在します。ただしネイティブ42を含むLP追加・解除は、
-          プレースホルダ方式での実績が未確認のため、下のフォームでは
-          引き続き無効化しています。
+          42 / QOM のペアはあります。ただし、42をそのまま預ける方法は
+          まだ確認できていないため、この組み合わせでは預けられません。
         </Body>
       ) : null}
       <PrimaryButton label={t("common.refresh")} onPress={loadPairChecks} />
@@ -683,8 +678,8 @@ export default function SwapScreen({
       </View>
       <Text style={styles.dexCaption}>
         {chain.key === "infinite"
-          ? "DEX: Don't Panic / Nutri-Matic（Uniswap V2方式）"
-          : "DEX: QomSwap（Uniswap V2方式）"}
+          ? "Don't Panic で交換します"
+          : "QomSwap で交換します"}
       </Text>
 
       {/* ------- Uniswap-style swap card ------- */}
@@ -692,7 +687,7 @@ export default function SwapScreen({
       <View style={styles.swapCard}>
         {/* pay panel */}
         <View style={styles.panel}>
-          <Text style={styles.panelLabel}>支払い（You pay）</Text>
+          <Text style={styles.panelLabel}>払う</Text>
           <View style={styles.panelRow}>
             <TextInput
               style={styles.bigInput}
@@ -711,7 +706,7 @@ export default function SwapScreen({
               {fromBalance
                 ? `${prettyAmount(fromBalance.formatted)} ${fromToken.symbol}`
                 : wallet.info
-                  ? "取得中／未取得"
+                  ? "読み込み中"
                   : "—"}
             </Text>
             <PercentChips onSelect={setPercent} disabled={!fromBalance} />
@@ -725,7 +720,7 @@ export default function SwapScreen({
 
         {/* receive panel */}
         <View style={styles.panel}>
-          <Text style={styles.panelLabel}>受取（You receive・見積）</Text>
+          <Text style={styles.panelLabel}>もらえる（目安）</Text>
           <View style={styles.panelRow}>
             <Text
               style={[
@@ -781,23 +776,27 @@ export default function SwapScreen({
           </View>
         </View>
 
+        <Text style={styles.finePrint}>
+          スリッページは「価格のずれの許容範囲」です。大きすぎると損をすることがあります。
+        </Text>
+
         {/* details */}
         {quote ? (
           <View style={styles.details}>
-            <InfoRow label="ルート" value={quote.routeLabel} />
+            <InfoRow label="経路" value={quote.routeLabel} />
             <InfoRow
               label="レート"
               value={`1 ${fromToken.symbol} ≈ ${quote.rate.toPrecision(6)} ${toToken.symbol}`}
             />
             {quote.spotRate !== null ? (
               <InfoRow
-                label="スポットレート"
+                label="今の相場"
                 value={`1 ${fromToken.symbol} ≈ ${quote.spotRate.toPrecision(6)} ${toToken.symbol}`}
               />
             ) : null}
             {quote.priceImpactPct !== null ? (
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>価格インパクト（手数料込み）</Text>
+                <Text style={styles.infoLabel}>価格への影響</Text>
                 <Text
                   style={[
                     styles.infoValue,
@@ -813,7 +812,7 @@ export default function SwapScreen({
               </View>
             ) : null}
             <InfoRow
-              label="最小受取"
+              label="最悪でももらえる量"
               value={`${minReceived} ${toToken.symbol}`}
             />
             <Pressable onPress={runQuote}>
@@ -857,8 +856,7 @@ export default function SwapScreen({
           )}
         </Pressable>
         <Text style={styles.finePrint}>
-          実行時は正確な数量分だけ承認（approve）してから交換します。
-          最終確認は確認画面（ガス代・最小受取つき）で行います。
+          交換の前に、確認画面で金額と手数料を必ず確認してください。
         </Text>
       </View>
       ) : null}
@@ -868,12 +866,13 @@ export default function SwapScreen({
         <>
           {pairPanel}
           <Card>
-        <Heading>流動性提供（LP）</Heading>
+        <Heading>流動性を提供</Heading>
+        <Body>2つの通貨を預けて、交換の手数料をもらえます。</Body>
         <Body>トークンA</Body>
         <ChipPicker
           options={tokens.map((t) => ({
             key: t.address,
-            label: t.isNative ? `${t.symbol}（ネイティブ）` : t.symbol,
+            label: t.symbol,
           }))}
           value={lpA.address}
           onChange={setLpAKey}
@@ -884,7 +883,7 @@ export default function SwapScreen({
             .filter((t) => t.address !== lpA.address)
             .map((t) => ({
               key: t.address,
-              label: t.isNative ? `${t.symbol}（ネイティブ）` : t.symbol,
+              label: t.symbol,
             }))}
           value={lpB.address}
           onChange={setLpBKey}
@@ -892,11 +891,10 @@ export default function SwapScreen({
         {lpNativeBlocked ? (
           <>
             <Body>
-              Infiniteではネイティブ（42）を含むペアのLP追加・解除は、
-              プレースホルダ方式での実績が確認できていないため無効化しています
-              （情報不足／TODO）。トークン同士のペアは利用できます。
+              42を含む組み合わせは、預ける方法がまだ確認できていないため
+              使えません。トークン同士の組み合わせは使えます。
             </Body>
-            <DisabledButton label="LP追加（このペアは準備中）" />
+            <DisabledButton label="この組み合わせは準備中" />
           </>
         ) : (
           <>
@@ -920,34 +918,34 @@ export default function SwapScreen({
               onSelect={(pct) => setLpPercent("B", lpB, pct)}
               disabled={!balanceEntry(lpB)}
             />
-            <PrimaryButton label="流動性を追加" onPress={handleAddLiquidity} />
+            <PrimaryButton label="預ける" onPress={handleAddLiquidity} />
           </>
         )}
-        <PrimaryButton label="LP残高を取得" onPress={fetchLpBalance} />
+        <PrimaryButton label="預けた量を確認" onPress={fetchLpBalance} />
         {lpBalance !== null ? (
-          <InfoRow label="あなたのLP残高" value={lpBalance} />
+          <InfoRow label="あなたが預けた量" value={lpBalance} />
         ) : null}
         {!lpNativeBlocked ? (
           <>
             <Field
               value={lpRemoveAmount}
               onChangeText={setLpRemoveAmount}
-              placeholder="解除するLP数量"
+              placeholder="引き出す量"
               keyboardType="decimal-pad"
             />
             <PrimaryButton
-              label="流動性を解除"
+              label="引き出す"
               onPress={handleRemoveLiquidity}
             />
             <Body>
-              解除時の最小受取は0に設定しています（プロトタイプ）。実行前に
-              ペアの状態をエクスプローラーで確認してください。
+              戻ってくる量は、そのときの相場で変わります。
+              確認画面でよく確認してください。
             </Body>
           </>
         ) : null}
         {lpError ? <Text style={styles.errorText}>{lpError}</Text> : null}
         {!wallet.info ? (
-          <Body>LP操作にはウォレットの作成／インポートが必要です。</Body>
+          <Body>預けたり引き出したりには、ウォレットの作成／インポートが必要です。</Body>
         ) : null}
           </Card>
         </>
@@ -983,13 +981,12 @@ export default function SwapScreen({
                       <View>
                         <Text style={styles.tokenRowSymbol}>
                           {t.symbol}
-                          {t.isNative ? "（ネイティブ）" : ""}
                         </Text>
-                        <Text style={styles.tokenRowAddr}>
-                          {t.isNative && chain.key === "infinite"
-                            ? "ネイティブコイン"
-                            : `${t.address.slice(0, 10)}…${t.address.slice(-6)}`}
-                        </Text>
+                        {t.isNative ? (
+                          <Text style={styles.tokenRowAddr}>
+                            このチェーンの通貨
+                          </Text>
+                        ) : null}
                       </View>
                     </View>
                     <Text style={styles.tokenRowBalance}>

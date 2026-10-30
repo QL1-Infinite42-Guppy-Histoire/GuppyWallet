@@ -363,15 +363,15 @@ export async function fetchStarlightState(): Promise<StarlightState> {
 export function flukeCommitJob(state: FlukeState): TxJob {
   const price = state.priceRaw;
   return {
-    title: "Fluke — コミット",
+    title: "Fluke — 参加",
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "コミット（commit）" },
+      { label: "アクション", value: "参加" },
       { label: "支払い", value: `${state.priceFormatted} ZAP` },
       { label: "コントラクト", value: FLUKE_CORE_ADDRESS },
       {
         label: "注意",
-        value: "ZAPはゲームで消費（バーン）されます。少額・自己責任で。",
+        value: "ZAPは参加料として使われます。少額でどうぞ。",
       },
     ],
     prepare: async (signer: Wallet) => {
@@ -402,10 +402,10 @@ export function flukeCommitJob(state: FlukeState): TxJob {
 export function flukeRevealJob(itemId: string, state: FlukeState): TxJob {
   const maxCost = state.revealPriceRaw;
   return {
-    title: "Fluke — リビール",
+    title: "Fluke — めくる",
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "リビール（reveal）" },
+      { label: "アクション", value: "めくる" },
       { label: "対象Guide", value: `#${itemId}` },
       {
         label: "コスト上限",
@@ -438,7 +438,7 @@ export function flukeBoostJob(
     title: "Fluke — ブースト",
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "ブースト（boost）" },
+      { label: "アクション", value: "ブースト" },
       { label: "対象Guide", value: `#${itemId}` },
       { label: "支払い", value: `${amountFormatted} ZAP` },
       { label: "コントラクト", value: FLUKE_CORE_ADDRESS },
@@ -474,12 +474,12 @@ export function flukeBoostJob(
 
 export function flukeSettleJob(recordId: string, signature: string): TxJob {
   return {
-    title: "Fluke — セトル（精算）",
+    title: "Fluke — 精算",
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "セトル（settle）" },
+      { label: "アクション", value: "精算" },
       { label: "レコードID", value: recordId },
-      { label: "署名", value: "公式API（fluke.zaphod.one）発行" },
+      { label: "署名", value: "公式サイト発行" },
       { label: "コントラクト", value: FLUKE_CORE_ADDRESS },
     ],
     prepare: async (signer: Wallet) => {
@@ -500,10 +500,10 @@ export function flukeSettleJob(recordId: string, signature: string): TxJob {
 
 export function starlightRegisterJob(ids: bigint[]): TxJob {
   return {
-    title: "Starlight — Guide登録",
+    title: "Starlight — Guideを登録",
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "登録（register）" },
+      { label: "アクション", value: "登録" },
       {
         label: "対象Guide",
         value: ids.map((i) => `#${i.toString()}`).join(", "),
@@ -511,7 +511,7 @@ export function starlightRegisterJob(ids: bigint[]): TxJob {
       { label: "コントラクト", value: STARLIGHT_ADDRESS },
       {
         label: "注意",
-        value: "登録中は[42]報酬が週次エポックで蓄積されます。",
+        value: "登録中は42の報酬が少しずつたまります。",
       },
     ],
     prepare: async (signer: Wallet) => {
@@ -531,10 +531,10 @@ export function starlightRegisterJob(ids: bigint[]): TxJob {
 
 export function starlightClaimJob(ids: bigint[]): TxJob {
   return {
-    title: "Starlight — 報酬請求",
+    title: "Starlight — 報酬の受け取り",
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "請求（claim）" },
+      { label: "アクション", value: "報酬の受け取り" },
       {
         label: "対象Guide",
         value: ids.map((i) => `#${i.toString()}`).join(", "),
@@ -722,18 +722,18 @@ export function bridgeSendJob(args: {
   const recipient = getAddress(args.recipient);
   const recipientBytes32 = zeroPadValue(recipient, 32);
   return {
-    title: `Bridge — ${args.tokenSymbol} 送信`,
+    title: `ブリッジ — ${args.tokenSymbol} を送る`,
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "ブリッジ送信（transferRemote）" },
+      { label: "アクション", value: "別のチェーンへ送る" },
       { label: "トークン", value: `${args.amountFormatted} ${args.tokenSymbol}` },
       { label: "送信先チェーン", value: args.destinationLabel },
-      { label: "受取アドレス", value: recipient },
+      { label: "送り先", value: recipient },
       { label: "ルーター", value: args.routerAddress },
       {
         label: "注意",
         value:
-          "片道送信です。配送はHyperlaneリレイヤーが行い、時間がかかる場合があります。アプリ内ではtxハッシュのみ追跡できます。",
+          "片道の送信です。届くまで時間がかかる場合があります。",
       },
     ],
     prepare: async (signer: Wallet) => {

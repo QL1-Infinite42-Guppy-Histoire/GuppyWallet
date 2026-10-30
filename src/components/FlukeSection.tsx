@@ -14,8 +14,6 @@ import { Card, colors } from "./ui";
 import { useWallet } from "../context/WalletContext";
 import { percentOfBalance, prettyAmount } from "../lib/onchain";
 import {
-  FLUKE_CORE_ADDRESS,
-  STARLIGHT_ADDRESS,
   fetchFlukeRecord,
   fetchFlukeState,
   fetchGuideItem,
@@ -76,7 +74,7 @@ export default function FlukeSection() {
       setStarlight(s);
     } catch (e) {
       setLoadError(
-        `Fluke情報の取得に失敗しました：${e instanceof Error ? e.message : String(e)}`,
+        `Flukeの情報を読み込めませんでした：${e instanceof Error ? e.message : String(e)}`,
       );
     }
   }, [address]);
@@ -115,14 +113,14 @@ export default function FlukeSection() {
       id = BigInt(recordIdText.trim());
       if (id < 0n) throw new Error("negative");
     } catch {
-      setRecordError("コミットのレコードID（数値）を入力してください。");
+      setRecordError("参加番号（数字）を入力してください。");
       return;
     }
     try {
       setRecord(await fetchFlukeRecord(id, address));
     } catch (e) {
       setRecordError(
-        `レコードを取得できませんでした：${e instanceof Error ? e.message : String(e)}`,
+        `参加番号を確認できませんでした：${e instanceof Error ? e.message : String(e)}`,
       );
     }
   }, [recordIdText, address]);
@@ -160,7 +158,7 @@ export default function FlukeSection() {
       amount = parseUnits(boostAmount, 18);
       if (amount <= 0n) throw new Error("zero");
     } catch {
-      setItemError("ブースト数量（ZAP）を確認してください。");
+      setItemError("ブーストの数量（ZAP）を確認してください。");
       return;
     }
     startTx(flukeBoostJob(item.id, amount, formatUnits(amount, 18)));
@@ -170,26 +168,25 @@ export default function FlukeSection() {
     <>
       {modal}
       <Card>
-        <Heading>Fluke — The Guide（アプリ内実行）</Heading>
+        <Heading>Fluke（くじ引き）</Heading>
         <Body>
-          fluke.zaphod.one のゲーム本体は The Guide
-          コントラクト自体に組み込まれています。この画面では外部サイトを
-          開かず、内蔵ウォレットで直接プレイします。
+          Guide NFTで遊べる抽選ゲームです。外部サイトを開かず、
+          このアプリの中でそのまま遊べます。
         </Body>
         {loadError ? <Text style={styles.error}>{loadError}</Text> : null}
         {fluke ? (
           <>
             <InfoRow
               label="ゲーム状態"
-              value={fluke.paused ? "停止中（paused）" : "稼働中"}
+              value={fluke.paused ? "お休み中" : "開催中"}
             />
             <InfoRow
-              label="コミット価格"
+              label="参加料"
               value={`${prettyAmount(fluke.priceFormatted)} ZAP`}
             />
             <InfoRow
-              label="リビール価格"
-              value={`${prettyAmount(fluke.revealPriceFormatted)}（[42]建て）`}
+              label="めくる料金"
+              value={`${prettyAmount(fluke.revealPriceFormatted)}（42で支払い）`}
             />
             <InfoRow
               label="賞金プールA"
@@ -227,7 +224,6 @@ export default function FlukeSection() {
               label="あなたのGuide保有数"
               value={fluke.guideBalance ?? "ウォレット未作成"}
             />
-            <Text style={styles.addr}>コントラクト: {FLUKE_CORE_ADDRESS}</Text>
           </>
         ) : (
           <Body>読み込み中…</Body>
@@ -235,22 +231,21 @@ export default function FlukeSection() {
         <PrimaryButton label="更新" onPress={load} />
         {fluke && !fluke.paused ? (
           <PrimaryButton
-            label={`コミットする（${prettyAmount(fluke.priceFormatted)} ZAP）`}
+            label={`参加する（${prettyAmount(fluke.priceFormatted)} ZAP）`}
             onPress={() => startTx(flukeCommitJob(fluke))}
           />
         ) : null}
         <Body>
-          コミットでレコードが作られます。レコードIDは送信完了後の
-          エクスプローラー（tx詳細）で確認できます。初めての方は
-          必ず少額・自己責任でどうぞ。
+          参加すると参加番号（レコードID）が出ます。精算のときに
+          使うので控えてください。初めての方は、必ず少額でどうぞ。
         </Body>
       </Card>
 
       <Card>
-        <Heading>Guideを調べる / リビール / ブースト</Heading>
+        <Heading>Guideを調べる・めくる・ブースト</Heading>
         <Body>
-          トークンIDを入力すると、所有者・スコア・Starlight登録状態を
-          表示します。自分のGuideならリビールとブーストができます。
+          番号を入力すると、持ち主・スコア・報酬の登録状態を
+          表示します。自分のGuideなら、めくったりブーストしたりできます。
         </Body>
         <Field
           value={itemIdText}
@@ -268,7 +263,7 @@ export default function FlukeSection() {
               value={item.scoreFormatted ? prettyAmount(item.scoreFormatted) : "—"}
             />
             <InfoRow
-              label="バーン済み"
+              label="消した分"
               value={item.burnedFormatted ? prettyAmount(item.burnedFormatted) : "—"}
             />
             <InfoRow label="ティア" value={item.tier !== null ? String(item.tier) : "—"} />
@@ -284,14 +279,10 @@ export default function FlukeSection() {
               <>
                 <InfoRow
                   label="Starlight登録"
-                  value={
-                    item.starlight.registered
-                      ? `登録済み（ティア ${item.starlight.tierIdx} / ウェイト ${item.starlight.weight}）`
-                      : "未登録"
-                  }
+                  value={item.starlight.registered ? "登録済み" : "未登録"}
                 />
                 <InfoRow
-                  label="Starlight獲得見込み"
+                  label="ためた報酬"
                   value={`${prettyAmount(item.starlight.earnedFormatted)} [42]`}
                 />
               </>
@@ -299,7 +290,7 @@ export default function FlukeSection() {
             {item.mine && fluke ? (
               <>
                 <PrimaryButton
-                  label={`リビールする（上限 ${prettyAmount(fluke.revealPriceFormatted)}）`}
+                  label={`めくる（${prettyAmount(fluke.revealPriceFormatted)} まで）`}
                   onPress={() => startTx(flukeRevealJob(item.id, fluke))}
                 />
                 <Field
@@ -331,7 +322,7 @@ export default function FlukeSection() {
                 item.starlight.registered &&
                 item.starlight.earnedRaw > 0n ? (
                   <PrimaryButton
-                    label="Starlight報酬を請求する"
+                    label="報酬を受け取る"
                     onPress={() =>
                       startTx(starlightClaimJob([BigInt(item.id)]))
                     }
@@ -346,16 +337,15 @@ export default function FlukeSection() {
       </Card>
 
       <Card>
-        <Heading>Fluke — セトル（精算）</Heading>
+        <Heading>Fluke — 精算</Heading>
         <Body>
-          コミットのレコードIDを入力すると、精算状態を確認できます。
-          settle の実行には公式API（fluke.zaphod.one）が発行する署名が
-          必要です。
+          参加番号（レコードID）を入力すると、精算できるか確認できます。
+          精算には、公式サイトが出す「合言葉」が必要です。
         </Body>
         <Field
           value={recordIdText}
           onChangeText={setRecordIdText}
-          placeholder="レコードID"
+          placeholder="参加番号（レコードID）"
           keyboardType="decimal-pad"
         />
         <PrimaryButton label="レコードを確認" onPress={handleLookupRecord} />
@@ -372,22 +362,21 @@ export default function FlukeSection() {
               {!record.settled && record.mine ? (
                 <>
                   <PrimaryButton
-                    label="公式APIから署名を取得"
+                    label="合言葉を受け取る"
                     onPress={handleFetchSignature}
                   />
                   {sigState === "fetching" ? (
-                    <Body>署名を確認しています…</Body>
+                    <Body>合言葉を確認しています…</Body>
                   ) : null}
                   {sigState === "missing" ? (
                     <Text style={styles.todo}>
-                      公式APIの署名待ち：現在、公開APIの応答にこのレコードの
-                      署名が含まれていません。時間をおいて再試行するか、
-                      公式サイト（fluke.zaphod.one）で精算してください。
+                      まだ合言葉が届いていません。時間をおいてもう一度
+                      試すか、公式サイト（fluke.zaphod.one）で精算してください。
                     </Text>
                   ) : null}
                   {sigState === "found" && signature ? (
                     <PrimaryButton
-                      label="セトルを実行する"
+                      label="精算する"
                       onPress={() =>
                         startTx(flukeSettleJob(record.id, signature))
                       }
@@ -405,22 +394,22 @@ export default function FlukeSection() {
       </Card>
 
       <Card>
-        <Heading>Starlight（Guide利回り）</Heading>
+        <Heading>Starlight（Guideの報酬）</Heading>
         <Body>
-          Guide NFTを登録すると、[42]報酬が週次エポックで蓄積されます。
-          複数IDをまとめて登録・請求できます。
+          Guide NFTを登録すると、42の報酬が少しずつたまります。
+          複数のGuideをまとめて登録・受け取りできます。
         </Body>
         {starlight ? (
           <>
             <InfoRow
-              label="現在エポック"
+              label="現在の期間"
               value={starlight.currentEpoch ?? "—"}
             />
             <InfoRow
-              label="総流入"
+              label="集まった合計"
               value={
                 starlight.totalInFormatted
-                  ? `${prettyAmount(starlight.totalInFormatted)} [42]`
+                  ? `${prettyAmount(starlight.totalInFormatted)} 42`
                   : "—"
               }
             />
@@ -428,7 +417,6 @@ export default function FlukeSection() {
               label="登録受付"
               value={starlight.registerPaused ? "停止中" : "受付中"}
             />
-            <Text style={styles.addr}>台帳: {STARLIGHT_ADDRESS}</Text>
           </>
         ) : (
           <Body>読み込み中…</Body>
@@ -447,7 +435,7 @@ export default function FlukeSection() {
           }}
         />
         <PrimaryButton
-          label="まとめて報酬を請求する"
+          label="まとめて報酬を受け取る"
           onPress={() => {
             const ids = parseBulkIds();
             if (ids) startTx(starlightClaimJob(ids));

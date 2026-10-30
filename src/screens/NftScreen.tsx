@@ -179,13 +179,12 @@ export default function NftScreen() {
                   />
                   <InfoRow
                     label={t("nft.totalSupply")}
-                    value={n.totalSupply ?? "取得不可（totalSupply未実装）"}
+                    value={n.totalSupply ?? "わかりません"}
                   />
                   <InfoRow
                     label={t("nft.ownedCount")}
-                    value={n.owned ?? "アドレス未設定"}
+                    value={n.owned ?? "ウォレットがありません"}
                   />
-                  <Text style={styles.addr}>{n.address}</Text>
                 </React.Fragment>
               ))
             ) : (
@@ -227,11 +226,11 @@ export default function NftScreen() {
             {starlight ? (
               <>
                 <InfoRow
-                  label="現在のエポック"
+                  label="現在の期間"
                   value={starlight.currentEpoch ?? "—"}
                 />
                 <InfoRow
-                  label="総ストリーム（ネイティブ）"
+                  label="これまでの合計"
                   value={
                     starlight.totalInFormatted
                       ? `${starlight.totalInFormatted} 42`
@@ -339,7 +338,7 @@ export default function NftScreen() {
                     ) : null}
                     {guideItem.mine && guideItem.starlight.registered ? (
                       <PrimaryButton
-                        label="報酬を請求する（claim）"
+                        label="報酬を受け取る"
                         onPress={() =>
                           startTx(starlightClaimJob([BigInt(guideItem.id)]))
                         }
