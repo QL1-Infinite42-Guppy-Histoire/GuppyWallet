@@ -312,7 +312,7 @@ export default function SettingsScreen() {
 
       <Card>
         <Heading>{t("settings.about")}</Heading>
-        <DontPanic compact />
+        <DontPanic compact tone="card" />
         <Body>
           Zaphod Wallet — {t("settings.catchphrase")}
           {"\n"}

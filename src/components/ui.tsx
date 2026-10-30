@@ -1,20 +1,41 @@
-import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useMemo } from "react";
+import {
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useI18n } from "../context/LanguageContext";
 
 /**
- * Theme: MetaMask-like light theme (2026-10-30 pivot) — plain white
- * background, very light gray-blue surfaces, near-black text, simple
- * solid blue primary. The DON'T PANIC wordmark stays as a small blue
- * brand line. Don't panic.
+ * Theme: galaxy glass (2026-10-30, user: 「ガッツリ宇宙が見える」).
+ * A bold full-bleed deep-space backdrop — saturated nebulae, a dense
+ * starfield and a milky-way band — is the app's visual identity.
+ * Everything floats on it as TRANSLUCENT WHITE GLASS: cards at 0.86
+ * white so the space visibly tints through while dark text stays
+ * crisp, hero/tab bar a touch stronger, modal sheets near-opaque.
+ * Text rendered directly on the space uses the onSpace tokens (white);
+ * text inside glass keeps the dark tokens. Simple solid blue primary,
+ * plain-language UI — unchanged.
  */
 export const colors = {
-  bg: "#FFFFFF",
-  bgDeep: "#FFFFFF",
-  card: "#FFFFFF",
-  panel: "#F2F4F8",
-  panelBorder: "#E4E9F2",
-  border: "#E4E9F2",
+  // Deep-space backdrop base (behind / around the GalaxyBackground)
+  bg: "#050914",
+  bgDeep: "#070D24",
+  space: "#050914",
+  spaceDeep: "#0A1230",
+  // Glass materials (translucent white over the galaxy)
+  card: "rgba(255,255,255,0.86)",
+  cardBorder: "rgba(255,255,255,0.65)",
+  panel: "rgba(255,255,255,0.55)",
+  glassStrong: "rgba(255,255,255,0.9)", // hero + tab bar
+  glassSheet: "rgba(255,255,255,0.97)", // modal sheets
+  glassField: "rgba(255,255,255,0.75)", // text inputs
+  glassChip: "rgba(255,255,255,0.88)", // chips / segmented on the space
+  panelBorder: "rgba(27,30,40,0.10)",
+  border: "rgba(27,30,40,0.12)",
   text: "#1B1E28",
   muted: "#6A737D",
   accent: "#168BFF",
@@ -27,6 +48,13 @@ export const colors = {
   cyan: "#0E7FA8",
   positive: "#0E9F6E",
   negative: "#E5486C",
+  // On-space text / accents (rendered directly over the galaxy)
+  onSpace: "#FFFFFF",
+  onSpaceMuted: "rgba(255,255,255,0.75)",
+  onSpaceFaint: "rgba(255,255,255,0.55)",
+  onSpaceDanger: "#FF9DB4",
+  brandGold: "#F5C542",
+  cyanBright: "#30DFFF",
   // Legacy gradient stops — primary actions are solid blue now; these
   // remain only as token values for chip-active backgrounds (gradStart).
   gradStart: "#168BFF",
@@ -101,13 +129,230 @@ export function TokenIcon({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Galaxy backdrop                                                     */
+/* ------------------------------------------------------------------ */
+
+/** Deterministic PRNG (mulberry32) — the sky is identical every render. */
+function mulberry32(seed: number) {
+  let a = seed | 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+interface StarSpec {
+  left: number;
+  top: number;
+  size: number;
+  opacity: number;
+  color: string;
+  round: boolean;
+}
+
+const STAR_TINTS = [
+  "#FFFFFF",
+  "#FFFFFF",
+  "#FFFFFF",
+  "#BCD7FF",
+  "#E3D0FF",
+  "#FFD9EC",
+  "#FFE9B8",
+  "#B8FFF1",
+];
+
+/**
+ * Nebula glows: large saturated color clouds built from concentric
+ * discs (each step inward is smaller and stronger) so the color falls
+ * off softly like a space photo. Positions are fractions of the
+ * viewport; several bleed off the edges so colors blend together.
+ */
+const NEBULAE: {
+  fx: number;
+  fy: number;
+  size: number;
+  rgb: string;
+  peak: number;
+}[] = [
+  { fx: 0.88, fy: 0.1, size: 560, rgb: "155,53,255", peak: 0.5 }, // purple, top right
+  { fx: 0.05, fy: 0.34, size: 620, rgb: "22,139,255", peak: 0.46 }, // blue, left middle
+  { fx: 0.95, fy: 0.72, size: 540, rgb: "255,77,121", peak: 0.4 }, // pink, bottom right
+  { fx: 0.18, fy: 0.92, size: 500, rgb: "48,223,255", peak: 0.34 }, // cyan, bottom left
+  { fx: 0.55, fy: 0.5, size: 680, rgb: "90,60,220", peak: 0.36 }, // violet heart
+];
+
+function buildStars(width: number, height: number): StarSpec[] {
+  const rnd = mulberry32(42);
+  const stars: StarSpec[] = [];
+  const push = (
+    left: number,
+    top: number,
+    size: number,
+    opacity: number,
+    color: string,
+  ) => stars.push({ left, top, size, opacity, color, round: size <= 3.4 });
+
+  // Main field — dense and bright, a few hero stars.
+  for (let i = 0; i < 230; i++) {
+    const hero = i < 7;
+    push(
+      rnd() * width,
+      rnd() * height,
+      hero ? 3.4 + rnd() * 1.2 : 1 + rnd() * (rnd() > 0.88 ? 2.2 : 1.4),
+      hero ? 0.95 : 0.3 + rnd() * 0.65,
+      STAR_TINTS[Math.floor(rnd() * STAR_TINTS.length)],
+    );
+  }
+  // Milky-way band: a diagonal river of tiny clustered stars running
+  // from the top-right down to the bottom-left.
+  const bx0 = width * 1.08;
+  const by0 = -height * 0.06;
+  const bx1 = -width * 0.08;
+  const by1 = height * 0.78;
+  for (let i = 0; i < 190; i++) {
+    const t = rnd();
+    const scatter =
+      ((rnd() + rnd() + rnd()) / 3 - 0.5) * width * 0.52 * (0.35 + rnd() * 0.65);
+    const dx = bx1 - bx0;
+    const dy = by1 - by0;
+    const len = Math.hypot(dx, dy) || 1;
+    const px = -dy / len;
+    const py = dx / len;
+    push(
+      bx0 + dx * t + px * scatter,
+      by0 + dy * t + py * scatter,
+      0.7 + rnd() * 1.1,
+      0.2 + rnd() * 0.6,
+      rnd() > 0.25 ? "#DCE9FF" : "#FFFFFF",
+    );
+  }
+  // One bright cluster (upper right, inside the purple nebula).
+  const cx = width * 0.76;
+  const cy = height * 0.15;
+  for (let i = 0; i < 30; i++) {
+    const ang = rnd() * Math.PI * 2;
+    const rad = Math.pow(rnd(), 1.6) * 74;
+    push(
+      cx + Math.cos(ang) * rad,
+      cy + Math.sin(ang) * rad,
+      1.2 + rnd() * 2.4,
+      0.55 + rnd() * 0.45,
+      rnd() > 0.3 ? "#FFFFFF" : "#E3D0FF",
+    );
+  }
+  return stars;
+}
+
+/**
+ * The full-bleed galaxy: deep-space gradient, bold nebula glows, a
+ * dense starfield with a milky-way band and a bright cluster, and a
+ * vignette to seat the edges. Fully static, memoized, touch-transparent
+ * — rendered by Screen behind all content on every screen.
+ */
+export const GalaxyBackground = React.memo(function GalaxyBackground() {
+  const { width, height } = Dimensions.get("window");
+  const stars = useMemo(() => buildStars(width, height), [width, height]);
+  return (
+    <View style={styles.galaxy} pointerEvents="none">
+      <LinearGradient
+        colors={["#03040C", "#050914", "#0A1230", "#0E1748"]}
+        locations={[0, 0.35, 0.72, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.7, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      {/* milky-way glow strip underneath the band stars */}
+      <View
+        style={[
+          styles.milkyGlow,
+          {
+            width: width * 1.7,
+            left: -width * 0.35,
+            top: height * 0.26,
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={[
+            "rgba(150,175,255,0)",
+            "rgba(150,175,255,0.13)",
+            "rgba(190,160,255,0.10)",
+            "rgba(150,175,255,0)",
+          ]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+      {NEBULAE.map((n, i) => {
+        const cx = n.fx * width;
+        const cy = n.fy * height;
+        return (
+          <View
+            key={i}
+            style={{
+              position: "absolute",
+              left: cx - n.size / 2,
+              top: cy - n.size / 2,
+              width: n.size,
+              height: n.size,
+            }}
+          >
+            {[1, 0.68, 0.42, 0.2].map((scale, j) => (
+              <View
+                key={j}
+                style={{
+                  position: "absolute",
+                  left: (n.size - n.size * scale) / 2,
+                  top: (n.size - n.size * scale) / 2,
+                  width: n.size * scale,
+                  height: n.size * scale,
+                  borderRadius: (n.size * scale) / 2,
+                  backgroundColor: `rgba(${n.rgb},${(n.peak * (0.16 + j * 0.14)).toFixed(3)})`,
+                }}
+              />
+            ))}
+          </View>
+        );
+      })}
+      {stars.map((s, i) => (
+        <View
+          key={i}
+          style={{
+            position: "absolute",
+            left: s.left,
+            top: s.top,
+            width: s.size,
+            height: s.size,
+            borderRadius: s.round ? s.size / 2 : 0,
+            backgroundColor: s.color,
+            opacity: s.opacity,
+          }}
+        />
+      ))}
+      {/* vignette */}
+      <LinearGradient
+        colors={["rgba(2,3,10,0.38)", "rgba(2,3,10,0)"]}
+        style={[styles.vignette, { height: 150, top: 0 }]}
+      />
+      <LinearGradient
+        colors={["rgba(2,3,10,0)", "rgba(2,3,10,0.5)"]}
+        style={[styles.vignette, { height: 190, bottom: 0 }]}
+      />
+    </View>
+  );
+});
+
 export function Screen({
   children,
   embedded,
 }: {
   children: React.ReactNode;
   /** Rendered inside another Screen (e.g. a DeFi sub-view): no nested
-   *  ScrollView / starfield, just the stacked content. */
+   *  ScrollView / galaxy, just the stacked content. */
   embedded?: boolean;
 }) {
   if (embedded) {
@@ -115,6 +360,7 @@ export function Screen({
   }
   return (
     <View style={styles.screenWrap}>
+      <GalaxyBackground />
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         {children}
       </ScrollView>
@@ -132,16 +378,33 @@ export function Card({ children }: { children: React.ReactNode }) {
 
 /**
  * The most important words in the galaxy, in large friendly letters.
- * Used on the Dashboard header and on empty states.
+ * Used on the Dashboard header and on empty states. `tone` picks the
+ * surface it sits on: "space" (default) is gold on the galaxy; "card"
+ * is the blue brand inside a glass card, where gold would wash out.
  */
-export function DontPanic({ compact }: { compact?: boolean }) {
+export function DontPanic({
+  compact,
+  tone = "space",
+}: {
+  compact?: boolean;
+  tone?: "space" | "card";
+}) {
   const { t } = useI18n();
+  const onCard = tone === "card";
   return (
     <View style={styles.dontPanicWrap}>
-      <Text style={[styles.dontPanic, compact && styles.dontPanicCompact]}>
+      <Text
+        style={[
+          styles.dontPanic,
+          compact && styles.dontPanicCompact,
+          onCard && styles.dontPanicOnCard,
+        ]}
+      >
         DON'T PANIC
       </Text>
-      <Text style={styles.dontPanicSub}>{t("common.dontPanicSub")}</Text>
+      <Text style={[styles.dontPanicSub, onCard && styles.dontPanicSubOnCard]}>
+        {t("common.dontPanicSub")}
+      </Text>
     </View>
   );
 }
@@ -164,30 +427,61 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "transparent" },
   content: { padding: 16, gap: 12 },
   embeddedContent: { gap: 12 },
-  title: { color: colors.text, fontSize: 24, fontWeight: "800" },
+  galaxy: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    overflow: "hidden",
+    backgroundColor: colors.space,
+  },
+  milkyGlow: {
+    position: "absolute",
+    height: 210,
+    transform: [{ rotate: "-24deg" }],
+  },
+  vignette: { position: "absolute", left: 0, right: 0 },
+  title: {
+    color: colors.onSpace,
+    fontSize: 24,
+    fontWeight: "800",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
   card: {
     backgroundColor: colors.card,
-    borderColor: colors.border,
+    borderColor: colors.cardBorder,
     borderWidth: 1,
     borderRadius: 20,
     padding: 16,
     gap: 8,
-    shadowColor: "#1B1E28",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    shadowColor: "#000000",
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 5,
   },
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: "600" },
   todoItem: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   dontPanicWrap: { alignItems: "center", paddingVertical: 8, gap: 4 },
   dontPanic: {
-    color: colors.accent,
+    color: colors.brandGold,
     fontSize: 34,
     fontWeight: "800",
     letterSpacing: 3,
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 8,
   },
   dontPanicCompact: { fontSize: 24, letterSpacing: 2 },
-  dontPanicSub: { color: colors.muted, fontSize: 12, textAlign: "center" },
+  dontPanicOnCard: { color: colors.accent, textShadowColor: "transparent" },
+  dontPanicSub: {
+    color: colors.onSpaceMuted,
+    fontSize: 12,
+    textAlign: "center",
+  },
+  dontPanicSubOnCard: { color: colors.muted },
 });

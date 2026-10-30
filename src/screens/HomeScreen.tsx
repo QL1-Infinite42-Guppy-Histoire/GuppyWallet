@@ -133,7 +133,7 @@ export default function HomeScreen() {
       />
       {!hasWallet ? (
         <Card>
-          <DontPanic compact />
+          <DontPanic compact tone="card" />
           <Body>{t("common.noWalletBody")}</Body>
         </Card>
       ) : (
