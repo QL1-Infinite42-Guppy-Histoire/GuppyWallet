@@ -102,7 +102,7 @@ function TabNavigator() {
           paddingTop: 6,
           paddingBottom: insets.bottom,
         },
-        tabBarActiveTintColor: colors.cyan,
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
       }}
@@ -164,7 +164,7 @@ export default function App() {
         <WalletProvider>
           <BalancesProvider>
             <NavigationContainer>
-              <StatusBar style="light" />
+              <StatusBar style="dark" />
               <TabNavigator />
             </NavigationContainer>
           </BalancesProvider>

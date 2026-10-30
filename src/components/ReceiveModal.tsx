@@ -10,8 +10,7 @@ import {
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { useWallet } from "../context/WalletContext";
-import { GRADIENT, colors } from "./ui";
-import { LinearGradient } from "expo-linear-gradient";
+import { colors } from "./ui";
 
 /**
  * Receive view: a LARGE QR of the wallet's own address.
@@ -112,12 +111,6 @@ export function ReceiveModal({
                 <Text style={styles.addrLabel}>アドレス</Text>
                 <Text style={styles.addr}>{address}</Text>
                 <Pressable style={styles.copyButton} onPress={handleCopy}>
-                  <LinearGradient
-                    colors={GRADIENT}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={StyleSheet.absoluteFill}
-                  />
                   <Text style={styles.copyButtonText}>
                     {copied ? "コピーしました ✓" : "アドレスをコピー"}
                   </Text>
@@ -171,6 +164,8 @@ const styles = StyleSheet.create({
   qrWrap: {
     alignSelf: "center",
     backgroundColor: "#FFFFFF",
+    borderColor: colors.border,
+    borderWidth: 1,
     borderRadius: 20,
     padding: 18,
     marginVertical: 14,
@@ -182,6 +177,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
     overflow: "hidden",
+    backgroundColor: colors.primary,
   },
   copyButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
 });

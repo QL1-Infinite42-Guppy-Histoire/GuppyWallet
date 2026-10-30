@@ -1,5 +1,4 @@
 import { Contract, formatUnits, parseUnits } from "ethers";
-import { LinearGradient } from "expo-linear-gradient";
 import React, {
   useCallback,
   useEffect,
@@ -28,15 +27,7 @@ import {
   PercentChips,
   PrimaryButton,
 } from "../components/controls";
-import {
-  Card,
-  GRADIENT,
-
-  Screen,
-  Title,
-  TokenIcon,
-  colors,
-} from "../components/ui";
+import { Card, Screen, Title, TokenIcon, colors } from "../components/ui";
 import { CHAINS, type ChainConfig } from "../config/chains";
 import { useI18n } from "../context/LanguageContext";
 import { useWallet } from "../context/WalletContext";
@@ -657,17 +648,9 @@ export default function SwapScreen({
           return (
             <Pressable
               key={c.key}
-              style={styles.segment}
+              style={[styles.segment, active && styles.segmentActive]}
               onPress={() => setChainKey(c.key)}
             >
-              {active ? (
-                <LinearGradient
-                  colors={GRADIENT}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={StyleSheet.absoluteFill}
-                />
-              ) : null}
               <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
                 {c.key === "infinite" ? "Infinite" : "QL1"}
               </Text>
@@ -825,22 +808,17 @@ export default function SwapScreen({
 
         {/* action */}
         <Pressable
-          style={styles.actionButton}
+          style={[
+            styles.actionButton,
+            {
+              backgroundColor: actionEnabled
+                ? colors.primary
+                : colors.panel,
+            },
+          ]}
           disabled={!actionEnabled}
           onPress={handleSwap}
         >
-          {actionEnabled ? (
-            <LinearGradient
-              colors={GRADIENT}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : (
-            <View
-              style={[StyleSheet.absoluteFill, styles.actionDisabledFill]}
-            />
-          )}
           {quoting ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
@@ -1021,6 +999,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   segmentText: { color: colors.muted, fontSize: 14, fontWeight: "600" },
+  segmentActive: { backgroundColor: colors.primary },
   segmentTextActive: { color: "#FFFFFF", fontWeight: "800" },
   dexCaption: { color: colors.muted, fontSize: 12, textAlign: "center" },
   swapCard: {
@@ -1152,13 +1131,12 @@ const styles = StyleSheet.create({
     marginTop: 14,
     overflow: "hidden",
   },
-  actionDisabledFill: { backgroundColor: colors.panel },
   actionText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },
   actionTextDisabled: { color: colors.muted },
   finePrint: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 8 },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(2,4,10,0.72)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
   modalSheet: {

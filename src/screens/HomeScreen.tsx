@@ -1,20 +1,11 @@
 import { useNavigation } from "@react-navigation/native";
 import { formatUnits } from "ethers";
-import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { BalanceResults, formatJpy } from "../components/BalanceResults";
 import { Body, Heading, PrimaryButton } from "../components/controls";
 import { ReceiveModal } from "../components/ReceiveModal";
-import {
-  Card,
-  DontPanic,
-  GRADIENT,
-  GRADIENT_DEEP,
-
-  Screen,
-  colors,
-} from "../components/ui";
+import { Card, DontPanic, Screen, colors } from "../components/ui";
 import { useI18n } from "../context/LanguageContext";
 import { useWallet } from "../context/WalletContext";
 import { useBalances } from "../context/BalancesContext";
@@ -34,12 +25,6 @@ function QuickAction({
   return (
     <Pressable style={styles.quickAction} onPress={onPress}>
       <View style={styles.quickIconWrap}>
-        <LinearGradient
-          colors={GRADIENT}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
         <Text style={styles.quickGlyph}>{glyph}</Text>
       </View>
       <Text style={styles.quickLabel}>{label}</Text>
@@ -146,12 +131,6 @@ export default function HomeScreen() {
         <>
           {/* ------- hero: one big total, JPY first ------- */}
           <View style={styles.hero}>
-            <LinearGradient
-              colors={GRADIENT_DEEP}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
             <Text style={styles.heroLabel}>{t("home.totalBalance")}</Text>
             {hasData ? (
               <>
@@ -295,7 +274,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: "rgba(5,11,27,0.45)",
+    backgroundColor: colors.panel,
   },
   addressChipText: { color: colors.text, fontSize: 12, fontWeight: "600" },
   lockState: { color: colors.muted, fontSize: 11 },
@@ -308,6 +287,7 @@ const styles = StyleSheet.create({
   },
   hero: {
     borderRadius: 24,
+    backgroundColor: "#F7F9FC",
     borderColor: colors.panelBorder,
     borderWidth: 1,
     padding: 20,
@@ -315,7 +295,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   heroLabel: { color: colors.muted, fontSize: 13, fontWeight: "600" },
-  heroTotal: { color: "#FFFFFF", fontSize: 44, fontWeight: "800" },
+  heroTotal: { color: colors.text, fontSize: 44, fontWeight: "800" },
   heroSub: { color: colors.muted, fontSize: 15, fontWeight: "600" },
   heroTotalMuted: { color: colors.muted, fontSize: 44, fontWeight: "800" },
   quickRow: {
@@ -331,6 +311,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    backgroundColor: colors.primary,
   },
   quickGlyph: { color: "#FFFFFF", fontSize: 22, fontWeight: "800" },
   quickLabel: { color: colors.text, fontSize: 12, fontWeight: "700" },

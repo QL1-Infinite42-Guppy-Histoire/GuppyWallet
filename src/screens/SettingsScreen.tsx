@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 26,
     fontWeight: "600",
-    backgroundColor: colors.bgDeep,
+    backgroundColor: colors.panel,
     borderRadius: 10,
     padding: 12,
   },

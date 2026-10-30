@@ -1,4 +1,3 @@
-import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
   ActivityIndicator,
@@ -8,7 +7,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { GRADIENT, colors } from "./ui";
+import { colors } from "./ui";
 
 export function Heading({ children }: { children: React.ReactNode }) {
   return <Text style={styles.heading}>{children}</Text>;
@@ -29,12 +28,6 @@ export function PrimaryButton({
 }) {
   return (
     <Pressable style={styles.button} onPress={onPress} disabled={loading}>
-      <LinearGradient
-        colors={GRADIENT}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={StyleSheet.absoluteFill}
-      />
       {loading ? (
         <ActivityIndicator color="#FFFFFF" />
       ) : (
@@ -48,7 +41,7 @@ export function PrimaryButton({
 export function DisabledButton({ label }: { label: string }) {
   return (
     <Pressable style={[styles.button, styles.buttonDisabled]} disabled>
-      <Text style={styles.buttonText}>{label}</Text>
+      <Text style={styles.buttonTextDisabled}>{label}</Text>
     </Pressable>
   );
 }
@@ -162,17 +155,9 @@ export function SegmentedTabs({
         return (
           <Pressable
             key={o.key}
-            style={styles.segment}
+            style={[styles.segment, active && styles.segmentActive]}
             onPress={() => onChange(o.key)}
           >
-            {active ? (
-              <LinearGradient
-                colors={GRADIENT}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFill}
-              />
-            ) : null}
             <Text
               style={[styles.segmentText, active && styles.segmentTextActive]}
             >
@@ -202,9 +187,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
     overflow: "hidden",
+    backgroundColor: colors.primary,
   },
-  buttonDisabled: { opacity: 0.4, backgroundColor: colors.panel },
+  buttonDisabled: { backgroundColor: colors.panel },
   buttonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
+  buttonTextDisabled: { color: colors.muted, fontSize: 15, fontWeight: "700" },
   input: {
     borderColor: colors.border,
     borderWidth: 1,
@@ -254,6 +241,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
   },
+  segmentActive: { backgroundColor: colors.primary },
   segmentText: { color: colors.muted, fontSize: 13, fontWeight: "600" },
   segmentTextActive: { color: "#FFFFFF", fontWeight: "800" },
   infoRow: {
