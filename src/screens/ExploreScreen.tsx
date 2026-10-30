@@ -1,15 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Linking, Pressable, StyleSheet, Text } from "react-native";
-import { Body, Heading, InfoRow, PrimaryButton } from "../components/controls";
+import React from "react";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Body, Heading } from "../components/controls";
 import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
-import { CHAINS, DAPP_LINKS } from "../config/chains";
+import { DAPP_LINKS } from "../config/chains";
 import { useI18n } from "../context/LanguageContext";
-import { getProvider } from "../lib/onchain";
-
-interface ChainStatus {
-  block: number | null;
-  error: string | null;
-}
 
 interface Entry {
   label: string;
@@ -18,91 +12,67 @@ interface Entry {
 }
 
 // URLs come from DAPP_LINKS / chain config only — no invented links.
+// Descriptions are one plain line each; technical chain status lives
+// in Settings → 詳細情報, not here.
 const ENTRIES: Entry[] = [
   {
-    label: "Infinite Drivechain — プロジェクトハブ",
-    description: "プロジェクトのリンク集（公式）",
+    label: "Infinite Drivechain",
+    description: "プロジェクトの公式リンク集",
     url: DAPP_LINKS.projectHub,
   },
   {
     label: "Hub",
-    description: "Infinite のポータル",
+    description: "Infinite のポータルサイト",
     url: DAPP_LINKS.hub,
   },
   {
     label: "DontPanic Finance",
-    description: "Infinite 側 DEX（Swap / LP の参照実装）",
+    description: "通貨を交換したり預けたりできるサイト",
     url: DAPP_LINKS.dontPanicDex,
   },
   {
     label: "Fluke",
-    description: "The Guide のゲーム（アプリ内でも実行できます）",
+    description: "Guide NFTで遊べるくじ引きゲーム（このアプリでも遊べます）",
     url: DAPP_LINKS.flukeGuide,
   },
   {
-    label: "NFT マーケットプレイス",
-    description: "Guide などの NFT マーケット",
+    label: "NFT マーケット",
+    description: "NFTを買ったり売ったりできる場所",
     url: DAPP_LINKS.nft,
   },
   {
     label: "Bridge",
-    description: "Hyperlane ブリッジ（アプリ内でも実行できます）",
+    description: "別のチェーンへ通貨を送るサイト（このアプリでもできます）",
     url: DAPP_LINKS.bridge,
   },
   {
     label: "Docs",
-    description: "Infinite 公式ドキュメント",
+    description: "公式の説明ページ",
     url: DAPP_LINKS.docs,
   },
   {
     label: "Console",
-    description: "Infinite コンソール",
+    description: "開発者向けの管理画面",
     url: DAPP_LINKS.console,
   },
   {
     label: "DriveStats",
-    description: "チェーン統計",
+    description: "チェーンの利用状況がわかるページ",
     url: DAPP_LINKS.driveStats,
   },
   {
     label: "FishDisk",
-    description: "関連サービス（参照）",
+    description: "関連サービス",
     url: DAPP_LINKS.fishDisk,
   },
 ];
 
 /**
- * Explore tab: ecosystem hub — live chain status (direct RPC probes,
- * no wallet needed), ecosystem/dApp links, and ended-service notes.
- * Absorbs the old More screen's link/info role.
+ * Explore tab: a friendly ecosystem hub — one-line descriptions and
+ * big tappable rows. No technical data here.
  */
 export default function ExploreScreen() {
   const { t } = useI18n();
-  const [status, setStatus] = useState<Record<string, ChainStatus> | null>(
-    null,
-  );
-
-  const load = useCallback(async () => {
-    const out: Record<string, ChainStatus> = {};
-    await Promise.all(
-      CHAINS.map(async (c) => {
-        try {
-          const block = await getProvider(c).getBlockNumber();
-          out[c.key] = { block, error: null };
-        } catch (e) {
-          out[c.key] = {
-            block: null,
-            error: e instanceof Error ? e.message : String(e),
-          };
-        }
-      }),
-    );
-    setStatus(out);
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   return (
     <Screen>
@@ -110,34 +80,20 @@ export default function ExploreScreen() {
       <PrototypeWarning />
 
       <Card>
-        <Heading>{t("explore.chainStatus")}</Heading>
-        {CHAINS.map((c) => {
-          const s = status?.[c.key];
-          return (
-            <React.Fragment key={c.key}>
-              <InfoRow
-                label={c.displayName}
-                value={
-                  s === undefined
-                    ? t("common.loading")
-                    : s.block !== null
-                      ? `${t("explore.block")} ${s.block}`
-                      : t("common.fetchFailed")
-                }
-              />
-              <Body>
-                ネイティブ通貨 {c.nativeSymbol} / EVM Chain ID {c.evmChainId}
-                {c.cosmosChainId ? ` / Cosmos ${c.cosmosChainId}` : ""}
-                {"\n"}RPC: {c.evmRpcUrls[0]}
-                {s?.error ? `\n${s.error}` : ""}
-              </Body>
-              <Pressable onPress={() => Linking.openURL(c.explorerUrl)}>
-                <Text style={styles.link}>{t("explore.explorer")}</Text>
-              </Pressable>
-            </React.Fragment>
-          );
-        })}
-        <PrimaryButton label={t("common.refresh")} onPress={load} />
+        <Heading>{t("explore.links")}</Heading>
+        {ENTRIES.map((e) => (
+          <Pressable
+            key={e.label}
+            style={styles.row}
+            onPress={() => Linking.openURL(e.url)}
+          >
+            <View style={styles.rowMain}>
+              <Text style={styles.rowLabel}>{e.label}</Text>
+              <Text style={styles.rowDesc}>{e.description}</Text>
+            </View>
+            <Text style={styles.rowArrow}>↗</Text>
+          </Pressable>
+        ))}
       </Card>
 
       <Card>
@@ -156,24 +112,20 @@ export default function ExploreScreen() {
       </Card>
 
       <Text style={styles.note}>{t("explore.linkWarning")}</Text>
-      <Card>
-        <Heading>{t("explore.links")}</Heading>
-        {ENTRIES.map((e) => (
-          <React.Fragment key={e.label}>
-            <Body>
-              {e.label} — {e.description}
-            </Body>
-            <Pressable onPress={() => Linking.openURL(e.url)}>
-              <Text style={styles.link}>{e.url} ↗</Text>
-            </Pressable>
-          </React.Fragment>
-        ))}
-      </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   note: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  link: { color: colors.accent, fontSize: 13 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+  },
+  rowMain: { flex: 1, gap: 2 },
+  rowLabel: { color: colors.text, fontSize: 15, fontWeight: "700" },
+  rowDesc: { color: colors.muted, fontSize: 12, lineHeight: 17 },
+  rowArrow: { color: colors.cyan, fontSize: 15, fontWeight: "700" },
 });

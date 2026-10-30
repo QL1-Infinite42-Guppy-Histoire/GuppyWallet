@@ -1,10 +1,11 @@
-import React, { useState } from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
   Body,
   ChipPicker,
   Field,
   Heading,
+  InfoRow,
   PrimaryButton,
 } from "../components/controls";
 import {
@@ -15,10 +16,17 @@ import {
   Title,
   colors,
 } from "../components/ui";
-import { CHAINS } from "../config/chains";
+import {
+  CHAINS,
+  INFINITE_CONTRACTS,
+  INFINITE_NFTS,
+  QL1_CONTRACTS,
+} from "../config/chains";
 import { useI18n } from "../context/LanguageContext";
 import { useWallet } from "../context/WalletContext";
 import { useBalances } from "../context/BalancesContext";
+import { getProvider } from "../lib/onchain";
+import { ST42_ADDRESS } from "../lib/protocol";
 
 const APP_VERSION = "0.1.0"; // keep in sync with app.json "version"
 
@@ -38,6 +46,25 @@ export default function SettingsScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [phraseChecked, setPhraseChecked] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+
+  // Technical details (moved off Home/Explore): live block numbers.
+  const [blocks, setBlocks] = useState<Record<string, number | null>>({});
+  const loadBlocks = useCallback(async () => {
+    const out: Record<string, number | null> = {};
+    await Promise.all(
+      CHAINS.map(async (c) => {
+        try {
+          out[c.key] = await getProvider(c).getBlockNumber();
+        } catch {
+          out[c.key] = null;
+        }
+      }),
+    );
+    setBlocks(out);
+  }, []);
+  useEffect(() => {
+    loadBlocks();
+  }, [loadBlocks]);
 
   const handleCreate = async () => {
     setFormError(null);
@@ -109,7 +136,7 @@ export default function SettingsScreen() {
           <>
             <Body>
               ウォレットを作成するか、既存のリカバリーフレーズ／秘密鍵をインポートできます。
-              鍵は端末の安全領域（SecureStore＝Android Keystore）にだけ保存され、
+              鍵はスマホの中の安全な場所にだけ保存され、
               外部に送信されることはありません。
             </Body>
             <PrimaryButton
@@ -146,14 +173,14 @@ export default function SettingsScreen() {
               状態: {wallet.unlocked ? "ロック解除中（5分で自動ロック）" : "ロック中"}
               {"\n"}種類:{" "}
               {wallet.info.kind === "mnemonic"
-                ? "リカバリーフレーズ（BIP-39, m/44'/60'/0'/0/0）"
+                ? "リカバリーフレーズ"
                 : "秘密鍵"}
             </Body>
-            <Text style={styles.addrLabel}>EVMアドレス（両チェーン共通）</Text>
+            <Text style={styles.addrLabel}>アドレス（Infinite / QL1 共通）</Text>
             <Text style={styles.addr}>{wallet.info.evmAddress}</Text>
-            <Text style={styles.addrLabel}>Cosmosアドレス（Infinite・表示のみ）</Text>
+            <Text style={styles.addrLabel}>アドレス（Infinite・別形式）</Text>
             <Text style={styles.addr}>{wallet.info.infiniteAddress}</Text>
-            <Text style={styles.addrLabel}>Cosmosアドレス（QL1・表示のみ）</Text>
+            <Text style={styles.addrLabel}>アドレス（QL1・別形式）</Text>
             <Text style={styles.addr}>{wallet.info.qomAddress}</Text>
             {wallet.unlocked ? (
               <PrimaryButton label="ロックする" onPress={wallet.lock} />
@@ -229,6 +256,57 @@ export default function SettingsScreen() {
       </Card>
 
       <Card>
+        <Heading>{t("settings.details")}</Heading>
+        <Body>{t("settings.detailsNote")}</Body>
+        {CHAINS.map((c) => (
+          <View key={c.key} style={styles.detailBlock}>
+            <Text style={styles.subHeading}>{c.displayName}</Text>
+            <InfoRow label="EVM Chain ID" value={String(c.evmChainId)} />
+            <InfoRow
+              label="Cosmos Chain ID"
+              value={c.cosmosChainId ?? "—"}
+            />
+            <InfoRow
+              label="ブロック"
+              value={
+                blocks[c.key] === undefined
+                  ? t("common.loading")
+                  : blocks[c.key] === null
+                    ? t("common.fetchFailed")
+                    : String(blocks[c.key])
+              }
+            />
+            <Text style={styles.addrLabel}>RPC</Text>
+            <Text style={styles.addr}>{c.evmRpcUrls[0]}</Text>
+            <Text style={styles.addrLabel}>エクスプローラー</Text>
+            <Text style={styles.addr}>{c.explorerUrl}</Text>
+          </View>
+        ))}
+        <PrimaryButton label={t("common.refresh")} onPress={loadBlocks} />
+        <Text style={styles.subHeading}>主なコントラクト</Text>
+        {[
+          ["Infinite DEX ルーター", INFINITE_CONTRACTS.dexRouter],
+          ["Infinite DEX ファクトリー", INFINITE_CONTRACTS.dexFactory],
+          ["QL1 DEX ルーター（QomSwap）", QL1_CONTRACTS.dexRouter],
+          ["QL1 DEX ファクトリー（QomSwap）", QL1_CONTRACTS.dexFactory],
+          ["st42", ST42_ADDRESS],
+          ["The Guide / Fluke", INFINITE_NFTS.theGuide],
+          ["ZG13", INFINITE_NFTS.zg13],
+          ["Starlight", INFINITE_CONTRACTS.starlightLedger],
+          ["Bridge ルーター（QOM）", INFINITE_CONTRACTS.bridgeRouterQom],
+          ["Bridge ルーター（USDT）", INFINITE_CONTRACTS.bridgeRouterUsdt],
+          ["Bridge ルーター（USDC）", INFINITE_CONTRACTS.bridgeRouterUsdc],
+          ["Bridge ルーター（WBTC）", INFINITE_CONTRACTS.bridgeRouterWbtc],
+          ["QNS（.qom）", QL1_CONTRACTS.qnsDomains],
+        ].map(([label, addr]) => (
+          <React.Fragment key={label}>
+            <Text style={styles.addrLabel}>{label}</Text>
+            <Text style={styles.addr}>{addr}</Text>
+          </React.Fragment>
+        ))}
+      </Card>
+
+      <Card>
         <Heading>{t("settings.security")}</Heading>
         <Body>{t("settings.securityBody")}</Body>
       </Card>
@@ -248,12 +326,14 @@ export default function SettingsScreen() {
           答えは 42。タオル（TOWEL）もちゃんとトークン一覧に入っています。
           慌てず、少額からどうぞ。
         </Body>
+        <Body>{t("settings.priceNote")}</Body>
       </Card>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  detailBlock: { gap: 2, marginTop: 4 },
   subHeading: {
     color: colors.text,
     fontSize: 14,
