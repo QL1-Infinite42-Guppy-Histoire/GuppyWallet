@@ -9,7 +9,7 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
-import { getProvider } from "../lib/onchain";
+import { getProvider, type ProviderChainLike } from "../lib/onchain";
 import {
   cosmosAddressFromPrivateKey,
   generatePhrase,
@@ -27,7 +27,6 @@ import {
   type WalletKind,
   type WalletPublicInfo,
 } from "../lib/walletStore";
-import type { ChainConfig } from "../config/chains";
 
 /**
  * Real wallet state (user opted in to signing on 2026-10-30).
@@ -35,6 +34,19 @@ import type { ChainConfig } from "../config/chains";
  * The secret lives only in expo-secure-store. After biometric unlock it
  * is derived into a private key held in memory ONLY, and auto-relocks
  * after AUTO_LOCK_MS of inactivity. Nothing here ever transmits keys.
+ *
+ * AUTH MODEL (user instruction, 2026-10-30): biometric authentication is
+ * asked for at exactly two moments —
+ *   1. App open: on cold start, if a wallet exists and is locked, the
+ *      unlock prompt appears automatically once (see the effect below).
+ *      If the user cancels, nothing retries automatically; they can tap
+ *      the unlock button in Settings (or the lock chip flow) instead.
+ *   2. Signing: EVERY transaction send re-authenticates fresh inside
+ *      ConfirmTx, immediately before the job executes — even when the
+ *      session is already unlocked.
+ * Nothing else asks for biometrics: wallet deletion deliberately relies
+ * on its two-step in-app confirmation UI only, and creation/import never
+ * gated on biometrics.
  */
 
 const AUTO_LOCK_MS = 5 * 60 * 1000;
@@ -54,8 +66,9 @@ interface WalletState {
   unlock: () => Promise<boolean>;
   lock: () => void;
   removeWallet: () => Promise<void>;
-  /** ethers Wallet connected to the chain RPC, or null while locked */
-  getSigner: (chain: ChainConfig) => Wallet | null;
+  /** ethers Wallet connected to the chain RPC, or null while locked.
+   *  Accepts the wallet chains and the bridge's signer-only chains. */
+  getSigner: (chain: ProviderChainLike) => Wallet | null;
   /** raw private key for local derivation needs, or null while locked */
   getPrivateKey: () => string | null;
 }
@@ -177,9 +190,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [privateKey, scheduleAutoLock]);
 
+  // App-open biometric prompt (auth model #1): exactly once per cold
+  // start, when a stored wallet exists and the key is not yet in memory.
+  // Cancelling leaves the wallet locked with no automatic retry.
+  const autoPromptedRef = useRef(false);
+  useEffect(() => {
+    if (info && !privateKey && !autoPromptedRef.current) {
+      autoPromptedRef.current = true;
+      unlock();
+    }
+  }, [info, privateKey, unlock]);
+
   const removeWallet = useCallback(async () => {
-    const ok = await authenticate("ウォレットを削除");
-    if (!ok) return;
+    // No biometric here by design (see AUTH MODEL above): the Settings
+    // screen's two-step confirmation UI is the only gate for deletion.
     await deleteWallet();
     setInfo(null);
     setPrivateKey(null);
@@ -187,7 +211,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getSigner = useCallback(
-    (chain: ChainConfig): Wallet | null => {
+    (chain: ProviderChainLike): Wallet | null => {
       if (!privateKey) return null;
       scheduleAutoLock();
       return new Wallet(privateKey, getProvider(chain));

@@ -10,9 +10,13 @@ import {
   Text,
   View,
 } from "react-native";
-import type { ChainConfig } from "../config/chains";
 import { useWallet } from "../context/WalletContext";
-import { getHasSentTx, markHasSentTx } from "../lib/walletStore";
+import type { ProviderChainLike } from "../lib/onchain";
+import {
+  authenticate,
+  getHasSentTx,
+  markHasSentTx,
+} from "../lib/walletStore";
 import { colors } from "./ui";
 
 /**
@@ -20,11 +24,24 @@ import { colors } from "./ui";
  *
  * Flow: (unlock if needed) → prepare (fee estimate) → review sheet in
  * plain words (where to / how much / fee estimate) → user taps
- * confirm → local signing + send → explorer link + pending/success/
- * failure state. Technical lines (contract addresses etc.) stay
- * available behind a 詳細 toggle — same safety data, plainer front.
+ * confirm → FRESH biometric authentication → local signing + send →
+ * explorer link + pending/success/failure state. The biometric step is
+ * part of the auth model: it runs here, centrally, so every TxJob
+ * (send / swap / LP / staking / st42 / Fluke / Bridge) is gated the
+ * same way, even when the session is already unlocked. If the user
+ * cancels or authentication fails, nothing is sent.
+ * Technical lines (contract addresses etc.) stay available behind a
+ * 詳細 toggle — same safety data, plainer front.
  * The first-ever send carries an extra "まずは少額で" warning.
  */
+
+/** Structural chain shape a TxJob needs: the wallet chains (ChainConfig)
+ *  and the bridge's signer-only source chains both satisfy it. */
+export interface TxChainLike extends ProviderChainLike {
+  displayName: string;
+  explorerUrl: string;
+  nativeSymbol: string;
+}
 
 /** Line labels that are technical detail, shown behind the toggle. */
 const DETAIL_LABELS = new Set([
@@ -47,7 +64,7 @@ export interface PreparedTx {
 
 export interface TxJob {
   title: string;
-  chain: ChainConfig;
+  chain: TxChainLike;
   lines: TxLine[];
   prepare: (signer: Wallet) => Promise<PreparedTx>;
 }
@@ -72,6 +89,7 @@ export function ConfirmTxModal({
   const [prepared, setPrepared] = useState<PreparedTx | null>(null);
   const [hashes, setHashes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [firstSend, setFirstSend] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -80,6 +98,7 @@ export function ConfirmTxModal({
     setPrepared(null);
     setHashes([]);
     setError(null);
+    setAuthError(null);
     setShowDetails(false);
     setPhase(wallet.unlocked ? "preparing" : "locked");
     getHasSentTx()
@@ -123,6 +142,16 @@ export function ConfirmTxModal({
 
   const handleConfirm = useCallback(async () => {
     if (!prepared) return;
+    // Signing-time biometric gate (auth model #2): authenticate fresh,
+    // immediately before executing — regardless of session unlock state.
+    setAuthError(null);
+    const ok = await authenticate("送信の確認");
+    if (!ok) {
+      setAuthError(
+        "指紋認証ができなかったため、送信をやめました。もう一度お試しください。",
+      );
+      return; // stay in review; nothing was sent
+    }
     setPhase("sending");
     try {
       const result = await prepared.send();
@@ -229,6 +258,9 @@ export function ConfirmTxModal({
             ) : null}
             {phase === "error" ? (
               <Text style={styles.errorText}>送信できませんでした：{error}</Text>
+            ) : null}
+            {phase === "review" && authError ? (
+              <Text style={styles.errorText}>{authError}</Text>
             ) : null}
           </ScrollView>
 
