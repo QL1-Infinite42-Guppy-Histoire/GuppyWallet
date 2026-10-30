@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassSheet,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderColor: colors.border,
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    backgroundColor: colors.panel,
+    backgroundColor: colors.glassChip,
   },
   chipActive: { backgroundColor: colors.gradStart, borderColor: colors.gradStart },
   chipText: { color: colors.text, fontSize: 13 },

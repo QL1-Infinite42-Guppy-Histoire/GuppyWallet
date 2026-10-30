@@ -116,7 +116,8 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-  note: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  // Rendered directly on the galaxy, below the cards.
+  note: { color: colors.onSpaceMuted, fontSize: 13, lineHeight: 19 },
   row: {
     flexDirection: "row",
     alignItems: "center",

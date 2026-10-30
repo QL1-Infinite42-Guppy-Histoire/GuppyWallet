@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassSheet,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 18,

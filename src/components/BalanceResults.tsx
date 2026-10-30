@@ -135,10 +135,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   left: { flex: 1, gap: 1 },
-  symbol: { color: colors.text, fontSize: 16, fontWeight: "700" },
-  chainName: { color: colors.muted, fontSize: 11 },
+  // Rows sit directly on the galaxy (no card) — on-space colors.
+  symbol: { color: colors.onSpace, fontSize: 16, fontWeight: "700" },
+  chainName: { color: colors.onSpaceMuted, fontSize: 11 },
   right: { alignItems: "flex-end", gap: 1 },
-  amount: { color: colors.text, fontSize: 15, fontWeight: "600" },
-  value: { color: colors.muted, fontSize: 12 },
-  note: { color: colors.muted, fontSize: 12, paddingVertical: 4 },
+  amount: { color: colors.onSpace, fontSize: 15, fontWeight: "600" },
+  value: { color: colors.onSpaceMuted, fontSize: 12 },
+  note: { color: colors.onSpaceMuted, fontSize: 12, paddingVertical: 4 },
 });

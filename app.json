@@ -27,6 +27,11 @@
       "supportsTablet": false
     },
     "name": "Zaphod Wallet",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#050914"
+    },
     "orientation": "portrait",
     "scheme": "infiniteql1wallet",
     "slug": "infinite-ql1-wallet",

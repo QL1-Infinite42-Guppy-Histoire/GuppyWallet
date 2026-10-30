@@ -1,5 +1,9 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { NavigationContainer } from "@react-navigation/native";
+import {
+  DefaultTheme,
+  NavigationContainer,
+  type Theme,
+} from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
@@ -54,9 +58,12 @@ function HomeStackNavigator() {
   return (
     <HomeStack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
-        headerTintColor: colors.text,
+        // Deep-space header: blends into the galaxy at the top of
+        // every screen, white title text on space.
+        headerStyle: { backgroundColor: colors.bgDeep },
+        headerTintColor: colors.onSpace,
         headerTitleStyle: { fontWeight: "800" },
+        headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
@@ -89,15 +96,17 @@ function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
-        headerTintColor: colors.text,
+        headerStyle: { backgroundColor: colors.bgDeep },
+        headerTintColor: colors.onSpace,
         headerTitleStyle: { fontWeight: "800" },
+        headerShadowVisible: false,
         tabBarStyle: {
-          // Solid opaque bar that extends under the system navigation
-          // area; height and bottom padding grow by the device inset so
-          // the tabs themselves sit fully above the system buttons.
-          backgroundColor: colors.bgDeep,
-          borderTopColor: colors.panelBorder,
+          // Translucent white glass bar floating over the galaxy; it
+          // extends under the system navigation area, with height and
+          // bottom padding growing by the device inset so the tabs
+          // themselves sit fully above the system buttons.
+          backgroundColor: colors.glassStrong,
+          borderTopColor: colors.cardBorder,
           borderTopWidth: 1,
           height: TAB_BAR_BASE_HEIGHT + insets.bottom,
           paddingTop: 6,
@@ -158,6 +167,12 @@ function TabNavigator() {
   );
 }
 
+/** Navigation theme on deep space — no white flash behind screens. */
+const NAV_THEME: Theme = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: colors.bg },
+};
+
 export default function App() {
   return (
     <SafeAreaProvider>
@@ -165,8 +180,8 @@ export default function App() {
         <WalletProvider>
           <BalancesProvider>
             <ChainSelectionProvider>
-              <NavigationContainer>
-                <StatusBar style="dark" />
+              <NavigationContainer theme={NAV_THEME}>
+                <StatusBar style="light" />
                 <TabNavigator />
               </NavigationContainer>
             </ChainSelectionProvider>
