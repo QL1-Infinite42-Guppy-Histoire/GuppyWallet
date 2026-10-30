@@ -1,5 +1,6 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { Text } from "react-native";
@@ -8,15 +9,19 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { colors } from "./src/components/ui";
-import { WalletProvider } from "./src/context/WalletContext";
 import { BalancesProvider } from "./src/context/BalancesContext";
-import DashboardScreen from "./src/screens/DashboardScreen";
-import MoreScreen from "./src/screens/MoreScreen";
-import StakingScreen from "./src/screens/StakingScreen";
-import SwapScreen from "./src/screens/SwapScreen";
-import WalletScreen from "./src/screens/WalletScreen";
+import { LanguageProvider, useI18n } from "./src/context/LanguageContext";
+import { WalletProvider } from "./src/context/WalletContext";
+import DeFiScreen from "./src/screens/DeFiScreen";
+import ExploreScreen from "./src/screens/ExploreScreen";
+import HomeScreen from "./src/screens/HomeScreen";
+import NftScreen from "./src/screens/NftScreen";
+import SendScreen from "./src/screens/SendScreen";
+import SettingsScreen from "./src/screens/SettingsScreen";
+import TokenListScreen from "./src/screens/TokenListScreen";
 
 const Tab = createBottomTabNavigator();
+const HomeStack = createNativeStackNavigator();
 
 function tabIcon(symbol: string) {
   return ({
@@ -38,12 +43,48 @@ function tabIcon(symbol: string) {
   );
 }
 
+/**
+ * Home tab stack: Home (dashboard) → TokenList / Send.
+ * Balances live only here; Send is reached from Home's quick action;
+ * wallet management lives only in Settings. There is no Wallet tab.
+ */
+function HomeStackNavigator() {
+  const { t } = useI18n();
+  return (
+    <HomeStack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.bg },
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontWeight: "800" },
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      <HomeStack.Screen
+        name="HomeMain"
+        component={HomeScreen}
+        options={{ title: t("tab.home") }}
+      />
+      <HomeStack.Screen
+        name="TokenList"
+        component={TokenListScreen}
+        options={{ title: t("tokens.title") }}
+      />
+      <HomeStack.Screen
+        name="Send"
+        component={SendScreen}
+        options={{ title: t("send.title") }}
+      />
+    </HomeStack.Navigator>
+  );
+}
+
 // Base height of the tab content area (icons + labels), excluding the
 // Android/iOS system navigation inset at the bottom.
 const TAB_BAR_BASE_HEIGHT = 62;
 
 function TabNavigator() {
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -61,35 +102,56 @@ function TabNavigator() {
           paddingTop: 6,
           paddingBottom: insets.bottom,
         },
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.cyan,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
       }}
     >
       <Tab.Screen
-        name="Dashboard"
-        component={DashboardScreen}
-        options={{ title: "ホーム", tabBarIcon: tabIcon("⌂") }}
+        name="Home"
+        component={HomeStackNavigator}
+        options={{
+          title: t("tab.home"),
+          tabBarLabel: t("tab.home"),
+          tabBarIcon: tabIcon("⌂"),
+          headerShown: false,
+        }}
       />
       <Tab.Screen
-        name="Wallet"
-        component={WalletScreen}
-        options={{ title: "ウォレット", tabBarIcon: tabIcon("◉") }}
+        name="DeFi"
+        component={DeFiScreen}
+        options={{
+          title: t("tab.defi"),
+          tabBarLabel: t("tab.defi"),
+          tabBarIcon: tabIcon("◈"),
+        }}
       />
       <Tab.Screen
-        name="Swap"
-        component={SwapScreen}
-        options={{ title: "Swap", tabBarIcon: tabIcon("⇄") }}
+        name="Explore"
+        component={ExploreScreen}
+        options={{
+          title: t("tab.explore"),
+          tabBarLabel: t("tab.explore"),
+          tabBarIcon: tabIcon("◎"),
+        }}
       />
       <Tab.Screen
-        name="Staking"
-        component={StakingScreen}
-        options={{ title: "ステーキング", tabBarIcon: tabIcon("◈") }}
+        name="NFT"
+        component={NftScreen}
+        options={{
+          title: t("tab.nft"),
+          tabBarLabel: t("tab.nft"),
+          tabBarIcon: tabIcon("▣"),
+        }}
       />
       <Tab.Screen
-        name="More"
-        component={MoreScreen}
-        options={{ title: "もっと", tabBarIcon: tabIcon("☰") }}
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          title: t("tab.settings"),
+          tabBarLabel: t("tab.settings"),
+          tabBarIcon: tabIcon("⚙"),
+        }}
       />
     </Tab.Navigator>
   );
@@ -98,14 +160,16 @@ function TabNavigator() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <WalletProvider>
-        <BalancesProvider>
-          <NavigationContainer>
-            <StatusBar style="light" />
-            <TabNavigator />
-          </NavigationContainer>
-        </BalancesProvider>
-      </WalletProvider>
+      <LanguageProvider>
+        <WalletProvider>
+          <BalancesProvider>
+            <NavigationContainer>
+              <StatusBar style="light" />
+              <TabNavigator />
+            </NavigationContainer>
+          </BalancesProvider>
+        </WalletProvider>
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }

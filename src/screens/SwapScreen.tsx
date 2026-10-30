@@ -1,6 +1,12 @@
 import { Contract, formatUnits, parseUnits } from "ethers";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -32,6 +38,7 @@ import {
   colors,
 } from "../components/ui";
 import { CHAINS, type ChainConfig } from "../config/chains";
+import { useI18n } from "../context/LanguageContext";
 import { useWallet } from "../context/WalletContext";
 import { useBalances } from "../context/BalancesContext";
 import type { TokenBalance } from "../lib/onchain";
@@ -62,8 +69,38 @@ import {
 
 const SLIPPAGE_PRESETS = ["0.1", "0.5", "1"] as const;
 
-export default function SwapScreen() {
+interface PairCheck {
+  label: string;
+  pair: string | null;
+  detail: string | null;
+}
+
+/** Major pairs probed live (factory.getPair + reserves) in the LP view. */
+const PAIR_DEFS: Record<string, [string, string][]> = {
+  infinite: [
+    ["42", "QOM"],
+    ["42", "USDT"],
+    ["42", "FISH"],
+    ["FISH", "PANIC"],
+  ],
+  ql1: [
+    ["QOM", "QSWAP"],
+    ["QOM", "ZAP"],
+    ["ZAP", "QSWAP"],
+  ],
+};
+
+export default function SwapScreen({
+  view = "swap",
+  embedded,
+}: {
+  /** "swap" renders the swap card; "lp" renders the LP card + pair checks.
+   *  All state/logic is shared — this only selects the visible section. */
+  view?: "swap" | "lp";
+  embedded?: boolean;
+} = {}) {
   const wallet = useWallet();
+  const { t } = useI18n();
   const balances = useBalances();
   const { startTx, modal } = useTxFlow();
 
@@ -100,6 +137,46 @@ export default function SwapScreen() {
   const [lpBalance, setLpBalance] = useState<string | null>(null);
   const [lpRemoveAmount, setLpRemoveAmount] = useState("");
   const [lpError, setLpError] = useState<string | null>(null);
+
+  // LP pair-existence checks (read-only; factory.getPair + reserves)
+  const [pairChecks, setPairChecks] = useState<PairCheck[] | null>(null);
+  const loadPairChecks = useCallback(async () => {
+    const defs = PAIR_DEFS[chain.key] ?? [];
+    const checks = await Promise.all(
+      defs.map(async ([sa, sb]): Promise<PairCheck> => {
+        const label = `${sa} / ${sb}`;
+        const a = tokens.find((x) => x.symbol === sa);
+        const b = tokens.find((x) => x.symbol === sb);
+        if (!a || !b) return { label, pair: null, detail: null };
+        const pair = await getPairAddress(chain, a.address, b.address);
+        if (!pair) return { label, pair: null, detail: null };
+        let detail: string | null = null;
+        try {
+          const pc = new Contract(pair, PAIR_ABI, getProvider(chain)) as any;
+          const [res, t0] = await Promise.all([
+            pc.getReserves(),
+            pc.token0(),
+          ]);
+          const aIs0 =
+            String(t0).toLowerCase() === a.address.toLowerCase();
+          const ra = aIs0 ? res[0] : res[1];
+          const rb = aIs0 ? res[1] : res[0];
+          detail = `${prettyAmount(formatUnits(ra, a.decimals))} ${sa} / ${prettyAmount(formatUnits(rb, b.decimals))} ${sb}`;
+        } catch {
+          detail = null;
+        }
+        return { label, pair, detail };
+      }),
+    );
+    setPairChecks(checks);
+  }, [chain, tokens]);
+
+  useEffect(() => {
+    if (view === "lp") {
+      setPairChecks(null);
+      loadPairChecks().catch(() => setPairChecks([]));
+    }
+  }, [view, loadPairChecks]);
 
   const slippageBps = useMemo(() => {
     const pct = Number(slippage);
@@ -540,9 +617,42 @@ export default function SwapScreen() {
     </Pressable>
   );
 
+  const pairPanel = (
+    <Card>
+      <Heading>{t("defi.lpPairs")}</Heading>
+      {pairChecks === null ? (
+        <Body>{t("common.loading")}</Body>
+      ) : (
+        pairChecks.map((c) => (
+          <React.Fragment key={c.label}>
+            <InfoRow
+              label={c.label}
+              value={c.pair ? t("defi.lpPairExists") : t("defi.lpPairNone")}
+            />
+            {c.pair ? (
+              <Body>
+                {c.pair}
+                {c.detail ? `\nプール残高: ${c.detail}` : ""}
+              </Body>
+            ) : null}
+          </React.Fragment>
+        ))
+      )}
+      {chain.key === "infinite" ? (
+        <Body>
+          42 / QOM
+          ペアは実際に存在します。ただしネイティブ42を含むLP追加・解除は、
+          プレースホルダ方式での実績が未確認のため、下のフォームでは
+          引き続き無効化しています。
+        </Body>
+      ) : null}
+      <PrimaryButton label={t("common.refresh")} onPress={loadPairChecks} />
+    </Card>
+  );
+
   return (
-    <Screen>
-      <Title>Swap</Title>
+    <Screen embedded={embedded}>
+      {embedded ? null : <Title>Swap</Title>}
       <PrototypeWarning />
       {modal}
 
@@ -578,6 +688,7 @@ export default function SwapScreen() {
       </Text>
 
       {/* ------- Uniswap-style swap card ------- */}
+      {view === "swap" ? (
       <View style={styles.swapCard}>
         {/* pay panel */}
         <View style={styles.panel}>
@@ -750,9 +861,13 @@ export default function SwapScreen() {
           最終確認は確認画面（ガス代・最小受取つき）で行います。
         </Text>
       </View>
+      ) : null}
 
       {/* ------- LP (unchanged flows, restyled container) ------- */}
-      <Card>
+      {view === "lp" ? (
+        <>
+          {pairPanel}
+          <Card>
         <Heading>流動性提供（LP）</Heading>
         <Body>トークンA</Body>
         <ChipPicker
@@ -834,7 +949,9 @@ export default function SwapScreen() {
         {!wallet.info ? (
           <Body>LP操作にはウォレットの作成／インポートが必要です。</Body>
         ) : null}
-      </Card>
+          </Card>
+        </>
+      ) : null}
 
       {/* ------- token selector modal ------- */}
       <Modal

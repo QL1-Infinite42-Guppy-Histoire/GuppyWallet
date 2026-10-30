@@ -37,7 +37,12 @@ import {
 } from "../lib/protocol";
 import { estimateOrFallback, gasCostNative, sendAndWait } from "../lib/tx";
 
-export default function StakingScreen() {
+export default function StakingScreen({
+  embedded,
+}: {
+  /** Rendered inside the DeFi tab (no own Title / scroll container). */
+  embedded?: boolean;
+} = {}) {
   const wallet = useWallet();
   const balances = useBalances();
   const { startTx, modal } = useTxFlow();
@@ -394,8 +399,8 @@ export default function StakingScreen() {
   };
 
   return (
-    <Screen>
-      <Title>ステーキング</Title>
+    <Screen embedded={embedded}>
+      {embedded ? null : <Title>ステーキング</Title>}
       <PrototypeWarning />
       {modal}
 
@@ -511,6 +516,10 @@ export default function StakingScreen() {
                   ? `${prettyAmount(st42.totalAssetsFormatted)} 42`
                   : "—"
               }
+            />
+            <InfoRow
+              label="APY"
+              value="未取得（年率を算出できる公式データがありません）"
             />
             <InfoRow
               label="アンボンディング"
