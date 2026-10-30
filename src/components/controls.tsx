@@ -145,6 +145,46 @@ export function PercentChips({
   );
 }
 
+/** Segmented sub-navigation used inside the DeFi / NFT tabs. */
+export function SegmentedTabs({
+  options,
+  value,
+  onChange,
+}: {
+  options: ChipOption[];
+  value: string;
+  onChange: (key: string) => void;
+}) {
+  return (
+    <View style={styles.segmented}>
+      {options.map((o) => {
+        const active = o.key === value;
+        return (
+          <Pressable
+            key={o.key}
+            style={styles.segment}
+            onPress={() => onChange(o.key)}
+          >
+            {active ? (
+              <LinearGradient
+                colors={GRADIENT}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
+            ) : null}
+            <Text
+              style={[styles.segmentText, active && styles.segmentTextActive]}
+            >
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.infoRow}>
@@ -197,6 +237,25 @@ const styles = StyleSheet.create({
   },
   pctChipDisabled: { opacity: 0.4 },
   pctChipText: { color: colors.muted, fontSize: 11, fontWeight: "700" },
+  segmented: {
+    flexDirection: "row",
+    backgroundColor: colors.panel,
+    borderColor: colors.panelBorder,
+    borderWidth: 1,
+    borderRadius: 999,
+    padding: 4,
+    gap: 4,
+  },
+  segment: {
+    flex: 1,
+    borderRadius: 999,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  segmentText: { color: colors.muted, fontSize: 13, fontWeight: "600" },
+  segmentTextActive: { color: "#FFFFFF", fontWeight: "800" },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",

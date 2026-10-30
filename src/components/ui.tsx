@@ -1,30 +1,39 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useI18n } from "../context/LanguageContext";
 
 /**
- * Theme: deep-space "Guide" look — Hitchhiker's Guide to the Galaxy.
- * Near-black navy void, a quiet starfield, towel-gold accents.
+ * Theme: deep-space "Guide" look — Hitchhiker's Guide to the Galaxy,
+ * on the product-spec palette (2026-10-30 restructure): near-black navy
+ * void #050B1B, glassy cards #101D35, neon blue → purple gradients,
+ * cyan accents, towel-gold reserved for the DON'T PANIC wordmark.
  * Don't panic.
  */
 export const colors = {
-  bg: "#070B16",
-  bgDeep: "#04060D",
-  card: "#111A2E",
-  panel: "#182238",
-  panelBorder: "#2C3A5E",
-  border: "#26314D",
-  text: "#E8ECF4",
-  muted: "#93A0B8",
+  bg: "#050B1B",
+  bgDeep: "#030612",
+  card: "#101D35",
+  panel: "#152741",
+  panelBorder: "#2B4A73",
+  border: "#223A5C",
+  text: "#FFFFFF",
+  muted: "#94A7C7",
   accent: "#F5C542",
   accentWarm: "#FFB84D",
   star: "#FFFFFF",
   dangerBg: "#3A1620",
   dangerText: "#FFB3C0",
-  // Zaphod gradient (purple → blue) — primary accent from the design mock
-  gradStart: "#7C5CFF",
-  gradEnd: "#3D9BFF",
-  gradDeepStart: "#2A1B5E",
-  gradDeepEnd: "#12305E",
+  // Product-spec palette
+  primary: "#168BFF",
+  purple: "#9B35FF",
+  cyan: "#30DFFF",
+  positive: "#00D98B",
+  negative: "#FF4D79",
+  // Gradient stops (blue → purple per spec)
+  gradStart: "#168BFF",
+  gradEnd: "#9B35FF",
+  gradDeepStart: "#0A2450",
+  gradDeepEnd: "#2A1052",
 };
 
 /** The app-wide primary gradient stops (purple → blue). */
@@ -40,16 +49,16 @@ export const GRADIENT_DEEP: [string, string] = [
  * symbol — no external images, stable across renders).
  */
 const TOKEN_COLORS = [
+  "#168BFF",
+  "#9B35FF",
+  "#30DFFF",
+  "#00D98B",
+  "#F5C542",
+  "#FF4D79",
   "#7C5CFF",
   "#3D9BFF",
-  "#F5C542",
-  "#FF7AC3",
   "#2ED3A6",
   "#FF8A5C",
-  "#5CC8FF",
-  "#B78CFF",
-  "#FF5C7A",
-  "#4ADE80",
 ];
 
 export function tokenColor(symbol: string): string {
@@ -132,7 +141,18 @@ export function Starfield() {
   );
 }
 
-export function Screen({ children }: { children: React.ReactNode }) {
+export function Screen({
+  children,
+  embedded,
+}: {
+  children: React.ReactNode;
+  /** Rendered inside another Screen (e.g. a DeFi sub-view): no nested
+   *  ScrollView / starfield, just the stacked content. */
+  embedded?: boolean;
+}) {
+  if (embedded) {
+    return <View style={styles.embeddedContent}>{children}</View>;
+  }
   return (
     <View style={styles.screenWrap}>
       <Starfield />
@@ -156,14 +176,13 @@ export function Card({ children }: { children: React.ReactNode }) {
  * Used on the Dashboard header and on empty states.
  */
 export function DontPanic({ compact }: { compact?: boolean }) {
+  const { t } = useI18n();
   return (
     <View style={styles.dontPanicWrap}>
       <Text style={[styles.dontPanic, compact && styles.dontPanicCompact]}>
         DON'T PANIC
       </Text>
-      <Text style={styles.dontPanicSub}>
-        慌てないで。タオルと、このガイドがあれば大丈夫。
-      </Text>
+      <Text style={styles.dontPanicSub}>{t("common.dontPanicSub")}</Text>
     </View>
   );
 }
@@ -197,9 +216,11 @@ const styles = StyleSheet.create({
   screenWrap: { flex: 1, backgroundColor: colors.bg },
   screen: { flex: 1, backgroundColor: "transparent" },
   content: { padding: 16, gap: 12 },
+  embeddedContent: { gap: 12 },
   title: { color: colors.text, fontSize: 24, fontWeight: "800" },
   card: {
-    backgroundColor: colors.card,
+    // glassy: slightly translucent so the starfield shimmers through
+    backgroundColor: "rgba(16,29,53,0.94)",
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 20,
@@ -220,24 +241,24 @@ const styles = StyleSheet.create({
     height: 340,
     top: -120,
     right: -110,
-    backgroundColor: "#27407A",
-    opacity: 0.16,
+    backgroundColor: "#168BFF",
+    opacity: 0.13,
   },
   nebulaB: {
     width: 280,
     height: 280,
     bottom: -90,
     left: -120,
-    backgroundColor: "#5A3A8A",
-    opacity: 0.12,
+    backgroundColor: "#9B35FF",
+    opacity: 0.11,
   },
   nebulaC: {
     width: 190,
     height: 190,
     top: "42%",
     right: -80,
-    backgroundColor: "#8A5A1E",
-    opacity: 0.08,
+    backgroundColor: "#30DFFF",
+    opacity: 0.05,
   },
   dontPanicWrap: { alignItems: "center", paddingVertical: 8, gap: 4 },
   dontPanic: {

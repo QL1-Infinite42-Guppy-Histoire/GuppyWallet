@@ -189,6 +189,7 @@ export const CHAINS: ChainConfig[] = [INFINITE, QL1];
 /** External service links (information only — swaps run natively in-app
  *  against the confirmed DEX routers). */
 export const DAPP_LINKS = {
+  projectHub: "https://infinitedrive42.xyz", // project master link hub (user-supplied 2026-10-30)
   flukeGuide: "https://fluke.zaphod.one",
   nft: "https://nft.zaphod.one",
   bridge: "https://bridge.zaphod.one",
