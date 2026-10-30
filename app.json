@@ -26,7 +26,7 @@
       "bundleIdentifier": "one.zaphod.wallet.prototype",
       "supportsTablet": false
     },
-    "name": "Infinite QL1 Wallet (Prototype)",
+    "name": "Zaphod Wallet",
     "orientation": "portrait",
     "scheme": "infiniteql1wallet",
     "slug": "infinite-ql1-wallet",
@@ -41,6 +41,13 @@
         "expo-local-authentication",
         {
           "faceIDPermission": "ウォレットのロック解除に生体認証を使います。"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "送金先アドレスのQRコードを読み取るためにカメラを使います。",
+          "recordAudioAndroid": false
         }
       ]
     ],

@@ -15,8 +15,22 @@ import WalletScreen from "./src/screens/WalletScreen";
 const Tab = createBottomTabNavigator();
 
 function tabIcon(symbol: string) {
-  return ({ color }: { color: string }) => (
-    <Text style={{ color, fontSize: 18 }}>{symbol}</Text>
+  return ({
+    color,
+    focused,
+  }: {
+    color: string;
+    focused: boolean;
+  }) => (
+    <Text
+      style={{
+        color,
+        fontSize: focused ? 23 : 21,
+        fontWeight: focused ? "800" : "400",
+      }}
+    >
+      {symbol}
+    </Text>
   );
 }
 
@@ -30,15 +44,23 @@ export default function App() {
           screenOptions={{
             headerStyle: { backgroundColor: colors.bg },
             headerTintColor: colors.text,
-            tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
+            headerTitleStyle: { fontWeight: "800" },
+            tabBarStyle: {
+              backgroundColor: colors.bgDeep,
+              borderTopColor: colors.panelBorder,
+              height: 62,
+              paddingTop: 6,
+              paddingBottom: 8,
+            },
             tabBarActiveTintColor: colors.accent,
             tabBarInactiveTintColor: colors.muted,
+            tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
           }}
         >
           <Tab.Screen
             name="Dashboard"
             component={DashboardScreen}
-            options={{ title: "ダッシュボード", tabBarIcon: tabIcon("▦") }}
+            options={{ title: "ホーム", tabBarIcon: tabIcon("⌂") }}
           />
           <Tab.Screen
             name="Wallet"
@@ -48,7 +70,7 @@ export default function App() {
           <Tab.Screen
             name="Swap"
             component={SwapScreen}
-            options={{ title: "スワップ", tabBarIcon: tabIcon("⇄") }}
+            options={{ title: "Swap", tabBarIcon: tabIcon("⇄") }}
           />
           <Tab.Screen
             name="Staking"
@@ -58,7 +80,7 @@ export default function App() {
           <Tab.Screen
             name="More"
             component={MoreScreen}
-            options={{ title: "その他", tabBarIcon: tabIcon("☰") }}
+            options={{ title: "もっと", tabBarIcon: tabIcon("☰") }}
           />
         </Tab.Navigator>
         </NavigationContainer>

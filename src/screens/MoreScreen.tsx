@@ -73,7 +73,7 @@ export default function MoreScreen() {
 
   return (
     <Screen>
-      <Title>その他</Title>
+      <Title>もっと</Title>
       <PrototypeWarning />
 
       <Card>

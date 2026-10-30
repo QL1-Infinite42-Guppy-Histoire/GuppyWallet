@@ -20,7 +20,78 @@ export const colors = {
   star: "#FFFFFF",
   dangerBg: "#3A1620",
   dangerText: "#FFB3C0",
+  // Zaphod gradient (purple → blue) — primary accent from the design mock
+  gradStart: "#7C5CFF",
+  gradEnd: "#3D9BFF",
+  gradDeepStart: "#2A1B5E",
+  gradDeepEnd: "#12305E",
 };
+
+/** The app-wide primary gradient stops (purple → blue). */
+export const GRADIENT: [string, string] = [colors.gradStart, colors.gradEnd];
+/** Darker hero-surface gradient stops. */
+export const GRADIENT_DEEP: [string, string] = [
+  colors.gradDeepStart,
+  colors.gradDeepEnd,
+];
+
+/**
+ * Deterministic per-token colors for icon chips (hashed from the
+ * symbol — no external images, stable across renders).
+ */
+const TOKEN_COLORS = [
+  "#7C5CFF",
+  "#3D9BFF",
+  "#F5C542",
+  "#FF7AC3",
+  "#2ED3A6",
+  "#FF8A5C",
+  "#5CC8FF",
+  "#B78CFF",
+  "#FF5C7A",
+  "#4ADE80",
+];
+
+export function tokenColor(symbol: string): string {
+  const s = symbol.toUpperCase();
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return TOKEN_COLORS[h % TOKEN_COLORS.length];
+}
+
+/** Circular token icon chip: colored disc + the symbol's letter(s). */
+export function TokenIcon({
+  symbol,
+  size = 40,
+}: {
+  symbol: string;
+  size?: number;
+}) {
+  const label =
+    symbol.length <= 2 ? symbol : symbol.slice(0, 2).toUpperCase();
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: tokenColor(symbol),
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text
+        style={{
+          color: "#0B0F19",
+          fontSize: Math.max(10, size * 0.34),
+          fontWeight: "800",
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
 
 /**
  * Deterministic starfield (seeded pattern — stable across renders, no
@@ -126,14 +197,14 @@ const styles = StyleSheet.create({
   screenWrap: { flex: 1, backgroundColor: colors.bg },
   screen: { flex: 1, backgroundColor: "transparent" },
   content: { padding: 16, gap: 12 },
-  title: { color: colors.text, fontSize: 22, fontWeight: "700" },
+  title: { color: colors.text, fontSize: 24, fontWeight: "800" },
   card: {
     backgroundColor: colors.card,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    gap: 6,
+    borderRadius: 20,
+    padding: 16,
+    gap: 8,
   },
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: "600" },
   todoItem: { color: colors.muted, fontSize: 14, lineHeight: 20 },

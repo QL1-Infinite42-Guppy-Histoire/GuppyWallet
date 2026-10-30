@@ -1,8 +1,17 @@
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { isAddress, parseUnits } from "ethers";
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { BalanceResults } from "../components/BalanceResults";
 import { useTxFlow, type TxJob } from "../components/ConfirmTx";
+import { ReceiveModal } from "../components/ReceiveModal";
 import {
   Body,
   ChipPicker,
@@ -33,22 +42,71 @@ import {
 } from "../lib/tx";
 import { Contract } from "ethers";
 
+/** Extract an EVM address from a scanned QR payload (plain 0x… or ethereum: URI). */
+function parseScannedAddress(raw: string): string | null {
+  let s = raw.trim();
+  if (s.toLowerCase().startsWith("ethereum:")) {
+    s = s.slice("ethereum:".length);
+    s = s.split("@")[0].split("?")[0].split("/")[0];
+  }
+  return isAddress(s) ? s : null;
+}
+
 export default function WalletScreen() {
   const wallet = useWallet();
   const balances = useBalances();
   const { startTx, modal } = useTxFlow();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const [phraseInput, setPhraseInput] = useState("");
   const [keyInput, setKeyInput] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [phraseChecked, setPhraseChecked] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [receiveOpen, setReceiveOpen] = useState(false);
 
   // send form
   const [sendChainKey, setSendChainKey] = useState<string>("infinite");
   const [sendTokenKey, setSendTokenKey] = useState<string>("native");
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanNote, setScanNote] = useState<string | null>(null);
+
+  const openScanner = async () => {
+    setScanNote(null);
+    if (Platform.OS === "web") {
+      setScanNote(
+        "WebプレビューではQRスキャンは使えません。アドレスを貼り付けてください。",
+      );
+      return;
+    }
+    let granted = cameraPermission?.granted ?? false;
+    if (!granted) {
+      const res = await requestCameraPermission();
+      granted = res.granted;
+    }
+    if (!granted) {
+      setScanNote(
+        "カメラの許可がないためQRスキャンは使えません。端末の設定で許可するか、アドレスを貼り付けてください。",
+      );
+      return;
+    }
+    setScannerOpen(true);
+  };
+
+  const handleBarcodeScanned = (data: string) => {
+    const addr = parseScannedAddress(data);
+    setScannerOpen(false);
+    if (addr) {
+      setRecipient(addr);
+      setScanNote(null);
+    } else {
+      setScanNote(
+        "読み取ったQRはEVMアドレスではありませんでした。内容を確認してください。",
+      );
+    }
+  };
 
   const sendChain: ChainConfig =
     CHAINS.find((c) => c.key === sendChainKey) ?? CHAINS[0];
@@ -187,6 +245,39 @@ export default function WalletScreen() {
       <Title>ウォレット</Title>
       <PrototypeWarning />
       {modal}
+      <ReceiveModal
+        visible={receiveOpen}
+        onClose={() => setReceiveOpen(false)}
+      />
+
+      {/* QR scanner (native only — never rendered on web) */}
+      <Modal
+        visible={scannerOpen}
+        animationType="slide"
+        onRequestClose={() => setScannerOpen(false)}
+      >
+        <View style={styles.scannerWrap}>
+          {Platform.OS !== "web" ? (
+            <CameraView
+              style={StyleSheet.absoluteFill}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+              onBarcodeScanned={({ data }) => handleBarcodeScanned(data)}
+            />
+          ) : null}
+          <View style={styles.scannerOverlay}>
+            <Text style={styles.scannerHint}>
+              送金先アドレスのQRコードを枠内に合わせてください
+            </Text>
+            <Pressable
+              style={styles.scannerClose}
+              onPress={() => setScannerOpen(false)}
+            >
+              <Text style={styles.scannerCloseText}>キャンセル</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {wallet.pendingPhrase ? (
         <Card>
@@ -278,6 +369,10 @@ export default function WalletScreen() {
                 onPress={() => wallet.unlock()}
               />
             )}
+            <PrimaryButton
+              label="受取（QRコードを表示）"
+              onPress={() => setReceiveOpen(true)}
+            />
             {confirmRemove ? (
               <>
                 <Text style={styles.phraseWarning}>
@@ -323,11 +418,19 @@ export default function WalletScreen() {
             value={sendToken.key}
             onChange={setSendTokenKey}
           />
-          <Field
-            value={recipient}
-            onChangeText={setRecipient}
-            placeholder="送信先アドレス 0x…"
-          />
+          <View style={styles.recipientRow}>
+            <View style={styles.recipientField}>
+              <Field
+                value={recipient}
+                onChangeText={setRecipient}
+                placeholder="送信先アドレス 0x…"
+              />
+            </View>
+            <Pressable style={styles.scanButton} onPress={openScanner}>
+              <Text style={styles.scanButtonText}>QR読取</Text>
+            </Pressable>
+          </View>
+          {scanNote ? <Text style={styles.scanNote}>{scanNote}</Text> : null}
           <Field
             value={amount}
             onChangeText={setAmount}
@@ -402,4 +505,42 @@ const styles = StyleSheet.create({
   errorText: { color: colors.dangerText, fontSize: 13 },
   removeText: { color: colors.dangerText, fontSize: 14, textAlign: "center" },
   cancelText: { color: colors.muted, fontSize: 14, textAlign: "center" },
+  recipientRow: { flexDirection: "row", gap: 8, alignItems: "stretch" },
+  recipientField: { flex: 1 },
+  scanButton: {
+    borderColor: colors.gradStart,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.panel,
+  },
+  scanButtonText: { color: colors.text, fontSize: 13, fontWeight: "700" },
+  scanNote: { color: colors.accentWarm, fontSize: 12, lineHeight: 17 },
+  scannerWrap: { flex: 1, backgroundColor: "#000" },
+  scannerOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 24,
+    gap: 16,
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  scannerHint: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  scannerClose: {
+    borderColor: "#FFFFFF",
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+  },
+  scannerCloseText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
 });

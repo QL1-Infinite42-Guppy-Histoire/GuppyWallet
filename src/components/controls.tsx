@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
   ActivityIndicator,
@@ -7,7 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { colors } from "./ui";
+import { GRADIENT, colors } from "./ui";
 
 export function Heading({ children }: { children: React.ReactNode }) {
   return <Text style={styles.heading}>{children}</Text>;
@@ -28,8 +29,14 @@ export function PrimaryButton({
 }) {
   return (
     <Pressable style={styles.button} onPress={onPress} disabled={loading}>
+      <LinearGradient
+        colors={GRADIENT}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={StyleSheet.absoluteFill}
+      />
       {loading ? (
-        <ActivityIndicator color="#0B0F19" />
+        <ActivityIndicator color="#FFFFFF" />
       ) : (
         <Text style={styles.buttonText}>{label}</Text>
       )}
@@ -151,21 +158,22 @@ const styles = StyleSheet.create({
   heading: { color: colors.text, fontSize: 16, fontWeight: "600" },
   body: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   button: {
-    backgroundColor: colors.accent,
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingVertical: 14,
     alignItems: "center",
+    overflow: "hidden",
   },
-  buttonDisabled: { opacity: 0.4 },
-  buttonText: { color: "#0B0F19", fontSize: 15, fontWeight: "700" },
+  buttonDisabled: { opacity: 0.4, backgroundColor: colors.panel },
+  buttonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
   input: {
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     color: colors.text,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 11,
     fontSize: 14,
+    backgroundColor: colors.panel,
   },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
@@ -174,10 +182,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    backgroundColor: colors.panel,
   },
-  chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  chipActive: { backgroundColor: colors.gradStart, borderColor: colors.gradStart },
   chipText: { color: colors.text, fontSize: 13 },
-  chipTextActive: { color: "#0B0F19", fontWeight: "700" },
+  chipTextActive: { color: "#FFFFFF", fontWeight: "700" },
   pctRow: { flexDirection: "row", gap: 6, alignItems: "center" },
   pctChip: {
     borderColor: colors.panelBorder,

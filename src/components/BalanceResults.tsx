@@ -4,7 +4,7 @@ import { explorerAddressUrl } from "../lib/balances";
 import { useBalances } from "../context/BalancesContext";
 import { priceOf } from "../lib/prices";
 import { prettyAmount } from "../lib/onchain";
-import { Card, colors } from "./ui";
+import { Card, TokenIcon, colors } from "./ui";
 
 /**
  * Renders the last balance fetch: native balance cards per chain, plus a
@@ -33,9 +33,15 @@ export function BalanceResults() {
             </Text>
             {r.ok ? (
               <>
-                <Text style={styles.balance}>
-                  {prettyAmount(r.formatted)} {r.symbol}
-                </Text>
+                <View style={styles.nativeRow}>
+                  <TokenIcon symbol={r.symbol} size={44} />
+                  <View style={styles.nativeRight}>
+                    <Text style={styles.balance}>
+                      {prettyAmount(r.formatted)} {r.symbol}
+                    </Text>
+                    <Text style={styles.meta}>ネイティブ通貨</Text>
+                  </View>
+                </View>
                 {r.chain.key === "infinite"
                   ? (() => {
                       const p = priceOf(prices, null);
@@ -77,7 +83,12 @@ export function BalanceResults() {
                 {tokens.map((t) =>
                   t.ok ? (
                     <View key={t.balance.address} style={styles.tokenRow}>
-                      <Text style={styles.tokenSymbol}>{t.balance.symbol}</Text>
+                      <View style={styles.tokenLeft}>
+                        <TokenIcon symbol={t.balance.symbol} size={38} />
+                        <Text style={styles.tokenSymbol}>
+                          {t.balance.symbol}
+                        </Text>
+                      </View>
                       <View style={styles.tokenRight}>
                         <Text style={styles.tokenAmount}>
                           {t.balance.formatted}
@@ -125,21 +136,24 @@ export function BalanceResults() {
 }
 
 const styles = StyleSheet.create({
-  chainName: { color: colors.muted, fontSize: 13 },
-  balance: { color: colors.text, fontSize: 24, fontWeight: "700" },
+  chainName: { color: colors.muted, fontSize: 13, fontWeight: "600" },
+  nativeRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  nativeRight: { flex: 1, gap: 2 },
+  balance: { color: colors.text, fontSize: 26, fontWeight: "800" },
   meta: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   link: { color: colors.accent, fontSize: 13 },
   errorText: { color: colors.dangerText, fontSize: 15, fontWeight: "600" },
-  tokenList: { marginTop: 8, gap: 4 },
+  tokenList: { marginTop: 10, gap: 2 },
   tokenHeader: { color: colors.muted, fontSize: 12, fontWeight: "600" },
   tokenRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 3,
+    paddingVertical: 6,
   },
-  tokenSymbol: { color: colors.text, fontSize: 14, fontWeight: "600" },
+  tokenLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+  tokenSymbol: { color: colors.text, fontSize: 15, fontWeight: "700" },
   tokenRight: { alignItems: "flex-end" },
-  tokenAmount: { color: colors.text, fontSize: 14 },
+  tokenAmount: { color: colors.text, fontSize: 15, fontWeight: "600" },
   tokenUsd: { color: colors.muted, fontSize: 11 },
 });

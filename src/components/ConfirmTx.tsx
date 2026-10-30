@@ -1,4 +1,5 @@
 import type { Wallet } from "ethers";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,7 +14,7 @@ import {
 import type { ChainConfig } from "../config/chains";
 import { useWallet } from "../context/WalletContext";
 import { getHasSentTx, markHasSentTx } from "../lib/walletStore";
-import { colors } from "./ui";
+import { GRADIENT, colors } from "./ui";
 
 /**
  * Mandatory confirmation sheet for every transaction.
@@ -204,11 +205,23 @@ export function ConfirmTxModal({
 
           {phase === "locked" ? (
             <Pressable style={styles.button} onPress={handleUnlock}>
+              <LinearGradient
+                colors={GRADIENT}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
               <Text style={styles.buttonText}>生体認証でロック解除</Text>
             </Pressable>
           ) : null}
           {phase === "review" ? (
             <Pressable style={styles.button} onPress={handleConfirm}>
+              <LinearGradient
+                colors={GRADIENT}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
               <Text style={styles.buttonText}>内容を確認して署名・送信</Text>
             </Pressable>
           ) : null}
@@ -245,8 +258,8 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.card,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 18,
     gap: 10,
     maxHeight: "85%",
@@ -280,12 +293,12 @@ const styles = StyleSheet.create({
   hash: { color: colors.accent, fontSize: 13, paddingVertical: 2 },
   errorText: { color: colors.dangerText, fontSize: 13, lineHeight: 19 },
   button: {
-    backgroundColor: colors.accent,
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingVertical: 14,
     alignItems: "center",
+    overflow: "hidden",
   },
-  buttonText: { color: "#0B0F19", fontSize: 15, fontWeight: "700" },
+  buttonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
   cancel: { alignItems: "center", paddingVertical: 8 },
   cancelText: { color: colors.muted, fontSize: 14 },
 });

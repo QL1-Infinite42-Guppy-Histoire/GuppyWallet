@@ -1,4 +1,5 @@
 import { Contract, formatUnits, parseUnits } from "ethers";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -21,7 +22,15 @@ import {
   PercentChips,
   PrimaryButton,
 } from "../components/controls";
-import { Card, PrototypeWarning, Screen, Title, colors } from "../components/ui";
+import {
+  Card,
+  GRADIENT,
+  PrototypeWarning,
+  Screen,
+  Title,
+  TokenIcon,
+  colors,
+} from "../components/ui";
 import { CHAINS, type ChainConfig } from "../config/chains";
 import { useWallet } from "../context/WalletContext";
 import { useBalances } from "../context/BalancesContext";
@@ -523,6 +532,7 @@ export default function SwapScreen() {
 
   const tokenChip = (token: DexToken, side: "from" | "to") => (
     <Pressable style={styles.tokenChip} onPress={() => setSelectorSide(side)}>
+      <TokenIcon symbol={token.symbol} size={24} />
       <Text style={styles.tokenChipText}>
         {token.symbol}
         {token.isNative ? " ⦿" : ""} ▾
@@ -543,9 +553,17 @@ export default function SwapScreen() {
           return (
             <Pressable
               key={c.key}
-              style={[styles.segment, active && styles.segmentActive]}
+              style={styles.segment}
               onPress={() => setChainKey(c.key)}
             >
+              {active ? (
+                <LinearGradient
+                  colors={GRADIENT}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              ) : null}
               <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
                 {c.key === "infinite" ? "Infinite" : "QL1"}
               </Text>
@@ -698,14 +716,33 @@ export default function SwapScreen() {
 
         {/* action */}
         <Pressable
-          style={[styles.actionButton, !actionEnabled && styles.actionDisabled]}
+          style={styles.actionButton}
           disabled={!actionEnabled}
           onPress={handleSwap}
         >
-          {quoting ? (
-            <ActivityIndicator color="#0B0F19" />
+          {actionEnabled ? (
+            <LinearGradient
+              colors={GRADIENT}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
           ) : (
-            <Text style={styles.actionText}>{actionLabel}</Text>
+            <View
+              style={[StyleSheet.absoluteFill, styles.actionDisabledFill]}
+            />
+          )}
+          {quoting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text
+              style={[
+                styles.actionText,
+                !actionEnabled && styles.actionTextDisabled,
+              ]}
+            >
+              {actionLabel}
+            </Text>
           )}
         </Pressable>
         <Text style={styles.finePrint}>
@@ -824,16 +861,19 @@ export default function SwapScreen() {
                     style={[styles.tokenRow, selected && styles.tokenRowSelected]}
                     onPress={() => pickToken(t)}
                   >
-                    <View>
-                      <Text style={styles.tokenRowSymbol}>
-                        {t.symbol}
-                        {t.isNative ? "（ネイティブ）" : ""}
-                      </Text>
-                      <Text style={styles.tokenRowAddr}>
-                        {t.isNative && chain.key === "infinite"
-                          ? "ネイティブコイン"
-                          : `${t.address.slice(0, 10)}…${t.address.slice(-6)}`}
-                      </Text>
+                    <View style={styles.tokenRowLeft}>
+                      <TokenIcon symbol={t.symbol} size={36} />
+                      <View>
+                        <Text style={styles.tokenRowSymbol}>
+                          {t.symbol}
+                          {t.isNative ? "（ネイティブ）" : ""}
+                        </Text>
+                        <Text style={styles.tokenRowAddr}>
+                          {t.isNative && chain.key === "infinite"
+                            ? "ネイティブコイン"
+                            : `${t.address.slice(0, 10)}…${t.address.slice(-6)}`}
+                        </Text>
+                      </View>
                     </View>
                     <Text style={styles.tokenRowBalance}>
                       {bal ? prettyAmount(bal.formatted) : ""}
@@ -863,12 +903,12 @@ const styles = StyleSheet.create({
   segment: {
     flex: 1,
     borderRadius: 999,
-    paddingVertical: 8,
+    paddingVertical: 9,
     alignItems: "center",
+    overflow: "hidden",
   },
-  segmentActive: { backgroundColor: colors.accent },
   segmentText: { color: colors.muted, fontSize: 14, fontWeight: "600" },
-  segmentTextActive: { color: "#0B0F19", fontWeight: "800" },
+  segmentTextActive: { color: "#FFFFFF", fontWeight: "800" },
   dexCaption: { color: colors.muted, fontSize: 12, textAlign: "center" },
   swapCard: {
     backgroundColor: colors.card,
@@ -911,12 +951,15 @@ const styles = StyleSheet.create({
   placeholderText: { color: colors.muted },
   dimmed: { opacity: 0.45 },
   tokenChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
     backgroundColor: colors.card,
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   tokenChipText: { color: colors.text, fontSize: 15, fontWeight: "700" },
   balanceRow: {
@@ -934,9 +977,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 4,
   },
-  pctChipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+  pctChipActive: { backgroundColor: colors.gradStart, borderColor: colors.gradStart },
   pctChipText: { color: colors.muted, fontSize: 11, fontWeight: "700" },
-  pctChipTextActive: { color: "#0B0F19" },
+  pctChipTextActive: { color: "#FFFFFF" },
   flipButton: {
     alignSelf: "center",
     width: 42,
@@ -990,14 +1033,15 @@ const styles = StyleSheet.create({
   impactDanger: { color: colors.dangerText },
   refreshLink: { color: colors.accent, fontSize: 12, marginTop: 4 },
   actionButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 16,
-    paddingVertical: 15,
+    borderRadius: 18,
+    paddingVertical: 16,
     alignItems: "center",
     marginTop: 14,
+    overflow: "hidden",
   },
-  actionDisabled: { opacity: 0.45 },
-  actionText: { color: "#0B0F19", fontSize: 16, fontWeight: "800" },
+  actionDisabledFill: { backgroundColor: colors.panel },
+  actionText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },
+  actionTextDisabled: { color: colors.muted },
   finePrint: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 8 },
   modalBackdrop: {
     flex: 1,
@@ -1024,6 +1068,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   tokenRowSelected: { backgroundColor: colors.panel },
+  tokenRowLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   tokenRowSymbol: { color: colors.text, fontSize: 15, fontWeight: "700" },
   tokenRowAddr: { color: colors.muted, fontSize: 11 },
   tokenRowBalance: { color: colors.muted, fontSize: 13 },
