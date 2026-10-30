@@ -19,12 +19,22 @@ import { GRADIENT, colors } from "./ui";
 /**
  * Mandatory confirmation sheet for every transaction.
  *
- * Flow: (unlock if needed) → prepare (gas estimate) → review sheet
- * showing chain / action / contract / amounts / estimated gas →
- * user taps confirm → local signing + send → hash + explorer link +
- * pending/success/failure state. The first-ever send carries an extra
- * "少額でテストしてください" warning.
+ * Flow: (unlock if needed) → prepare (fee estimate) → review sheet in
+ * plain words (where to / how much / fee estimate) → user taps
+ * confirm → local signing + send → explorer link + pending/success/
+ * failure state. Technical lines (contract addresses etc.) stay
+ * available behind a 詳細 toggle — same safety data, plainer front.
+ * The first-ever send carries an extra "まずは少額で" warning.
  */
+
+/** Line labels that are technical detail, shown behind the toggle. */
+const DETAIL_LABELS = new Set([
+  "コントラクト",
+  "ルーター",
+  "ペアコントラクト",
+  "バリデータアドレス",
+  "署名",
+]);
 
 export interface TxLine {
   label: string;
@@ -64,12 +74,14 @@ export function ConfirmTxModal({
   const [hashes, setHashes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [firstSend, setFirstSend] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     if (!job) return;
     setPrepared(null);
     setHashes([]);
     setError(null);
+    setShowDetails(false);
     setPhase(wallet.unlocked ? "preparing" : "locked");
     getHasSentTx()
       .then((has) => setFirstSend(!has))
@@ -135,49 +147,67 @@ export function ConfirmTxModal({
           <ScrollView style={styles.scroll}>
             <View style={styles.lineRow}>
               <Text style={styles.lineLabel}>チェーン</Text>
-              <Text style={styles.lineValue}>
-                {chain.displayName}（EVM {chain.evmChainId}）
-              </Text>
+              <Text style={styles.lineValue}>{chain.displayName}</Text>
             </View>
-            {job.lines.map((l) => (
-              <View key={l.label} style={styles.lineRow}>
-                <Text style={styles.lineLabel}>{l.label}</Text>
-                <Text style={styles.lineValue}>{l.value}</Text>
-              </View>
-            ))}
+            {job.lines
+              .filter((l) => !DETAIL_LABELS.has(l.label))
+              .map((l) => (
+                <View key={l.label} style={styles.lineRow}>
+                  <Text style={styles.lineLabel}>{l.label}</Text>
+                  <Text style={styles.lineValue}>{l.value}</Text>
+                </View>
+              ))}
             {phase === "review" || phase === "sending" || phase === "done" ? (
               <View style={styles.lineRow}>
-                <Text style={styles.lineLabel}>ガス代（目安）</Text>
+                <Text style={styles.lineLabel}>手数料の目安</Text>
                 <Text style={styles.lineValue}>
                   {prepared?.gasEstimateText ?? "—"}
                 </Text>
               </View>
             ) : null}
+            {job.lines.some((l) => DETAIL_LABELS.has(l.label)) ? (
+              <>
+                <Pressable onPress={() => setShowDetails((v) => !v)}>
+                  <Text style={styles.detailToggle}>
+                    {showDetails ? "詳細を閉じる" : "詳細を見る"}
+                  </Text>
+                </Pressable>
+                {showDetails
+                  ? job.lines
+                      .filter((l) => DETAIL_LABELS.has(l.label))
+                      .map((l) => (
+                        <View key={l.label} style={styles.lineRow}>
+                          <Text style={styles.lineLabel}>{l.label}</Text>
+                          <Text style={styles.lineValue}>{l.value}</Text>
+                        </View>
+                      ))
+                  : null}
+              </>
+            ) : null}
             {firstSend && phase !== "done" ? (
               <View style={styles.firstSend}>
                 <Text style={styles.firstSendText}>
-                  ⚠️ 初めての送信です。必ず少額でテストしてください。未監査の試作版のため、
-                  大きな金額は送らないでください。
+                  ⚠️ 初めての送信です。間違いを防ぐため、まずは少額でテストしてください。
                 </Text>
               </View>
             ) : null}
 
             {phase === "locked" ? (
               <Text style={styles.note}>
-                送信にはウォレットのロック解除（生体認証）が必要です。
+                送るには、指紋などでロックを解除してください。
               </Text>
             ) : null}
             {phase === "preparing" ? (
               <View style={styles.center}>
                 <ActivityIndicator color={colors.accent} />
-                <Text style={styles.note}>ガスを見積もっています…</Text>
+                <Text style={styles.note}>手数料を計算しています…</Text>
               </View>
             ) : null}
             {phase === "sending" ? (
               <View style={styles.center}>
                 <ActivityIndicator color={colors.accent} />
                 <Text style={styles.note}>
-                  署名して送信しました。チェーンの承認を待っています…
+                  送信しました。結果が反映されるまで少しお待ちください…
                 </Text>
               </View>
             ) : null}
@@ -192,7 +222,7 @@ export function ConfirmTxModal({
                     }
                   >
                     <Text style={styles.hash}>
-                      tx: {h.slice(0, 18)}…{h.slice(-8)} ↗
+                      取引の詳細を見る ↗
                     </Text>
                   </Pressable>
                 ))}
@@ -211,7 +241,7 @@ export function ConfirmTxModal({
                 end={{ x: 1, y: 0 }}
                 style={StyleSheet.absoluteFill}
               />
-              <Text style={styles.buttonText}>生体認証でロック解除</Text>
+              <Text style={styles.buttonText}>ロックを解除する</Text>
             </Pressable>
           ) : null}
           {phase === "review" ? (
@@ -222,7 +252,7 @@ export function ConfirmTxModal({
                 end={{ x: 1, y: 0 }}
                 style={StyleSheet.absoluteFill}
               />
-              <Text style={styles.buttonText}>内容を確認して署名・送信</Text>
+              <Text style={styles.buttonText}>この内容で送る</Text>
             </Pressable>
           ) : null}
           <Pressable
@@ -281,6 +311,12 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   note: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  detailToggle: {
+    color: colors.cyan,
+    fontSize: 13,
+    fontWeight: "700",
+    paddingVertical: 6,
+  },
   center: { alignItems: "center", gap: 8, paddingVertical: 8 },
   firstSend: {
     backgroundColor: colors.dangerBg,
