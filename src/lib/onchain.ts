@@ -158,15 +158,22 @@ async function fetchToken(
   }
 }
 
-/** Native + all listed ERC-20 balances of `address` on one chain. */
+/** Native + all listed ERC-20 balances of `address` on one chain.
+ *  `extraTokens` are user-added custom tokens for this chain. */
 export async function fetchChainBalances(
   chain: ChainConfig,
   address: string,
+  extraTokens: { symbol: string; address: string; decimals: number }[] = [],
 ): Promise<TokenBalanceResult[]> {
-  const tokens = chain.key === "infinite" ? INFINITE_TOKENS : QL1_TOKENS;
+  const listed = chain.key === "infinite" ? INFINITE_TOKENS : QL1_TOKENS;
+  const listedAddrs = new Set(listed.map((t) => t.address.toLowerCase()));
+  const extras = extraTokens.filter(
+    (t) => !listedAddrs.has(t.address.toLowerCase()),
+  );
   const results = await Promise.all([
     fetchNative(chain, address),
-    ...tokens.map((t) => fetchToken(chain, t, address)),
+    ...listed.map((t) => fetchToken(chain, t, address)),
+    ...extras.map((t) => fetchToken(chain, t, address)),
   ]);
   return results;
 }

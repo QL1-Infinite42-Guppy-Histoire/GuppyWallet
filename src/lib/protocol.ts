@@ -230,6 +230,56 @@ export interface NftCollectionState {
   owned: string | null;
 }
 
+export interface OwnedNftToken {
+  collectionAddress: string;
+  tokenId: string;
+  /** metadata name from the explorer index, when present */
+  name: string | null;
+  imageUrl: string | null;
+}
+
+/**
+ * Token ids owned by `address` in the known Infinite collections, via
+ * the explorer's NFT index (/api/v2/addresses/{addr}/nft, first page).
+ * Returns null when the API is unreachable — the UI then falls back to
+ * balanceOf counts only (fetchNftCollections).
+ */
+export async function fetchOwnedNftTokens(
+  address: string,
+): Promise<OwnedNftToken[] | null> {
+  try {
+    const res = await fetch(
+      `${INFINITE.explorerUrl}/api/v2/addresses/${address}/nft?type=ERC-721`,
+    );
+    if (!res.ok) return null;
+    const data: any = await res.json();
+    const items: any[] = Array.isArray(data?.items) ? data.items : [];
+    const known = new Map(
+      [INFINITE_NFTS.theGuide, INFINITE_NFTS.zg13].map((a) => [
+        a.toLowerCase(),
+        a,
+      ]),
+    );
+    const out: OwnedNftToken[] = [];
+    for (const it of items) {
+      const coll = known.get(
+        String(it?.token?.address_hash ?? "").toLowerCase(),
+      );
+      if (!coll) continue;
+      out.push({
+        collectionAddress: coll,
+        tokenId: String(it.id),
+        name: typeof it?.metadata?.name === "string" ? it.metadata.name : null,
+        imageUrl:
+          typeof it?.image_url === "string" ? it.image_url : null,
+      });
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchNftCollections(
   address: string | null,
 ): Promise<NftCollectionState[]> {

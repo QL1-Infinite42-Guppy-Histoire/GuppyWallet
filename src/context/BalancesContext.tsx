@@ -10,6 +10,11 @@ import React, {
 } from "react";
 import { CHAINS } from "../config/chains";
 import { fetchNativeBalances, type BalanceResult } from "../lib/balances";
+import {
+  loadCustomTokens,
+  saveCustomTokens,
+  type CustomToken,
+} from "../lib/customTokens";
 import { fetchChainBalances, type TokenBalanceResult } from "../lib/onchain";
 import { fetchInfinitePrices, type InfinitePrices } from "../lib/prices";
 import { useWallet } from "./WalletContext";
@@ -29,6 +34,10 @@ interface BalancesState {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  /** user-added custom tokens (persisted locally) */
+  customTokens: CustomToken[];
+  addCustomToken: (token: CustomToken) => Promise<void>;
+  removeCustomToken: (chainKey: CustomToken["chainKey"], address: string) => Promise<void>;
 }
 
 const Ctx = createContext<BalancesState | null>(null);
@@ -41,8 +50,15 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
   const [prices, setPrices] = useState<InfinitePrices | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [customTokens, setCustomTokens] = useState<CustomToken[]>([]);
   const addressRef = useRef<string | null>(null);
   addressRef.current = address;
+  const customTokensRef = useRef<CustomToken[]>([]);
+  customTokensRef.current = customTokens;
+
+  useEffect(() => {
+    loadCustomTokens().then(setCustomTokens).catch(() => {});
+  }, []);
 
   const refresh = useCallback(async () => {
     const target = addressRef.current;
@@ -56,9 +72,18 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
+      const extras = customTokensRef.current;
       const [native, perChain, priceMap] = await Promise.all([
         fetchNativeBalances(target),
-        Promise.all(CHAINS.map((c) => fetchChainBalances(c, target))),
+        Promise.all(
+          CHAINS.map((c) =>
+            fetchChainBalances(
+              c,
+              target,
+              extras.filter((t) => t.chainKey === c.key),
+            ),
+          ),
+        ),
         fetchInfinitePrices().catch(() => null),
       ]);
       // ignore stale responses if the wallet changed mid-flight
@@ -88,6 +113,41 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
     }
   }, [address, refresh]);
 
+  const addCustomToken = useCallback(
+    async (token: CustomToken) => {
+      const next = [
+        ...customTokensRef.current.filter(
+          (t) =>
+            !(
+              t.chainKey === token.chainKey &&
+              t.address.toLowerCase() === token.address.toLowerCase()
+            ),
+        ),
+        token,
+      ];
+      setCustomTokens(next);
+      await saveCustomTokens(next);
+      await refresh();
+    },
+    [refresh],
+  );
+
+  const removeCustomToken = useCallback(
+    async (chainKey: CustomToken["chainKey"], tokenAddress: string) => {
+      const next = customTokensRef.current.filter(
+        (t) =>
+          !(
+            t.chainKey === chainKey &&
+            t.address.toLowerCase() === tokenAddress.toLowerCase()
+          ),
+      );
+      setCustomTokens(next);
+      await saveCustomTokens(next);
+      await refresh();
+    },
+    [refresh],
+  );
+
   const value = useMemo<BalancesState>(
     () => ({
       address,
@@ -97,8 +157,22 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       refresh,
+      customTokens,
+      addCustomToken,
+      removeCustomToken,
     }),
-    [address, results, tokenResults, prices, loading, error, refresh],
+    [
+      address,
+      results,
+      tokenResults,
+      prices,
+      loading,
+      error,
+      refresh,
+      customTokens,
+      addCustomToken,
+      removeCustomToken,
+    ],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
