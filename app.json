@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0F19",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "one.zaphod.wallet.prototype",
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
+    },
+    "extra": {
+      "prototype": true,
+      "warning": "UNAUDITED PROTOTYPE - DO NOT USE WITH REAL FUNDS",
+      "eas": {
+        "projectId": "f3ae4336-58f6-4555-8331-5444ac5204ba"
+      }
+    },
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "one.zaphod.wallet.prototype",
+      "supportsTablet": false
+    },
+    "name": "Infinite QL1 Wallet (Prototype)",
+    "orientation": "portrait",
+    "scheme": "infiniteql1wallet",
+    "slug": "infinite-ql1-wallet",
+    "userInterfaceStyle": "dark",
+    "version": "0.1.0",
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "ウォレットのロック解除に生体認証を使います。"
+        }
+      ]
+    ],
+    "owner": "guppy9180s-team"
+  }
+}
