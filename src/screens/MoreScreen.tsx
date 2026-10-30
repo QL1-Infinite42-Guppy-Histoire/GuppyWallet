@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text } from "react-native";
+import BridgeSection from "../components/BridgeSection";
+import FlukeSection from "../components/FlukeSection";
 import {
   Body,
   Heading,
@@ -22,24 +24,14 @@ interface Entry {
 }
 
 // URLs come from DAPP_LINKS in src/config/chains.ts only — no invented links.
+// Bridge and Fluke used to be link cards here; both now run NATIVELY
+// in-app (see FlukeSection / BridgeSection below), so their link cards
+// were removed.
 const ENTRIES: Entry[] = [
-  {
-    label: "Bridge",
-    description: "QL1・Infinite 間などの資産移動（zaphod Bridge）",
-    url: DAPP_LINKS.bridge,
-    todoNote:
-      "ブリッジの仕組み（対応ルート・手数料・所要時間）が未確認のため、アプリ内実行は未実装です（情報不足／TODO）。",
-  },
   {
     label: "NFT",
     description: "Guide などの NFT マーケットプレイス",
     url: DAPP_LINKS.nft,
-  },
-  {
-    label: "Fluke — The Guide",
-    description: "Guide 系の体験／NFT 入口",
-    todoNote:
-      "Flukeのゲームコントラクトが公開情報から特定できないため、アプリ内実行は未実装です（情報不足／TODO）。",
   },
   {
     label: "DontPanic Finance",
@@ -101,6 +93,10 @@ export default function MoreScreen() {
         )}
         <PrimaryButton label="更新" onPress={loadNfts} />
       </Card>
+
+      <FlukeSection />
+
+      <BridgeSection />
 
       <Card>
         <Heading>QNS（.qom ドメイン）</Heading>

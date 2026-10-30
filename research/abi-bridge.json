@@ -1,0 +1,395 @@
+{
+ "_about": "Zaphod Bridge (bridge.zaphod.one) ABIs recovered verbatim from the site's public JS (chunk 9073, export s6 = bridgeRouter) 2026-10-30. bridgeRouter is the custom Zaphod wrapper used on Infinite/BSC/Ethereum; on QL1 the frontend calls transferRemote directly on the Hyperlane warp router (same signature). The other fragments are the helper ABIs the frontend bundles (mailbox, ISM, hook).",
+ "bridgeRouter": [
+  {
+   "name": "transferRemote",
+   "type": "function",
+   "stateMutability": "payable",
+   "inputs": [
+    {
+     "name": "destination",
+     "type": "uint32"
+    },
+    {
+     "name": "recipient",
+     "type": "bytes32"
+    },
+    {
+     "name": "amount",
+     "type": "uint256"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "messageId",
+     "type": "bytes32"
+    }
+   ]
+  },
+  {
+   "name": "feeFlat",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "",
+     "type": "uint256"
+    }
+   ]
+  },
+  {
+   "name": "quoteNative",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [
+    {
+     "name": "destination",
+     "type": "uint32"
+    },
+    {
+     "name": "priceData",
+     "type": "bytes"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "nativeFee",
+     "type": "uint256"
+    },
+    {
+     "name": "gasPayment",
+     "type": "uint256"
+    },
+    {
+     "name": "totalNative",
+     "type": "uint256"
+    },
+    {
+     "name": "usdPer42",
+     "type": "uint256"
+    },
+    {
+     "name": "source",
+     "type": "uint8"
+    }
+   ]
+  },
+  {
+   "name": "quoteBridge",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [
+    {
+     "name": "amount",
+     "type": "uint256"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "forwardAmount",
+     "type": "uint256"
+    },
+    {
+     "name": "fee",
+     "type": "uint256"
+    },
+    {
+     "name": "totalRequired",
+     "type": "uint256"
+    }
+   ]
+  },
+  {
+   "name": "token",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "",
+     "type": "address"
+    }
+   ]
+  },
+  {
+   "name": "underlying",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "",
+     "type": "address"
+    }
+   ]
+  },
+  {
+   "name": "feeBps",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "",
+     "type": "uint16"
+    }
+   ]
+  },
+  {
+   "name": "minTransferAmount",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "",
+     "type": "uint256"
+    }
+   ]
+  },
+  {
+   "name": "maxTransferAmount",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "",
+     "type": "uint256"
+    }
+   ]
+  },
+  {
+   "name": "allowedDestinations",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [
+    {
+     "name": "destination",
+     "type": "uint32"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "",
+     "type": "bool"
+    }
+   ]
+  },
+  {
+   "name": "destinationScaleFactor",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [
+    {
+     "name": "destination",
+     "type": "uint32"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "",
+     "type": "uint256"
+    }
+   ]
+  },
+  {
+   "name": "paused",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "",
+     "type": "bool"
+    }
+   ]
+  },
+  {
+   "name": "VERSION",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "",
+     "type": "string"
+    }
+   ]
+  },
+  {
+   "type": "event",
+   "name": "BridgeInitiated",
+   "anonymous": false,
+   "inputs": [
+    {
+     "indexed": true,
+     "name": "messageId",
+     "type": "bytes32"
+    },
+    {
+     "indexed": true,
+     "name": "sender",
+     "type": "address"
+    },
+    {
+     "indexed": true,
+     "name": "destination",
+     "type": "uint32"
+    },
+    {
+     "indexed": false,
+     "name": "recipient",
+     "type": "bytes32"
+    },
+    {
+     "indexed": false,
+     "name": "amountIn",
+     "type": "uint256"
+    },
+    {
+     "indexed": false,
+     "name": "fee",
+     "type": "uint256"
+    },
+    {
+     "indexed": false,
+     "name": "amountForwarded",
+     "type": "uint256"
+    }
+   ]
+  }
+ ],
+ "hyperlaneTokenRouter": [
+  {
+   "name": "transferRemote",
+   "type": "function",
+   "stateMutability": "payable",
+   "inputs": [
+    {
+     "name": "destination",
+     "type": "uint32"
+    },
+    {
+     "name": "recipient",
+     "type": "bytes32"
+    },
+    {
+     "name": "amount",
+     "type": "uint256"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "messageId",
+     "type": "bytes32"
+    }
+   ]
+  }
+ ],
+ "mailbox": [
+  {
+   "name": "delivered",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [
+    {
+     "name": "_id",
+     "type": "bytes32"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "",
+     "type": "bool"
+    }
+   ]
+  },
+  {
+   "name": "nonce",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "",
+     "type": "uint32"
+    }
+   ]
+  }
+ ],
+ "interchainSecurityModule": [
+  {
+   "name": "validatorsAndThreshold",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [
+    {
+     "name": "_message",
+     "type": "bytes"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "",
+     "type": "address[]"
+    },
+    {
+     "name": "",
+     "type": "uint8"
+    }
+   ]
+  }
+ ],
+ "routingIsm": [
+  {
+   "name": "module",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [
+    {
+     "name": "origin",
+     "type": "uint32"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "",
+     "type": "address"
+    }
+   ]
+  }
+ ],
+ "hook": [
+  {
+   "name": "requiredHook",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "",
+     "type": "address"
+    }
+   ]
+  },
+  {
+   "name": "minAmount",
+   "type": "function",
+   "stateMutability": "view",
+   "inputs": [
+    {
+     "name": "router",
+     "type": "address"
+    }
+   ],
+   "outputs": [
+    {
+     "name": "",
+     "type": "uint256"
+    }
+   ]
+  }
+ ]
+}
