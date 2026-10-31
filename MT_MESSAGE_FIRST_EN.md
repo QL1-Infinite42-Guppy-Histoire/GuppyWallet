@@ -1,8 +1,8 @@
 # Message to MT — first message (English, not sent yet)
-> Updated 2026-10-30 (v4). Since v3, the Bridge and Fluke contracts were recovered
-> from the official sites' public frontend code and verified on-chain, so those
-> asks shrank to small confirmations. Still assumes MT has seen nothing from us
-> yet; fully self-contained.
+> Updated 2026-11-01 (v5). Since v4, the inbound bridge routes (BSC/ETH → 42 Chain)
+> were verified on-chain and implemented, and the repo went public on GitHub.
+> The four asks below are the only items still genuinely open. Assumes MT has
+> seen nothing from us yet; fully self-contained.
 
 ---
 
@@ -19,8 +19,10 @@ the st42 vault, QL1's Cosmos parameters (qom_766-1 / aqom), Infinite's staking
 precompile (delegation from the EVM side works), the BridgeRouter contracts behind
 bridge.zaphod.one (Hyperlane-based), and the Fluke game built into The Guide NFT
 contract plus the Starlight ledger. Swap, LP, staking, st42, transfers, Bridge
-(Infinite-origin) and the Fluke commit/reveal flow are all connected in the app
-already.
+(42 Chain-origin, plus inbound routes from BSC and Ethereum) and the Fluke
+commit/reveal flow are all connected in the app already. The code and the full
+development history are public, if you'd like to see where it stands:
+https://github.com/nepicobsv-hash/zaphod-wallet
 
 What I still genuinely need:
 

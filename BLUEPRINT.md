@@ -36,7 +36,7 @@ bridge.zaphod.one, dontpanic.finance (Infinite DEX), fishdisk.com
 ## 3. チェーン設定（確認済み / 要MT確認を明記）
 ### Infinite Drive (Infinite Improbability Drive)
 - EVM Chain ID: 421018 / Cosmos Chain ID: infinite_421018-1
-- ネイティブ通貨: 42（18 decimals想定、要確認）
+- ネイティブ通貨: 42（18 decimals ✅ 確認済み、最小単位 drop）
 - EVM RPC（コミュニティ）: https://evm-rpc.infinitepanda.xyz
 - Comet RPC: https://comet-rpc.infinitedrive.xyz / gRPC: grpc.infinitedrive.xyz
 - Explorer: scan.infinitedrive.xyz / bech32 prefix: infinite
@@ -45,8 +45,8 @@ bridge.zaphod.one, dontpanic.finance (Infinite DEX), fishdisk.com
 - EVM Chain ID: 766
 - ネイティブ通貨: QOM
 - EVM RPC（コミュニティ AYC）: https://evm-rpc-ql1.mschihuahua.org
-- Explorer: scan.qom.one / bech32 prefix: qom
-- Cosmos Chain ID、公式RPC、decimals は **MTに要確認**（推測で埋めない）
+- Explorer: scan.qom.network / bech32 prefix: qom
+- Cosmos Chain ID: qom_766-1 / 最小単位: aqom / 18 decimals（✅ 確認済み 2026-10-30: genesis・公式ガイドより。MT確認は不要になった）
 
 ## 4. 開発フェーズ
 - Phase 0: 土台 — ウォレット作成/復元、鍵保管、生体認証、残高表示（42/QOM）、送金/受取
@@ -55,16 +55,25 @@ bridge.zaphod.one, dontpanic.finance (Infinite DEX), fishdisk.com
 - Phase 3: Bridge、NFT、QNS をネイティブ化
 - Phase 4: Google Play公開準備、iPhone版（同じコード）
 
-## 5. MTさんから受け取るものチェックリスト ★これが揃うと開発が一気に進む
-- [ ] 全コントラクトアドレス一覧（Swapルーター、LP/ファクトリー、ステーキング、st42、Bridge、NFT、QNS）チェーン別
-- [ ] 各コントラクトの ABI（またはソース/リポジトリ）
-- [ ] MTが使っている公式RPC / REST / gRPC エンドポイント（QL1・Infinite両方）
-- [ ] QL1の Cosmos Chain ID、通貨の最小単位と decimals（aqom等）
-- [ ] ステーキングの実装方式（Cosmos tx か、EVMプリコンパイル 0x0800番台か）
-- [ ] Bridgeの仕組み（ロック/ミントか、流動性方式か）と手数料、所要時間
+## 5. MTさんから受け取るものチェックリスト
+（2026-11-01 更新: ほとんどの項目は MT の返信を待たずにオンチェーン検証・公式フロント解析で解決した。残っているのは下の未チェック4件のみ）
+
+解決済み:
+- [x] 全コントラクトアドレス一覧 — オンチェーンで確定（Don't Panic/Nutri-Matic V2 ルーター・ファクトリー、QomSwap、st42 金庫、QNS、Guide NFT、Starlight、BridgeRouter 群）
+- [x] 各コントラクトの ABI — 公式サイトのフロントコードから復元＋標準 Uniswap V2 ABI で検証済み
+- [x] RPC エンドポイント — コミュニティ RPC で運用中。Cosmos REST/LCD は両チェーンとも公開されていないことを確認済み
+- [x] QL1の Cosmos Chain ID（qom_766-1）、最小単位（aqom）と decimals（18）— genesis・公式ガイドで確定
+- [x] ステーキングの実装方式 — 42 Chain は EVM プリコンパイル 0x0800 稼働を確認し実装済み。QL1 は Cosmos tx 方式と判明
+- [x] Bridgeの仕組み — Hyperlane 方式と判明。手数料・最小額もオンチェーン確認済み。42 Chain 発と BSC/ETH → 42 Chain は実装済み（QL1 発の実配送確認だけ下の未解決に残る）
+- [x] zaphod系の仕様 — フロント解析で自己解決（アグリゲーターはユーザー判断で不採用）
+- [x] ロゴ・素材 — 自作で対応済み
+- [x] QNS / st QOM / ZapStaking — サービス終了のため不要になった
+
+実際に MT 受領待ちのもの（これだけ）:
+- [ ] Fluke の settle 署名の発行方法（公式 API が現在署名を配っていない。エンドポイントの有無／settle が現行運用かどうか）
+- [ ] QL1 → 42 Chain ブリッジの実配送が稼働しているかの確認（公式統計で QL1 発の配送が 0 件のため、確認が取れるまでアプリ側は送信停止中）
+- [ ] QL1 での ZAP の交換ルート（QomSwap に直接ペアが無い）
 - [ ] テスト用アカウント/テストトークン、テストネットの有無
-- [ ] dontpanic.finance / zaphod系のAPI仕様（価格取得、quote取得）があればその資料
-- [ ] ロゴ・トークンアイコン等の素材（なければこちらで作成）
 
 ## 6. セキュリティ方針（譲らない線）
 - ノンカストディアル: 運営側サーバーが鍵に触れる設計はしない
