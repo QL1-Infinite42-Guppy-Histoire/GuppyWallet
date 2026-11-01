@@ -12,6 +12,7 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import SplashOverlay from "./src/components/SplashOverlay";
 import { colors } from "./src/components/ui";
 import { BalancesProvider } from "./src/context/BalancesContext";
 import { ChainSelectionProvider } from "./src/context/ChainSelectionContext";
@@ -188,6 +189,10 @@ export default function App() {
           </BalancesProvider>
         </WalletProvider>
       </LanguageProvider>
+      {/* Opening splash (~3 s per cold start): cosmic guppy artwork +
+          Orbitron wordmark over the galaxy, fading out on its own.
+          Purely visual — the app and its unlock flow run underneath. */}
+      <SplashOverlay />
     </SafeAreaProvider>
   );
 }

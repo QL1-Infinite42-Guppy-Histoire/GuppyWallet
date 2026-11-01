@@ -1,17 +1,9 @@
 import { useNavigation } from "@react-navigation/native";
 import { formatUnits } from "ethers";
 import React, { useEffect, useState } from "react";
-import {
-  Image,
-  Linking,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { BalanceResults, formatJpy } from "../components/BalanceResults";
 import { GuppyMascot } from "../components/GuppyMascot";
-import { GUPPY_ART } from "../components/guppyArt";
 import {
   Body,
   Heading,
@@ -142,28 +134,21 @@ export default function HomeScreen() {
       />
       {!hasWallet ? (
         <Card>
-          {/* the cosmic guppy artwork is the welcome visual */}
-          <Image
-            source={GUPPY_ART}
-            style={styles.welcomeArt}
-            resizeMode="cover"
-          />
           <DontPanic compact tone="card" />
+          <View style={styles.mascotCenter}>
+            <GuppyMascot size={104} />
+          </View>
           <Body>{t("common.noWalletBody")}</Body>
         </Card>
       ) : (
         <>
-          {/* ------- hero: artwork banner + chain toggle + one big
-              total, JPY first. The guppy artwork crowns the card;
-              the balance itself stays on the familiar glass so the
-              numbers stay crisp. ------- */}
+          {/* ------- hero: chain toggle + one big total, JPY first ------- */}
           <View style={styles.hero}>
-            <Image
-              source={GUPPY_ART}
-              style={styles.heroArt}
-              resizeMode="cover"
-            />
-            <View style={styles.heroBody}>
+            {/* mascot drifting in the top-right of the hero glass,
+                beside the total — decorative, touches pass through */}
+            <View style={styles.heroMascot} pointerEvents="none">
+              <GuppyMascot size={92} />
+            </View>
             <SegmentedTabs
               options={CHAINS.map((c) => ({
                 key: c.key,
@@ -210,7 +195,6 @@ export default function HomeScreen() {
                   })
                 }
               />
-            </View>
             </View>
           </View>
           <PrimaryButton
@@ -342,6 +326,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.glassStrong,
     borderColor: colors.cardBorder,
     borderWidth: 1,
+    padding: 20,
+    gap: 6,
     overflow: "hidden",
     shadowColor: "#000000",
     shadowOpacity: 0.16,
@@ -349,11 +335,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
   },
-  // Artwork banner crowning the hero (a horizontal band of the
-  // square artwork — the guppy and its nebula tail sit mid-frame).
-  heroArt: { width: "100%", height: 128 },
-  heroBody: { padding: 20, paddingTop: 14, gap: 6 },
-  welcomeArt: { width: "100%", height: 210, borderRadius: 14 },
+  heroMascot: { position: "absolute", right: 12, top: 72, zIndex: 1 },
   mascotCenter: { alignItems: "center", paddingVertical: 4 },
   heroLabel: { color: colors.muted, fontSize: 13, fontWeight: "600" },
   heroTotal: { color: colors.text, fontSize: 44, fontWeight: "800" },

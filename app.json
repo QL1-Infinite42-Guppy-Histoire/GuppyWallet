@@ -54,7 +54,8 @@
           "cameraPermission": "送金先アドレスのQRコードを読み取るためにカメラを使います。",
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-font"
     ],
     "owner": "guppy9180s-team"
   }
