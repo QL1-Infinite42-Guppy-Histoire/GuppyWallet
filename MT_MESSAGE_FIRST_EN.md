@@ -1,6 +1,8 @@
 # Message to MT — first message (English, not sent yet)
-> Updated 2026-11-01 (v5). Since v4, the inbound bridge routes (BSC/ETH → 42 Chain)
+> Updated 2026-11-01 (v6). Since v4, the inbound bridge routes (BSC/ETH → 42 Chain)
 > were verified on-chain and implemented, and the repo went public on GitHub.
+> Since v5, the app was renamed from "Zaphod Wallet" to "GuppyWallet"
+> (the repo was renamed too; the old URL redirects).
 > The four asks below are the only items still genuinely open. Assumes MT has
 > seen nothing from us yet; fully self-contained.
 
@@ -8,9 +10,10 @@
 
 Hi MT, nice to meet you — I hope it's OK to message you here.
 
-I'm building a dedicated wallet app for Infinite Drivechain and QL1 (Android first),
-with an original UI on the infrastructure you have already developed: balances, Swap,
-liquidity, staking, st42, Bridge, NFT, QNS (.qom), and a dashboard.
+I'm building a dedicated wallet app called GuppyWallet for Infinite Drivechain
+and QL1 (Android first), with an original UI on the infrastructure you have
+already developed: balances, Swap, liquidity, staking, st42, Bridge, NFT,
+QNS (.qom), and a dashboard.
 
 Quick status so you know where I am: the app already works end-to-end on mainnet.
 I found and verified on-chain, without needing to bother you: the Don't Panic /
@@ -22,7 +25,7 @@ contract plus the Starlight ledger. Swap, LP, staking, st42, transfers, Bridge
 (42 Chain-origin, plus inbound routes from BSC and Ethereum) and the Fluke
 commit/reveal flow are all connected in the app already. The code and the full
 development history are public, if you'd like to see where it stands:
-https://github.com/nepicobsv-hash/zaphod-wallet
+https://github.com/nepicobsv-hash/GuppyWallet
 
 What I still genuinely need:
 

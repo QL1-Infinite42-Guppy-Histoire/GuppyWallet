@@ -1,4 +1,4 @@
-# Zaphod Wallet — 42 Chain（Infinite）/ QL1 専用ウォレット
+# GuppyWallet — 42 Chain（Infinite）/ QL1 専用ウォレット
 
 42 Chain（旧 Infinite Drivechain）と QL1 の専用ウォレットアプリです。
 Android 先行で、React Native + Expo + TypeScript で作っています（iPhone版は後から同じコードで追加予定）。

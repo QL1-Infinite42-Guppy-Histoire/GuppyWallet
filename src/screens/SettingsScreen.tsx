@@ -311,7 +311,7 @@ export default function SettingsScreen() {
         <Heading>{t("settings.about")}</Heading>
         <DontPanic compact tone="card" />
         <Body>
-          Zaphod Wallet — {t("settings.catchphrase")}
+          GuppyWallet — {t("settings.catchphrase")}
           {"\n"}
           ひとつのウォレットに、無限の可能性を。
           {"\n"}
