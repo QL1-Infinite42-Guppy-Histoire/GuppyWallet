@@ -7,7 +7,7 @@ import {
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
@@ -18,11 +18,12 @@ import { colors } from "./src/components/ui";
 import { BalancesProvider } from "./src/context/BalancesContext";
 import { ChainSelectionProvider } from "./src/context/ChainSelectionContext";
 import { LanguageProvider, useI18n } from "./src/context/LanguageContext";
-import { WalletProvider } from "./src/context/WalletContext";
+import { WalletProvider, useWallet } from "./src/context/WalletContext";
 import DeFiScreen from "./src/screens/DeFiScreen";
 import ExploreScreen from "./src/screens/ExploreScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import NftScreen from "./src/screens/NftScreen";
+import OnboardingScreen from "./src/screens/OnboardingScreen";
 import SendScreen from "./src/screens/SendScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import TokenListScreen from "./src/screens/TokenListScreen";
@@ -175,6 +176,34 @@ const NAV_THEME: Theme = {
   colors: { ...DefaultTheme.colors, background: colors.bg },
 };
 
+/**
+ * First-run gate: until a wallet exists — and while the setup flow
+ * still owes its unlock-method step — the app shows the onboarding
+ * flow (welcome → create/import → unlock method) instead of the
+ * tabs. While the stored state is still loading, a plain deep-space
+ * view sits under the opening splash.
+ */
+function RootGate() {
+  const wallet = useWallet();
+  if (wallet.setupState === "loading") {
+    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  }
+  if (wallet.setupState === "needsSetup" || wallet.pendingUnlockSetup) {
+    return <OnboardingScreen />;
+  }
+  return (
+    <>
+      <NavigationContainer theme={NAV_THEME}>
+        <StatusBar style="light" />
+        <TabNavigator />
+      </NavigationContainer>
+      {/* Unlock flourish (~1 s): a star-warp + violet flash the
+          moment a locked wallet unlocks. Visual only. */}
+      <UnlockWarpOverlay />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
@@ -182,13 +211,7 @@ export default function App() {
         <WalletProvider>
           <BalancesProvider>
             <ChainSelectionProvider>
-              <NavigationContainer theme={NAV_THEME}>
-                <StatusBar style="light" />
-                <TabNavigator />
-              </NavigationContainer>
-              {/* Unlock flourish (~1 s): a star-warp + violet flash the
-                  moment a locked wallet unlocks. Visual only. */}
-              <UnlockWarpOverlay />
+              <RootGate />
             </ChainSelectionProvider>
           </BalancesProvider>
         </WalletProvider>

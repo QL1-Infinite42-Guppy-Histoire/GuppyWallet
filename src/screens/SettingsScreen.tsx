@@ -9,6 +9,7 @@ import {
   PrimaryButton,
 } from "../components/controls";
 import { GuppyMascot } from "../components/GuppyMascot";
+import UnlockMethodForm from "../components/UnlockMethodForm";
 import {
   Card,
   DontPanic,
@@ -27,141 +28,9 @@ import { useWallet } from "../context/WalletContext";
 import { useBalances } from "../context/BalancesContext";
 import { getProvider } from "../lib/onchain";
 import { ST42_ADDRESS } from "../lib/protocol";
-import {
-  isBiometricAvailable,
-  type UnlockMethod,
-} from "../lib/walletStore";
 
 const APP_VERSION = "0.1.0"; // keep in sync with app.json "version"
 
-/**
- * Unlock-method picker: used by the setup step right after a wallet
- * is created / imported, and again by the "change" flow in the wallet
- * card. Two plain options; the password option reveals a set +
- * confirm pair of fields. Saving goes through
- * wallet.chooseUnlockMethod (only a salted hash of the password is
- * stored). Devices without biometrics still get the password option —
- * and the biometric one keeps working through the device PIN.
- */
-function UnlockMethodForm({
-  initial,
-  onDone,
-}: {
-  initial: UnlockMethod;
-  onDone: () => void;
-}) {
-  const { t } = useI18n();
-  const wallet = useWallet();
-  const [method, setMethod] = useState<UnlockMethod>(initial);
-  const [pw1, setPw1] = useState("");
-  const [pw2, setPw2] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [bioOk, setBioOk] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    isBiometricAvailable()
-      .then(setBioOk)
-      .catch(() => setBioOk(false));
-  }, []);
-
-  const save = async () => {
-    setError(null);
-    if (method === "password") {
-      if (pw1.length < 6) {
-        setError(t("auth.passwordTooShort"));
-        return;
-      }
-      if (pw1 !== pw2) {
-        setError(t("auth.passwordMismatch"));
-        return;
-      }
-    }
-    setBusy(true);
-    try {
-      await wallet.chooseUnlockMethod(
-        method,
-        method === "password" ? pw1 : undefined,
-      );
-      onDone();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <>
-      <Pressable
-        style={[
-          styles.methodOption,
-          method === "biometric" && styles.methodOptionOn,
-        ]}
-        onPress={() => setMethod("biometric")}
-      >
-        <Text style={styles.methodRadio}>
-          {method === "biometric" ? "●" : "○"}
-        </Text>
-        <View style={styles.methodTexts}>
-          <Text style={styles.methodLabel}>{t("auth.methodBiometric")}</Text>
-          <Text style={styles.methodNote}>
-            {t("auth.methodBiometricNote")}
-          </Text>
-          {bioOk === false ? (
-            <Text style={styles.methodWarn}>
-              {t("auth.methodBiometricUnavailable")}
-            </Text>
-          ) : null}
-        </View>
-      </Pressable>
-      <Pressable
-        style={[
-          styles.methodOption,
-          method === "password" && styles.methodOptionOn,
-        ]}
-        onPress={() => setMethod("password")}
-      >
-        <Text style={styles.methodRadio}>
-          {method === "password" ? "●" : "○"}
-        </Text>
-        <View style={styles.methodTexts}>
-          <Text style={styles.methodLabel}>{t("auth.methodPassword")}</Text>
-          <Text style={styles.methodNote}>{t("auth.methodPasswordNote")}</Text>
-        </View>
-      </Pressable>
-      {method === "password" ? (
-        <>
-          <Field
-            value={pw1}
-            onChangeText={setPw1}
-            placeholder={t("auth.newPassword")}
-            secure
-          />
-          <Field
-            value={pw2}
-            onChangeText={setPw2}
-            placeholder={t("auth.confirmPassword")}
-            secure
-          />
-        </>
-      ) : null}
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      <PrimaryButton
-        label={t("auth.methodSave")}
-        onPress={save}
-        loading={busy}
-      />
-    </>
-  );
-}
-
-/**
- * Settings: the ONLY home of wallet management (create / import /
- * lock / delete), the JA/EN language switch, custom-token management,
- * security notes and About. Balances live on Home; sending lives in
- * the Send screen — nothing is duplicated here.
- */
 export default function SettingsScreen() {
   const { t, lang, setLang } = useI18n();
   const wallet = useWallet();
@@ -170,6 +39,9 @@ export default function SettingsScreen() {
   const [phraseInput, setPhraseInput] = useState("");
   const [keyInput, setKeyInput] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [addPhraseInput, setAddPhraseInput] = useState("");
+  const [addKeyInput, setAddKeyInput] = useState("");
+  const [addFormError, setAddFormError] = useState<string | null>(null);
   const [phraseChecked, setPhraseChecked] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [showMethodForm, setShowMethodForm] = useState(false);
@@ -222,6 +94,38 @@ export default function SettingsScreen() {
       setFormError(e instanceof Error ? e.message : String(e));
     }
   };
+
+  const handleAddImportPhrase = async () => {
+    setAddFormError(null);
+    try {
+      await wallet.importPhrase(addPhraseInput);
+      setAddPhraseInput("");
+    } catch (e) {
+      setAddFormError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleAddImportKey = async () => {
+    setAddFormError(null);
+    try {
+      await wallet.importPrivateKey(addKeyInput);
+      setAddKeyInput("");
+    } catch (e) {
+      setAddFormError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleAddAccount = async () => {
+    setAddFormError(null);
+    try {
+      await wallet.addAccount();
+    } catch (e) {
+      setAddFormError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const activeWalletMeta =
+    wallet.wallets.find((w) => w.id === wallet.activeWalletId) ?? null;
 
   return (
     <Screen>
@@ -317,6 +221,46 @@ export default function SettingsScreen() {
             <Text style={styles.addr}>{wallet.info.infiniteAddress}</Text>
             <Text style={styles.addrLabel}>{t("settings.addressQl1Alt")}</Text>
             <Text style={styles.addr}>{wallet.info.qomAddress}</Text>
+            {wallet.wallets.length > 1 ? (
+              <>
+                <Text style={styles.subHeading}>
+                  {t("wallet.switchWallet")}
+                </Text>
+                <ChipPicker
+                  options={wallet.wallets.map((w, i) => ({
+                    key: w.id,
+                    label: `${t("wallet.walletLabel")} ${i + 1}`,
+                  }))}
+                  value={wallet.activeWalletId ?? ""}
+                  onChange={(k) => wallet.switchWallet(k)}
+                />
+              </>
+            ) : null}
+            {activeWalletMeta && activeWalletMeta.accounts.length > 1 ? (
+              <>
+                <Text style={styles.subHeading}>
+                  {t("wallet.switchAccount")}
+                </Text>
+                <ChipPicker
+                  options={activeWalletMeta.accounts.map((a, i) => ({
+                    key: String(i),
+                    label: `${t("home.account")} ${i + 1}`,
+                  }))}
+                  value={String(wallet.activeAccountIndex)}
+                  onChange={(k) => wallet.switchAccount(Number(k))}
+                />
+              </>
+            ) : null}
+            {wallet.info.kind === "mnemonic" ? (
+              <>
+                <PrimaryButton
+                  label={t("wallet.addAccount")}
+                  onPress={handleAddAccount}
+                  loading={wallet.busy}
+                />
+                <Body>{t("wallet.addAccountNote")}</Body>
+              </>
+            ) : null}
             {wallet.unlocked ? (
               <PrimaryButton label={t("settings.lockButton")} onPress={wallet.lock} />
             ) : (
@@ -378,13 +322,50 @@ export default function SettingsScreen() {
               </>
             ) : (
               <Pressable onPress={() => setConfirmRemove(true)}>
-                <Text style={styles.removeText}>{t("settings.deleteWallet")}</Text>
+                <Text style={styles.removeText}>{t("wallet.removeThis")}</Text>
               </Pressable>
             )}
           </>
         )}
         {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
       </Card>
+
+      {wallet.info ? (
+        <Card>
+          <Heading>{t("wallet.addWallet")}</Heading>
+          <Body>{t("wallet.addWalletNote")}</Body>
+          <PrimaryButton
+            label={t("settings.createWallet")}
+            onPress={handleCreate}
+            loading={wallet.busy}
+          />
+          <Text style={styles.subHeading}>{t("settings.importPhraseTitle")}</Text>
+          <Field
+            value={addPhraseInput}
+            onChangeText={setAddPhraseInput}
+            placeholder={t("settings.importPhrasePlaceholder")}
+          />
+          <PrimaryButton
+            label={t("settings.importPhrase")}
+            onPress={handleAddImportPhrase}
+            loading={wallet.busy}
+          />
+          <Text style={styles.subHeading}>{t("settings.importKeyTitle")}</Text>
+          <Field
+            value={addKeyInput}
+            onChangeText={setAddKeyInput}
+            placeholder={t("settings.importKeyPlaceholder")}
+          />
+          <PrimaryButton
+            label={t("settings.importKey")}
+            onPress={handleAddImportKey}
+            loading={wallet.busy}
+          />
+          {addFormError ? (
+            <Text style={styles.errorText}>{addFormError}</Text>
+          ) : null}
+        </Card>
+      ) : null}
 
       <Card>
         <Heading>{t("settings.language")}</Heading>

@@ -605,6 +605,20 @@ const ja = {
   "auth.methodSaved": "解除方法を保存しました。",
   "auth.skipForNow": "あとで決める",
   "settings.unlock": "ロックを解除",
+  "onboarding.welcomeTitle": "ようこそ",
+  "onboarding.welcomeBody":
+    "まずはウォレットを作るか、手持ちのウォレットを取り込みましょう。",
+  "wallet.switchWallet": "ウォレットを切り替え",
+  "wallet.switchAccount": "アカウントを切り替え",
+  "wallet.walletLabel": "ウォレット",
+  "wallet.addAccount": "アカウントを追加",
+  "wallet.addAccountNote":
+    "同じウォレットから、新しいアドレスのアカウントを作ります。",
+  "wallet.addWallet": "ウォレットを追加",
+  "wallet.addWalletNote": "新しく作るか、別のウォレットを取り込みます。",
+  "wallet.removeThis": "このウォレットを削除する",
+  "err.addAccountKeyOnly":
+    "秘密鍵のウォレットではアカウントを追加できません。",
   "err.passwordRequired": "パスワードを入力してください。",
   "protocol.noName": "(名称なし)",
   "tx.feeSuffix": "（目安）",
@@ -1211,6 +1225,20 @@ const en: Record<I18nKey, string> = {
   "auth.methodSaved": "Unlock method saved.",
   "auth.skipForNow": "Decide later",
   "settings.unlock": "Unlock",
+  "onboarding.welcomeTitle": "Welcome",
+  "onboarding.welcomeBody":
+    "First, create a wallet or bring in one you already have.",
+  "wallet.switchWallet": "Switch wallet",
+  "wallet.switchAccount": "Switch account",
+  "wallet.walletLabel": "Wallet",
+  "wallet.addAccount": "Add account",
+  "wallet.addAccountNote":
+    "Creates a new address from the same wallet.",
+  "wallet.addWallet": "Add a wallet",
+  "wallet.addWalletNote": "Create a new one, or import another wallet.",
+  "wallet.removeThis": "Remove this wallet",
+  "err.addAccountKeyOnly":
+    "Accounts can only be added to phrase wallets.",
   "err.passwordRequired": "Please enter a password.",
   "protocol.noName": "(no name)",
   "tx.feeSuffix": " (estimate)",

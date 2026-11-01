@@ -23,6 +23,8 @@ const PUBLIC_KEY = "wallet.public.v1";
 const HAS_SENT_KEY = "wallet.hasSentTx.v1";
 const UNLOCK_METHOD_KEY = "wallet.unlockMethod.v1";
 const PW_VERIFIER_KEY = "wallet.pwVerifier.v1";
+const REGISTRY_KEY = "wallet.registry.v2";
+const META_KEY = "zaphod.walletsMeta.v2";
 const STORE_OPTIONS = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 } as const;
@@ -78,6 +80,20 @@ export async function getUnlockMethod(): Promise<UnlockMethod> {
     return v === "password" ? "password" : "biometric";
   } catch {
     return "biometric";
+  }
+}
+
+/** True when the user has ever explicitly saved an unlock method
+ *  (vs. silently defaulting to biometrics). Setup asks only then —
+ *  adding another wallet later never re-asks. */
+export async function hasUnlockMethodRecord(): Promise<boolean> {
+  try {
+    return (
+      (await SecureStore.getItemAsync(UNLOCK_METHOD_KEY, STORE_OPTIONS)) !==
+      null
+    );
+  } catch {
+    return false;
   }
 }
 
@@ -215,4 +231,111 @@ export async function getHasSentTx(): Promise<boolean> {
 
 export async function markHasSentTx(): Promise<void> {
   await SecureStore.setItemAsync(HAS_SENT_KEY, "1", STORE_OPTIONS);
+}
+
+/**
+ * ── Multi-wallet storage (v2) ─────────────────────────────────────
+ * Secrets live per-wallet in ONE SecureStore record (the registry):
+ * every wallet the user created / imported, keyed by id (the
+ * account-0 EVM address — unique per wallet, and re-importing the
+ * same wallet dedupes onto the same id). Public metadata (kinds,
+ * derived account addresses, which wallet/account is active) sits in
+ * a companion SecureStore record so the two can't drift apart.
+ *
+ * Migration: wallets stored by the v1 single-wallet layout
+ * (wallet.secret.v1 / wallet.public.v1) are folded into this layout
+ * by WalletContext on first load; clearLegacyWalletKeys() then
+ * removes ONLY the v1 secret/public records (the unlock-method
+ * record, password verifier and has-sent flag are app-wide and stay).
+ */
+
+export interface StoredWalletRecord {
+  id: string;
+  kind: WalletKind;
+  secret: string;
+}
+
+export interface WalletRegistry {
+  wallets: StoredWalletRecord[];
+  activeWalletId: string | null;
+}
+
+export async function loadRegistry(): Promise<WalletRegistry | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(REGISTRY_KEY, STORE_OPTIONS);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as WalletRegistry;
+    if (!parsed || !Array.isArray(parsed.wallets)) return null;
+    return {
+      wallets: parsed.wallets.filter(
+        (w) =>
+          w &&
+          typeof w.id === "string" &&
+          (w.kind === "mnemonic" || w.kind === "privateKey") &&
+          typeof w.secret === "string",
+      ),
+      activeWalletId:
+        typeof parsed.activeWalletId === "string"
+          ? parsed.activeWalletId
+          : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function saveRegistry(registry: WalletRegistry): Promise<void> {
+  await SecureStore.setItemAsync(
+    REGISTRY_KEY,
+    JSON.stringify(registry),
+    STORE_OPTIONS,
+  );
+}
+
+export interface WalletAccountMeta {
+  evmAddress: string;
+  infiniteAddress: string;
+  qomAddress: string;
+}
+
+export interface WalletMeta {
+  id: string;
+  kind: WalletKind;
+  accounts: WalletAccountMeta[];
+  activeAccountIndex: number;
+}
+
+export interface WalletsMeta {
+  wallets: WalletMeta[];
+  activeWalletId: string | null;
+}
+
+export async function loadWalletsMeta(): Promise<WalletsMeta | null> {
+  try {
+    const raw = await SecureStore.getItemAsync(META_KEY, STORE_OPTIONS);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as WalletsMeta;
+    if (!parsed || !Array.isArray(parsed.wallets)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveWalletsMeta(meta: WalletsMeta): Promise<void> {
+  // Kept in SecureStore alongside the registry (not best-effort
+  // AsyncStorage) so the two records can't silently drift apart.
+  await SecureStore.setItemAsync(
+    META_KEY,
+    JSON.stringify(meta),
+    STORE_OPTIONS,
+  );
+}
+
+/** Remove ONLY the v1 single-wallet records after a successful
+ *  migration into the v2 registry. Gate settings are app-wide and
+ *  deliberately NOT touched here. */
+export async function clearLegacyWalletKeys(): Promise<void> {
+  await SecureStore.deleteItemAsync(SECRET_KEY, STORE_OPTIONS);
+  await SecureStore.deleteItemAsync(PUBLIC_KEY, STORE_OPTIONS);
 }

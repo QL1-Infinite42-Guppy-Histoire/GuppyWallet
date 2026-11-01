@@ -118,7 +118,7 @@ export default function HomeScreen() {
       {/* account header: name + small address chip */}
       <View style={styles.accountRow}>
         <Text style={styles.accountName}>
-          {t("home.account")} 1
+          {t("home.account")} {wallet.activeAccountIndex + 1}
         </Text>
         {evm ? (
           <View style={styles.addressChip}>

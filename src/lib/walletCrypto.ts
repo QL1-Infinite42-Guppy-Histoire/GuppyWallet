@@ -19,6 +19,12 @@ import {
 
 export const EVM_DERIVATION_PATH = "m/44'/60'/0'/0/0";
 
+/** BIP-44 path of account `index` of a phrase (index 0 is the path
+ *  above — accounts are the last path component, MetaMask-style). */
+export function derivationPathForIndex(index: number): string {
+  return `m/44'/60'/0'/0/${index}`;
+}
+
 /** Generate a fresh 24-word BIP-39 phrase from 32 bytes of OS entropy. */
 export async function generatePhrase(): Promise<string> {
   const entropy = await Crypto.getRandomBytesAsync(32);
@@ -40,8 +46,17 @@ export function normalizePhrase(phrase: string): string {
 
 /** Derive the EVM wallet (m/44'/60'/0'/0/0) from a BIP-39 phrase. */
 export function walletFromPhrase(phrase: string): HDNodeWallet {
+  return walletFromPhraseAtIndex(phrase, 0);
+}
+
+/** Derive account `index` of a BIP-39 phrase (same phrase, next
+ *  address). Index 0 is exactly walletFromPhrase's result. */
+export function walletFromPhraseAtIndex(
+  phrase: string,
+  index: number,
+): HDNodeWallet {
   const mnemonic = Mnemonic.fromPhrase(normalizePhrase(phrase));
-  return HDNodeWallet.fromMnemonic(mnemonic, EVM_DERIVATION_PATH);
+  return HDNodeWallet.fromMnemonic(mnemonic, derivationPathForIndex(index));
 }
 
 export function isValidPrivateKey(key: string): boolean {
