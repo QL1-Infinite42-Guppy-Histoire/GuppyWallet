@@ -1,11 +1,20 @@
 # GuppyWallet — 42 Chain（Infinite）/ QL1 専用ウォレット
 
+![build](https://github.com/nepicobsv-hash/GuppyWallet/actions/workflows/build-apk.yml/badge.svg)
+
 42 Chain（旧 Infinite Drivechain）と QL1 の専用ウォレットアプリです。
 Android 先行で、React Native + Expo + TypeScript で作っています（iPhone版は後から同じコードで追加予定）。
 設計の全体像は [BLUEPRINT.md](./BLUEPRINT.md) を見てください。
 
 > ⚠️ **未監査の開発版です。** 署名・送金機能は実装済みですが、第三者監査は受けていません。
 > 実資金で使う場合は自己責任で、必ず少額から試してください。
+
+## 開発状況（2026-11-01 時点）
+
+- **現在版： v0.1.0** — APK は [Releases](https://github.com/nepicobsv-hash/GuppyWallet/releases) からダウンロード可能
+- **ビルド：** GitHub Actions が標準経路。master へ push するたびに APK がビルドされ、成果物（Artifacts）に上がります（署名は EAS 管理のものと同一＝上書き更新可能）
+- **状態：** 主要機能は実装済みでメインネット動作。最新ビルド（改名＋グッピーマスコット）は端末での最終確認待ち
+- **残タスク：** MT 回答待ち4件（下記セクション）と、既知の制約の解消
 
 ## できること（実装済み・メインネットで動作）
 
