@@ -1,6 +1,6 @@
 # GuppyWallet — 42 Chain（Infinite）/ QL1 専用ウォレット
 
-![build](https://github.com/nepicobsv-hash/GuppyWallet/actions/workflows/build-apk.yml/badge.svg)
+![build](https://github.com/QL1-Infinite42-Guppy-Histoire/GuppyWallet/actions/workflows/build-apk.yml/badge.svg)
 
 42 Chain（旧 Infinite Drivechain）と QL1 の専用ウォレットアプリです。
 Android 先行で、React Native + Expo + TypeScript で作っています（iPhone版は後から同じコードで追加予定）。
@@ -11,7 +11,7 @@ Android 先行で、React Native + Expo + TypeScript で作っています（iPh
 
 ## 開発状況（2026-11-01 時点）
 
-- **現在版： v0.1.8** — APK は [Releases](https://github.com/nepicobsv-hash/GuppyWallet/releases) からダウンロード可能
+- **現在版： v0.1.8** — APK は [Releases](https://github.com/QL1-Infinite42-Guppy-Histoire/GuppyWallet/releases) からダウンロード可能
 - **ビルド：** GitHub Actions が標準経路。master へ push するたびに APK がビルドされ、成果物（Artifacts）に上がります（署名は EAS 管理のものと同一＝上書き更新可能）
 - **状態：** 主要機能は実装済みでメインネット動作
 - **英語対応：** 完了（v0.1.3）。英語に切り替えると、Swap／LP／ステーキング／Bridge／Fluke の各フォームや送金確認画面まで含め、画面の文言がすべて英語になります（v0.1.2 までは一部の画面内部が日本語のままでした）。機能の変更はありません

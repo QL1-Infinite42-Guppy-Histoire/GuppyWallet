@@ -25,7 +25,7 @@ contract plus the Starlight ledger. Swap, LP, staking, st42, transfers, Bridge
 (42 Chain-origin, plus inbound routes from BSC and Ethereum) and the Fluke
 commit/reveal flow are all connected in the app already. The code and the full
 development history are public, if you'd like to see where it stands:
-https://github.com/nepicobsv-hash/GuppyWallet
+https://github.com/QL1-Infinite42-Guppy-Histoire/GuppyWallet
 
 What I still genuinely need:
 
