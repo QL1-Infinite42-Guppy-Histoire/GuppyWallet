@@ -51,11 +51,14 @@ export function Field({
   onChangeText,
   placeholder,
   keyboardType,
+  secure,
 }: {
   value: string;
   onChangeText: (v: string) => void;
   placeholder?: string;
   keyboardType?: "default" | "decimal-pad";
+  /** password-style entry (dots, no suggestions) */
+  secure?: boolean;
 }) {
   return (
     <TextInput
@@ -67,6 +70,7 @@ export function Field({
       autoCapitalize="none"
       autoCorrect={false}
       keyboardType={keyboardType ?? "default"}
+      secureTextEntry={secure === true}
     />
   );
 }

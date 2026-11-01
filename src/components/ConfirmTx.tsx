@@ -14,11 +14,7 @@ import { useI18n } from "../context/LanguageContext";
 import { useWallet } from "../context/WalletContext";
 import { tr } from "../i18n";
 import type { ProviderChainLike } from "../lib/onchain";
-import {
-  authenticate,
-  getHasSentTx,
-  markHasSentTx,
-} from "../lib/walletStore";
+import { getHasSentTx, markHasSentTx } from "../lib/walletStore";
 import { colors } from "./ui";
 
 /**
@@ -26,8 +22,9 @@ import { colors } from "./ui";
  *
  * Flow: (unlock if needed) → prepare (fee estimate) → review sheet in
  * plain words (where to / how much / fee estimate) → user taps
- * confirm → FRESH biometric authentication → local signing + send →
- * explorer link + pending/success/failure state. The biometric step is
+ * confirm → FRESH authentication (the user's chosen unlock method:
+ * biometrics or app password) → local signing + send →
+ * explorer link + pending/success/failure state. The auth step is
  * part of the auth model: it runs here, centrally, so every TxJob
  * (send / swap / LP / staking / st42 / Fluke / Bridge) is gated the
  * same way, even when the session is already unlocked. If the user
@@ -151,10 +148,11 @@ export function ConfirmTxModal({
 
   const handleConfirm = useCallback(async () => {
     if (!prepared) return;
-    // Signing-time biometric gate (auth model #2): authenticate fresh,
-    // immediately before executing — regardless of session unlock state.
+    // Signing-time gate (auth model #2): authenticate fresh, through
+    // the user's chosen unlock method (biometrics or app password),
+    // immediately before executing — regardless of session state.
     setAuthError(null);
-    const ok = await authenticate(tr("confirm.authReasonSend"));
+    const ok = await wallet.requestAuth(tr("confirm.authReasonSend"));
     if (!ok) {
       setAuthError(tr("confirm.authFailed"));
       return; // stay in review; nothing was sent
@@ -169,7 +167,7 @@ export function ConfirmTxModal({
       setError(e instanceof Error ? e.message : String(e));
       setPhase("error");
     }
-  }, [prepared]);
+  }, [prepared, wallet]);
 
   if (!job) return null;
   const { chain } = job;

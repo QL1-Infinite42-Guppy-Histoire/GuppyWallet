@@ -27,8 +27,134 @@ import { useWallet } from "../context/WalletContext";
 import { useBalances } from "../context/BalancesContext";
 import { getProvider } from "../lib/onchain";
 import { ST42_ADDRESS } from "../lib/protocol";
+import {
+  isBiometricAvailable,
+  type UnlockMethod,
+} from "../lib/walletStore";
 
 const APP_VERSION = "0.1.0"; // keep in sync with app.json "version"
+
+/**
+ * Unlock-method picker: used by the setup step right after a wallet
+ * is created / imported, and again by the "change" flow in the wallet
+ * card. Two plain options; the password option reveals a set +
+ * confirm pair of fields. Saving goes through
+ * wallet.chooseUnlockMethod (only a salted hash of the password is
+ * stored). Devices without biometrics still get the password option —
+ * and the biometric one keeps working through the device PIN.
+ */
+function UnlockMethodForm({
+  initial,
+  onDone,
+}: {
+  initial: UnlockMethod;
+  onDone: () => void;
+}) {
+  const { t } = useI18n();
+  const wallet = useWallet();
+  const [method, setMethod] = useState<UnlockMethod>(initial);
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [bioOk, setBioOk] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    isBiometricAvailable()
+      .then(setBioOk)
+      .catch(() => setBioOk(false));
+  }, []);
+
+  const save = async () => {
+    setError(null);
+    if (method === "password") {
+      if (pw1.length < 6) {
+        setError(t("auth.passwordTooShort"));
+        return;
+      }
+      if (pw1 !== pw2) {
+        setError(t("auth.passwordMismatch"));
+        return;
+      }
+    }
+    setBusy(true);
+    try {
+      await wallet.chooseUnlockMethod(
+        method,
+        method === "password" ? pw1 : undefined,
+      );
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <Pressable
+        style={[
+          styles.methodOption,
+          method === "biometric" && styles.methodOptionOn,
+        ]}
+        onPress={() => setMethod("biometric")}
+      >
+        <Text style={styles.methodRadio}>
+          {method === "biometric" ? "●" : "○"}
+        </Text>
+        <View style={styles.methodTexts}>
+          <Text style={styles.methodLabel}>{t("auth.methodBiometric")}</Text>
+          <Text style={styles.methodNote}>
+            {t("auth.methodBiometricNote")}
+          </Text>
+          {bioOk === false ? (
+            <Text style={styles.methodWarn}>
+              {t("auth.methodBiometricUnavailable")}
+            </Text>
+          ) : null}
+        </View>
+      </Pressable>
+      <Pressable
+        style={[
+          styles.methodOption,
+          method === "password" && styles.methodOptionOn,
+        ]}
+        onPress={() => setMethod("password")}
+      >
+        <Text style={styles.methodRadio}>
+          {method === "password" ? "●" : "○"}
+        </Text>
+        <View style={styles.methodTexts}>
+          <Text style={styles.methodLabel}>{t("auth.methodPassword")}</Text>
+          <Text style={styles.methodNote}>{t("auth.methodPasswordNote")}</Text>
+        </View>
+      </Pressable>
+      {method === "password" ? (
+        <>
+          <Field
+            value={pw1}
+            onChangeText={setPw1}
+            placeholder={t("auth.newPassword")}
+            secure
+          />
+          <Field
+            value={pw2}
+            onChangeText={setPw2}
+            placeholder={t("auth.confirmPassword")}
+            secure
+          />
+        </>
+      ) : null}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      <PrimaryButton
+        label={t("auth.methodSave")}
+        onPress={save}
+        loading={busy}
+      />
+    </>
+  );
+}
 
 /**
  * Settings: the ONLY home of wallet management (create / import /
@@ -46,6 +172,8 @@ export default function SettingsScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [phraseChecked, setPhraseChecked] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [showMethodForm, setShowMethodForm] = useState(false);
+  const [methodSavedFlash, setMethodSavedFlash] = useState(false);
 
   // Technical details (moved off Home/Explore): live block numbers.
   const [blocks, setBlocks] = useState<Record<string, number | null>>({});
@@ -125,6 +253,20 @@ export default function SettingsScreen() {
         </Card>
       ) : null}
 
+      {wallet.info && wallet.pendingUnlockSetup ? (
+        <Card>
+          <Heading>{t("auth.methodTitle")}</Heading>
+          <Body>{t("auth.methodNote")}</Body>
+          <UnlockMethodForm
+            initial={wallet.unlockMethod}
+            onDone={() => setMethodSavedFlash(true)}
+          />
+          <Pressable onPress={wallet.completeUnlockSetup}>
+            <Text style={styles.cancelText}>{t("auth.skipForNow")}</Text>
+          </Pressable>
+        </Card>
+      ) : null}
+
       <Card>
         <Heading>{t("settings.wallet")}</Heading>
         {!wallet.info ? (
@@ -179,9 +321,44 @@ export default function SettingsScreen() {
               <PrimaryButton label={t("settings.lockButton")} onPress={wallet.lock} />
             ) : (
               <PrimaryButton
-                label={t("settings.unlockBio")}
+                label={
+                  wallet.unlockMethod === "password"
+                    ? t("settings.unlock")
+                    : t("settings.unlockBio")
+                }
                 onPress={() => wallet.unlock()}
               />
+            )}
+            <Body>
+              {t("auth.methodCurrent")}:{" "}
+              {wallet.unlockMethod === "password"
+                ? t("auth.methodPassword")
+                : t("auth.methodBiometric")}
+            </Body>
+            {methodSavedFlash ? (
+              <Text style={styles.doneText}>{t("auth.methodSaved")}</Text>
+            ) : null}
+            {showMethodForm ? (
+              <UnlockMethodForm
+                initial={wallet.unlockMethod}
+                onDone={() => {
+                  setShowMethodForm(false);
+                  setMethodSavedFlash(true);
+                }}
+              />
+            ) : (
+              <Pressable
+                onPress={async () => {
+                  // Changing the gate first asks for the CURRENT one.
+                  const ok = await wallet.requestAuth();
+                  if (ok) {
+                    setMethodSavedFlash(false);
+                    setShowMethodForm(true);
+                  }
+                }}
+              >
+                <Text style={styles.linkText}>{t("auth.methodChange")}</Text>
+              </Pressable>
             )}
             {confirmRemove ? (
               <>
@@ -363,4 +540,27 @@ const styles = StyleSheet.create({
   errorText: { color: colors.dangerText, fontSize: 13 },
   removeText: { color: colors.dangerText, fontSize: 14, textAlign: "center" },
   cancelText: { color: colors.muted, fontSize: 14, textAlign: "center" },
+  methodOption: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 12,
+    backgroundColor: colors.panel,
+  },
+  methodOptionOn: { borderColor: colors.accent, borderWidth: 2 },
+  methodRadio: { color: colors.accent, fontSize: 16, lineHeight: 20 },
+  methodTexts: { flex: 1, gap: 2 },
+  methodLabel: { color: colors.text, fontSize: 15, fontWeight: "700" },
+  methodNote: { color: colors.muted, fontSize: 12, lineHeight: 17 },
+  methodWarn: { color: colors.dangerText, fontSize: 12, lineHeight: 17 },
+  doneText: { color: colors.positive, fontSize: 13 },
+  linkText: {
+    color: colors.accent,
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: 2,
+  },
 });
