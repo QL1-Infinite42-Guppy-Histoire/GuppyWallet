@@ -72,6 +72,13 @@ export interface TxJob {
   chain: TxChainLike;
   lines: TxLine[];
   prepare: (signer: Wallet) => Promise<PreparedTx>;
+  /** Optional outcome hooks for multi-step flows (e.g. the deposit
+   *  journey chains a swap into a bridge send). Fired once when the
+   *  send succeeds / when preparing or sending fails. Existing jobs
+   *  leave these unset and behave exactly as before. A job is never
+   *  auto-retried — the hooks only report the outcome. */
+  onDone?: (hashes: string[]) => void;
+  onError?: (message: string) => void;
 }
 
 type Phase =
@@ -130,8 +137,10 @@ export function ConfirmTxModal({
         }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : String(e));
+          const msg = e instanceof Error ? e.message : String(e);
+          setError(msg);
           setPhase("error");
+          job.onError?.(msg);
         }
       }
     })();
@@ -160,14 +169,18 @@ export function ConfirmTxModal({
     setPhase("sending");
     try {
       const result = await prepared.send();
-      setHashes(result.filter((h) => h));
+      const sent = result.filter((h) => h);
+      setHashes(sent);
       await markHasSentTx().catch(() => undefined);
       setPhase("done");
+      job?.onDone?.(sent);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
       setPhase("error");
+      job?.onError?.(msg);
     }
-  }, [prepared, wallet]);
+  }, [prepared, wallet, job]);
 
   if (!job) return null;
   const { chain } = job;

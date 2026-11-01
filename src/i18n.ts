@@ -524,6 +524,42 @@ const ja = {
   "deposit.errProxyOff": "入金の連携は準備中です。",
   "deposit.errNetwork": "通信できませんでした。",
 
+  // ---- Deposit journey: BNB arrival → USDT swap → bridge (v0.2.1) ----
+  "journey.entryButton": "42 Chainまで進める",
+  "journey.heading": "42 Chainまで進める",
+  "journey.bannerSuffix": " が届いています（BSC）",
+  "journey.intro":
+    "届いたBNBを、ガス代を残してUSDTに替え、そのまま42 Chainへ送ります。一つの流れで進みます。",
+  "journey.step1": "BNBが届いた",
+  "journey.step2": "USDTに替える",
+  "journey.step3": "42 Chainへ送る",
+  "journey.step4": "完了",
+  "journey.bnbBalance": "あなたのBNB（BSC）",
+  "journey.keepLabel": "ガス代として残す量",
+  "journey.swappableLabel": "替えられる量",
+  "journey.swapAmountLabel": "替える量（BNB）",
+  "journey.keepNotePrefix": "ガス代として、約 $",
+  "journey.keepNoteSuffix": " 分のBNBを残します。",
+  "journey.swapButton": "USDTに替える",
+  "journey.amountTooBig":
+    "ガス代に残す分が必要なので、これ以上は替えられません。",
+  "journey.tooSmallBody":
+    "届いたBNBが少ないため、ガス代として残す分だけで精一杯です。もう少しBNBが入ったら、この先へ進めます。",
+  "journey.noBnbBody":
+    "BSCにBNBが見つかりませんでした。入金が届いてから、もう一度開いてください。",
+  "journey.priceMissingBody":
+    "ドルの価格が取得できなかったため、ガス代として残す量を決められません。少し待って、もう一度試してください。",
+  "journey.loadFailedPrefix": "読み込めませんでした：",
+  "journey.jobTitle": "BNBをUSDTに替える",
+  "journey.bridgeIntro":
+    "次は、替えたUSDTを42 Chainへ送ります。送り先は、あなたの42 Chainのアドレスです。",
+  "journey.resumeNote":
+    "前回のつづきから再開します。替えたUSDTを、42 Chainへ送るところからです。",
+  "journey.resetButton": "最初からやり直す",
+  "journey.doneHeading": "送りました",
+  "journey.doneBody":
+    "42 Chainへ送りました。届くまで少し時間がかかります。届いたら、ホームの42 Chainの残高で確認できます。",
+
   // ---- Send ----
   "send.qrWebNote": "WebプレビューではQRスキャンは使えません。アドレスを貼り付けてください。",
   "send.qrNoPermission":
@@ -1222,6 +1258,42 @@ const en: Record<I18nKey, string> = {
   "deposit.newDeposit": "New deposit",
   "deposit.errProxyOff": "Deposits are being prepared.",
   "deposit.errNetwork": "Couldn't connect.",
+
+  // ---- Deposit journey: BNB arrival → USDT swap → bridge (v0.2.1) ----
+  "journey.entryButton": "Continue to 42 Chain",
+  "journey.heading": "Continue to 42 Chain",
+  "journey.bannerSuffix": " has arrived (BSC)",
+  "journey.intro":
+    "The BNB that arrived is swapped to USDT — with some kept back for gas — and then sent on to 42 Chain, all in one flow.",
+  "journey.step1": "BNB arrived",
+  "journey.step2": "Swap to USDT",
+  "journey.step3": "Send to 42 Chain",
+  "journey.step4": "Done",
+  "journey.bnbBalance": "Your BNB (BSC)",
+  "journey.keepLabel": "Kept back for gas",
+  "journey.swappableLabel": "Available to swap",
+  "journey.swapAmountLabel": "Amount to swap (BNB)",
+  "journey.keepNotePrefix": "About $",
+  "journey.keepNoteSuffix": " worth of BNB stays behind for gas.",
+  "journey.swapButton": "Swap to USDT",
+  "journey.amountTooBig":
+    "That is too much — some BNB has to stay behind for gas.",
+  "journey.tooSmallBody":
+    "So little BNB arrived that all of it is needed as gas money. Once a little more BNB arrives, you can continue from here.",
+  "journey.noBnbBody":
+    "No BNB was found on BSC. Please open this again after your deposit arrives.",
+  "journey.priceMissingBody":
+    "The dollar price couldn't be fetched, so the amount to keep for gas can't be decided. Please wait a bit and try again.",
+  "journey.loadFailedPrefix": "Couldn't load: ",
+  "journey.jobTitle": "Swap BNB to USDT",
+  "journey.bridgeIntro":
+    "Next, the swapped USDT is sent to 42 Chain. The destination is your own 42 Chain address.",
+  "journey.resumeNote":
+    "Picking up where you left off: the swapped USDT is ready to send to 42 Chain.",
+  "journey.resetButton": "Start over",
+  "journey.doneHeading": "Sent",
+  "journey.doneBody":
+    "It has been sent to 42 Chain. Delivery takes a little time. Once it arrives, you can see it in your 42 Chain balance on Home.",
 
   // ---- Send ----
   "send.qrWebNote": "QR scanning isn't available in the web preview. Paste the address instead.",

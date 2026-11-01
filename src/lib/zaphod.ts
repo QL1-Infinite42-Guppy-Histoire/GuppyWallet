@@ -933,6 +933,9 @@ export function bridgeInboundSendJob(args: {
   recipient: string;
   amountRaw: bigint;
   amountFormatted: string;
+  /** Optional outcome hooks (deposit journey chains swap → bridge). */
+  onDone?: (hashes: string[]) => void;
+  onError?: (message: string) => void;
 }): TxJob {
   const { entry } = args;
   const recipient = getAddress(args.recipient);
@@ -941,6 +944,8 @@ export function bridgeInboundSendJob(args: {
   return {
     title: `${tr("job.bridgeSendPrefix")}${entry.symbol}${tr("job.bridgeTo42Suffix")}`,
     chain: entry.chain,
+    onDone: args.onDone,
+    onError: args.onError,
     lines: [
       { label: tr("label.action"), value: tr("job.bridgeActionIn") },
       {

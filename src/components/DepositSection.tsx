@@ -61,15 +61,21 @@ const POLL_MS = 20_000;
  * Cross-chain deposit: the user sends XLM from their own Stellar
  * wallet; a ChangeNOW exchange (created through our proxy — the app
  * holds no provider key) pays BNB out to their own BSC address.
- * BNB-first per design doc §8; the PancakeSwap swap + bridge sequence
- * is a later release, so this build ends at tracking the order to
- * completion. While PROXY_BASE_URL is empty (DEPOSIT_ENABLED false)
- * the whole flow is an honest 準備中 and no order can be created.
+ * BNB-first per design doc §8. When an order finishes, the flow
+ * hands over to the guided journey (JourneySection: swap to USDT,
+ * then bridge) via onContinue. While PROXY_BASE_URL is empty
+ * (DEPOSIT_ENABLED false) the whole flow is an honest 準備中 and no
+ * order can be created.
  */
 export default function DepositSection({
   onBack,
+  onContinue,
 }: {
   onBack: () => void;
+  /** Journey (v0.2.1): when a deposit finishes, hand over to the
+   *  guided BNB → USDT → 42 Chain sequence instead of just going
+   *  back to the bridge screen. */
+  onContinue?: () => void;
 }) {
   const { t } = useI18n();
   const wallet = useWallet();
@@ -321,7 +327,14 @@ export default function DepositSection({
                   value={`${prettyAmount(order.actualTo)} BNB`}
                 />
               ) : null}
-              <PrimaryButton label={t("deposit.goBridge")} onPress={onBack} />
+              {onContinue ? (
+                <PrimaryButton
+                  label={t("journey.entryButton")}
+                  onPress={onContinue}
+                />
+              ) : (
+                <PrimaryButton label={t("deposit.goBridge")} onPress={onBack} />
+              )}
             </>
           ) : null}
           <InfoRow label={t("deposit.exchangeId")} value={order.id} />

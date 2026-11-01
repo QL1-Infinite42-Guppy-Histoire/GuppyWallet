@@ -47,8 +47,25 @@ import {
  */
 export default function BridgeInboundSection({
   startTx,
+  prefill,
+  onBridgeSubmitted,
+  onStartJourney,
 }: {
   startTx: (job: TxJob) => void;
+  /** Deposit journey (v0.2.1): prefill chain/token/amount, e.g. the
+   *  USDT a PancakeSwap swap just produced. `serial` changes whenever
+   *  a new prefill should be applied. */
+  prefill?: {
+    chainKey: string;
+    symbol: string;
+    amount: string;
+    serial: number;
+  } | null;
+  /** Fired when an inbound send completes (journey step 3 → done). */
+  onBridgeSubmitted?: () => void;
+  /** When set, a banner offers the guided journey while the user's
+   *  BSC BNB balance is above zero (journey entry point). */
+  onStartJourney?: () => void;
 }) {
   const wallet = useWallet();
   const { t } = useI18n();
@@ -80,6 +97,17 @@ export default function BridgeInboundSection({
   const entry: BridgeInboundEntry | undefined = chainEntries.find(
     (e) => e.symbol === symbol && e.verified,
   );
+
+  // Apply a journey prefill (chain + token + amount) when its serial
+  // changes. The recipient already defaults to the user's own address
+  // below — which is their 42 Chain address too (same EVM address).
+  useEffect(() => {
+    if (!prefill) return;
+    setChainKey(prefill.chainKey);
+    setSymbol(prefill.symbol);
+    setAmount(prefill.amount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill?.serial]);
 
   // Keep the token selection valid when the source chain changes.
   useEffect(() => {
@@ -288,15 +316,38 @@ export default function BridgeInboundSection({
         recipient: recipient.trim(),
         amountRaw,
         amountFormatted: formatUnits(amountRaw, state.tokenDecimals),
+        onDone: onBridgeSubmitted ? () => onBridgeSubmitted() : undefined,
       }),
     );
   };
+
+  // Journey entry point: BNB sitting on BSC (e.g. a cross-chain
+  // deposit payout) can be carried the rest of the way — swap to
+  // USDT, then bridge — in one guided sequence. The BNB balance rides
+  // along on the BSC deposit entries (nativeRaw).
+  const bscBnbRaw = deposits
+    .filter((d) => d.entry.chain.key === "bsc")
+    .reduce((max, d) => (d.nativeRaw > max ? d.nativeRaw : max), 0n);
+  const bscNativeDecimals =
+    BRIDGE_SOURCE_CHAINS.find((c) => c.key === "bsc")?.nativeDecimals ?? 18;
 
   return (
     <Card>
       <Body>
         {t("bridgeIn.intro")}
       </Body>
+      {onStartJourney && bscBnbRaw > 0n ? (
+        <View style={styles.depositBanner}>
+          <Text style={styles.depositText}>
+            {`${prettyAmount(formatUnits(bscBnbRaw, bscNativeDecimals))} BNB${t("journey.bannerSuffix")}`}
+          </Text>
+          <Pressable style={styles.depositButton} onPress={onStartJourney}>
+            <Text style={styles.depositButtonText}>
+              {t("journey.entryButton")}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
       {deposits
         .filter((d) => d.tokenRaw > 0n)
         .map((d) => (

@@ -232,6 +232,24 @@ export const BRIDGE_SOURCE_CHAINS: BridgeSourceChain[] = [
   },
 ];
 
+/** PancakeSwap V2 on BSC — used ONLY inside the cross-chain deposit
+ *  journey (lib/bscSwap.ts): BNB that arrived on BSC is swapped to
+ *  USDT there, then bridged to 42 Chain. BSC does not join the Swap
+ *  tab; this config is sequence-internal.
+ *  Verified 2026-11-01 via BSC public RPC eth_call:
+ *  - router.WETH() == WBNB below (0xbb4C…095c)
+ *  - USDT decimals() == 18 (0x12) and symbol() == "USDT" — BSC USDT
+ *    is an 18-decimal token, unlike the 6-decimal USDT on Ethereum
+ *  - router.getAmountsOut(0.005 BNB, [WBNB, USDT]) answered live
+ *    (≈3.5499 USDT; design doc research/CROSSCHAIN_DEPOSIT_DESIGN.md
+ *    §8.2 measured the same call the same day) */
+export const BSC_DEX = {
+  router: "0x10ED43C718714eb63d5aA57B78B54704E256024E", // PancakeSwap V2 router
+  wbnb: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+  usdt: "0x55d398326f99059fF775485246999027B3197955",
+  usdtDecimals: 18, // eth_call decimals() == 18, verified 2026-11-01
+} as const;
+
 /** External service links (information only — swaps run natively in-app
  *  against the confirmed DEX routers). */
 export const DAPP_LINKS = {

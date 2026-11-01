@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text } from "react-native";
 import BridgeInboundSection from "./BridgeInboundSection";
 import DepositSection from "./DepositSection";
+import JourneySection from "./JourneySection";
 import { useTxFlow } from "./ConfirmTx";
 import {
   Body,
@@ -47,6 +48,7 @@ export default function BridgeSection() {
   const { startTx, modal } = useTxFlow();
   const [direction, setDirection] = useState<"out" | "in">("out");
   const [showDeposit, setShowDeposit] = useState(false);
+  const [showJourney, setShowJourney] = useState(false);
 
   const [symbol, setSymbol] = useState<string>(
     BRIDGE_ROUTERS_INFINITE[0].symbol,
@@ -221,12 +223,27 @@ export default function BridgeSection() {
         />
       </Card>
       {showDeposit ? (
-        <DepositSection onBack={() => setShowDeposit(false)} />
+        <DepositSection
+          onBack={() => setShowDeposit(false)}
+          onContinue={() => {
+            setShowDeposit(false);
+            setShowJourney(true);
+          }}
+        />
       ) : null}
-      {!showDeposit && direction === "in" ? (
-        <BridgeInboundSection startTx={startTx} />
+      {showJourney ? (
+        <JourneySection
+          startTx={startTx}
+          onExit={() => setShowJourney(false)}
+        />
       ) : null}
-      {!showDeposit && direction === "out" ? (
+      {!showDeposit && !showJourney && direction === "in" ? (
+        <BridgeInboundSection
+          startTx={startTx}
+          onStartJourney={() => setShowJourney(true)}
+        />
+      ) : null}
+      {!showDeposit && !showJourney && direction === "out" ? (
       <>
       <Card>
         <Body>
