@@ -3,6 +3,7 @@ import { formatUnits } from "ethers";
 import React, { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { BalanceResults, formatJpy } from "../components/BalanceResults";
+import { GuppyMascot } from "../components/GuppyMascot";
 import {
   Body,
   Heading,
@@ -134,12 +135,20 @@ export default function HomeScreen() {
       {!hasWallet ? (
         <Card>
           <DontPanic compact tone="card" />
+          <View style={styles.mascotCenter}>
+            <GuppyMascot size={104} />
+          </View>
           <Body>{t("common.noWalletBody")}</Body>
         </Card>
       ) : (
         <>
           {/* ------- hero: chain toggle + one big total, JPY first ------- */}
           <View style={styles.hero}>
+            {/* mascot drifting in the top-right of the hero glass,
+                beside the total — decorative, touches pass through */}
+            <View style={styles.heroMascot} pointerEvents="none">
+              <GuppyMascot size={92} />
+            </View>
             <SegmentedTabs
               options={CHAINS.map((c) => ({
                 key: c.key,
@@ -211,7 +220,12 @@ export default function HomeScreen() {
             {history === null ? (
               <Body>{t("common.loading")}</Body>
             ) : history.length === 0 ? (
-              <Body>{t("home.historyEmpty")}</Body>
+              <>
+                <View style={styles.mascotCenter}>
+                  <GuppyMascot size={76} />
+                </View>
+                <Body>{t("home.historyEmpty")}</Body>
+              </>
             ) : (
               history.map((h) => (
                 <Pressable
@@ -321,6 +335,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
   },
+  heroMascot: { position: "absolute", right: 12, top: 72, zIndex: 1 },
+  mascotCenter: { alignItems: "center", paddingVertical: 4 },
   heroLabel: { color: colors.muted, fontSize: 13, fontWeight: "600" },
   heroTotal: { color: colors.text, fontSize: 44, fontWeight: "800" },
   heroSub: { color: colors.muted, fontSize: 15, fontWeight: "600" },

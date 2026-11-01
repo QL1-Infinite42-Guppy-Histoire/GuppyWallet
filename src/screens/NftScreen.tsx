@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useTxFlow } from "../components/ConfirmTx";
 import {
   Body,
@@ -9,6 +9,7 @@ import {
   PrimaryButton,
   SegmentedTabs,
 } from "../components/controls";
+import { GuppyMascot } from "../components/GuppyMascot";
 import { Card, Screen, colors } from "../components/ui";
 import { INFINITE_NFTS } from "../config/chains";
 import { useI18n } from "../context/LanguageContext";
@@ -199,7 +200,12 @@ export default function NftScreen() {
             ) : ownedTokens === null ? (
               <Body>{t("nft.apiNote")}</Body>
             ) : ownedTokens.length === 0 ? (
-              <Body>{t("nft.none")}</Body>
+              <>
+                <View style={styles.mascotWrap}>
+                  <GuppyMascot size={84} />
+                </View>
+                <Body>{t("nft.none")}</Body>
+              </>
             ) : (
               ownedTokens.map((o) => (
                 <Body key={`${o.collectionAddress}-${o.tokenId}`}>
@@ -420,6 +426,7 @@ export default function NftScreen() {
 }
 
 const styles = StyleSheet.create({
+  mascotWrap: { alignItems: "center", paddingVertical: 6 },
   addr: { color: colors.muted, fontSize: 11, lineHeight: 15 },
   error: { color: colors.dangerText, fontSize: 13, lineHeight: 19 },
 });

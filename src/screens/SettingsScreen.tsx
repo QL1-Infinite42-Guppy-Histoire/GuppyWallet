@@ -8,6 +8,7 @@ import {
   InfoRow,
   PrimaryButton,
 } from "../components/controls";
+import { GuppyMascot } from "../components/GuppyMascot";
 import {
   Card,
   DontPanic,
@@ -310,12 +311,19 @@ export default function SettingsScreen() {
       <Card>
         <Heading>{t("settings.about")}</Heading>
         <DontPanic compact tone="card" />
+        <View style={styles.aboutRow}>
+          <GuppyMascot size={58} />
+          <View style={styles.aboutNameCol}>
+            <Text style={styles.aboutName}>
+              GuppyWallet — {t("settings.catchphrase")}
+            </Text>
+            <Text style={styles.aboutVersion}>
+              {t("settings.version")}: {APP_VERSION}
+            </Text>
+          </View>
+        </View>
         <Body>
-          GuppyWallet — {t("settings.catchphrase")}
-          {"\n"}
           ひとつのウォレットに、無限の可能性を。
-          {"\n"}
-          {t("settings.version")}: {APP_VERSION}
           {"\n"}
           このウォレットは 42 Chain と QL1 のための
           銀河ヒッチハイカー向けガイドです。生命、宇宙、そして万物についての
@@ -329,6 +337,15 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  aboutRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  aboutNameCol: { flex: 1, gap: 2 },
+  aboutName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  aboutVersion: { color: colors.muted, fontSize: 12 },
   detailBlock: { gap: 2, marginTop: 4 },
   subHeading: {
     color: colors.text,
