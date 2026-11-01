@@ -858,6 +858,74 @@ export async function fetchBridgeSourceBalances(
   return { nativeRaw: BigInt(nativeRaw), tokenRaw };
 }
 
+/**
+ * Recommended minimum native-coin balance, in USD, for an inbound
+ * bridge send from each source chain. This is a guide, not an exact
+ * fee: the send itself carries no native fee on these routers
+ * (quoteNative reverts, value 0 — see above), so the native coin only
+ * pays the source chain's transaction gas (an ERC-20 approve when
+ * needed, plus transferRemote).
+ *
+ * Basis (measured 2026-11-01 from this repo's environment):
+ * - Spot: ETH gasPrice ≈ 0.053 Gwei (baseFee 0.046–0.063 Gwei over
+ *   the last 20 blocks — an unusually quiet Sunday), BSC gasPrice
+ *   = 0.05 Gwei (the chain floor). Spot cost of one send would be
+ *   under $1 on either chain; thresholds must survive normal
+ *   congestion, not spot.
+ * - Gas used: a Hyperlane transferRemote on a collateral router is
+ *   typically ~150k–250k gas (eth_estimateGas is not feasible here —
+ *   it reverts without a funded, pre-approved sender — so the
+ *   documented range is used; planning figure 250k, the top of it).
+ * - Planning gas prices: ETH 20 Gwei, BSC 5 Gwei (BSC's historical
+ *   standard price) at 250k gas, with ETH $2,273 and BNB $714
+ *   (CoinGecko, same day): ETH ≈ $11.4 → $10 (covers ≈17.6 Gwei at
+ *   250k gas), BSC ≈ $0.89 → $1 (covers ≈5.6 Gwei at 250k gas).
+ * The exact gas cost still shows in the ConfirmTx sheet at signing.
+ */
+export const BRIDGE_GAS_MIN_USD: { [chainKey: string]: number } = {
+  bsc: 1,
+  ethereum: 10,
+};
+
+export interface BridgeDeposit {
+  entry: BridgeInboundEntry;
+  token: string;
+  tokenDecimals: number;
+  tokenRaw: bigint;
+  nativeRaw: bigint;
+}
+
+/**
+ * Deposit detection for one inbound entry: resolves the router's
+ * token, then reads the owner's token + native balances on the
+ * source chain. Used to spot "your USDT has arrived on BSC/ETH"
+ * without opening the full bridge form for that chain first.
+ */
+export async function fetchBridgeDeposit(
+  entry: BridgeInboundEntry,
+  owner: string,
+): Promise<BridgeDeposit> {
+  const provider = getProvider(entry.chain);
+  const router = getBridgeRouter(entry.router, provider);
+  const token: string = await router.token();
+  const tokenContract = new Contract(
+    token,
+    ERC20_READ_ABI,
+    provider,
+  ) as any;
+  const [decimals, balances] = await Promise.all([
+    tokenContract.decimals().then((v: any) => Number(v)),
+    fetchBridgeSourceBalances(entry, token, owner),
+  ]);
+  return {
+    entry,
+    token,
+    tokenDecimals: decimals,
+    tokenRaw: balances.tokenRaw,
+    nativeRaw: balances.nativeRaw,
+  };
+}
+
 export function bridgeInboundSendJob(args: {
   entry: BridgeInboundEntry;
   tokenAddress: string;

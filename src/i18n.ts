@@ -444,6 +444,15 @@ const ja = {
   "bridgeIn.feeBalanceSuffix": "）",
   "bridgeIn.balanceLoadFailed": "残高を読み込めませんでした",
   "bridgeIn.recipientLabel": "送り先のアドレス（42 Chain）",
+  "bridgeIn.depositSuffixA": " が届いています（",
+  "bridgeIn.depositSuffixB": "）",
+  "bridgeIn.depositAction": "ブリッジする",
+  "bridgeIn.gasLowPrefix": "ガス代（",
+  "bridgeIn.gasLowMid1": "）が足りません。目安として $",
+  "bridgeIn.gasLowMid2": " 以上あると実行できます（現在 $",
+  "bridgeIn.gasLowSuffix": "）",
+  "bridgeIn.gasUsdUnavailable":
+    "ドル換算が取得できませんでした（ガス代の目安チェックは省略しています）",
 
   // ---- Send ----
   "send.qrWebNote": "WebプレビューではQRスキャンは使えません。アドレスを貼り付けてください。",
@@ -1064,6 +1073,15 @@ const en: Record<I18nKey, string> = {
   "bridgeIn.feeBalanceSuffix": ")",
   "bridgeIn.balanceLoadFailed": "Couldn't load your balance",
   "bridgeIn.recipientLabel": "Recipient address (42 Chain)",
+  "bridgeIn.depositSuffixA": " has arrived (",
+  "bridgeIn.depositSuffixB": ")",
+  "bridgeIn.depositAction": "Bridge it",
+  "bridgeIn.gasLowPrefix": "Not enough gas (",
+  "bridgeIn.gasLowMid1": "). As a guide, you need at least $",
+  "bridgeIn.gasLowMid2": " to send (you have $",
+  "bridgeIn.gasLowSuffix": ")",
+  "bridgeIn.gasUsdUnavailable":
+    "Couldn't get the dollar rate, so the gas guide check is skipped.",
 
   // ---- Send ----
   "send.qrWebNote": "QR scanning isn't available in the web preview. Paste the address instead.",

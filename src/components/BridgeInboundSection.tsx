@@ -1,10 +1,11 @@
 import { formatUnits, parseUnits } from "ethers";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { TxJob } from "./ConfirmTx";
 import {
   Body,
   ChipPicker,
+  DisabledButton,
   Field,
   InfoRow,
   PercentChips,
@@ -15,16 +16,20 @@ import { BRIDGE_SOURCE_CHAINS } from "../config/chains";
 import { useI18n } from "../context/LanguageContext";
 import { tr } from "../i18n";
 import { useWallet } from "../context/WalletContext";
+import { fetchEthBnbUsd, type NativeUsdPrices } from "../lib/fx";
 import { percentOfBalance, prettyAmount } from "../lib/onchain";
 import {
+  BRIDGE_GAS_MIN_USD,
   BRIDGE_INBOUND,
   BRIDGE_INBOUND_DOMAIN,
   bridgeInboundSendJob,
+  fetchBridgeDeposit,
   fetchBridgeQuote,
   fetchBridgeRouterState,
   fetchBridgeSourceBalances,
   isValidRecipient,
   truncateToDstDecimals,
+  type BridgeDeposit,
   type BridgeInboundEntry,
   type BridgeQuote,
   type BridgeRouterState,
@@ -62,6 +67,11 @@ export default function BridgeInboundSection({
   const [quote, setQuote] = useState<BridgeQuote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  // Deposit detection across BOTH source chains (USDT/USDC), plus the
+  // ETH/BNB dollar prices behind the gas guide. Independent of the
+  // chain/token currently selected in the form below.
+  const [deposits, setDeposits] = useState<BridgeDeposit[]>([]);
+  const [nativeUsd, setNativeUsd] = useState<NativeUsdPrices | null>(null);
 
   const chain =
     BRIDGE_SOURCE_CHAINS.find((c) => c.key === chainKey) ??
@@ -111,10 +121,70 @@ export default function BridgeInboundSection({
     load();
   }, [load]);
 
+  // Deposit detection: read USDT/USDC on BSC and Ethereum for the
+  // user's own address, and refresh the ETH/BNB dollar prices used by
+  // the gas guide. Failures are silent per entry — a chain that can't
+  // be read simply shows no banner.
+  const loadDeposits = useCallback(async () => {
+    fetchEthBnbUsd()
+      .then(setNativeUsd)
+      .catch(() => setNativeUsd({ ethUsd: null, bnbUsd: null }));
+    if (!address) {
+      setDeposits([]);
+      return;
+    }
+    const entries = BRIDGE_INBOUND.filter(
+      (e) => e.verified && (e.symbol === "USDT" || e.symbol === "USDC"),
+    );
+    const results = await Promise.allSettled(
+      entries.map((e) => fetchBridgeDeposit(e, address)),
+    );
+    setDeposits(
+      results
+        .filter(
+          (r): r is PromiseFulfilledResult<BridgeDeposit> =>
+            r.status === "fulfilled",
+        )
+        .map((r) => r.value),
+    );
+  }, [address]);
+
+  useEffect(() => {
+    loadDeposits();
+  }, [loadDeposits]);
+
+  const handleRefresh = useCallback(() => {
+    load();
+    loadDeposits();
+  }, [load, loadDeposits]);
+
   useEffect(() => {
     if (address && recipient === "") setRecipient(address);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address]);
+
+  // ---- Gas guide for the selected source chain ----
+  // The native balance in dollars vs the recommended minimum
+  // (BRIDGE_GAS_MIN_USD). When the dollar price is unavailable the
+  // gate steps aside — the send stays possible and the exact gas
+  // cost still shows in ConfirmTx.
+  const gasMinUsd = BRIDGE_GAS_MIN_USD[chain.key] ?? 0;
+  const gasPriceUsd =
+    nativeUsd === null
+      ? null
+      : chain.key === "bsc"
+        ? nativeUsd.bnbUsd
+        : nativeUsd.ethUsd;
+  const gasBalanceUsd =
+    sourceBalances !== null && gasPriceUsd !== null
+      ? Number(formatUnits(sourceBalances.nativeRaw, chain.nativeDecimals)) *
+        gasPriceUsd
+      : null;
+  const gasBlocked = gasBalanceUsd !== null && gasBalanceUsd < gasMinUsd;
+  const gasLowText = gasBlocked
+    ? `${t("bridgeIn.gasLowPrefix")}${chain.nativeSymbol}${t("bridgeIn.gasLowMid1")}${gasMinUsd}${t("bridgeIn.gasLowMid2")}${gasBalanceUsd.toFixed(2)}${t("bridgeIn.gasLowSuffix")}`
+    : null;
+  const gasPriceMissing = nativeUsd !== null && gasPriceUsd === null;
 
   const amountRaw = useMemo(() => {
     if (!state) return null;
@@ -161,6 +231,10 @@ export default function BridgeInboundSection({
   const handleSend = () => {
     setSendError(null);
     if (!state || !entry) return;
+    if (gasBlocked && gasLowText) {
+      setSendError(gasLowText);
+      return;
+    }
     if (state.paused) {
       setSendError(t("bridge.pausedError"));
       return;
@@ -223,6 +297,26 @@ export default function BridgeInboundSection({
       <Body>
         {t("bridgeIn.intro")}
       </Body>
+      {deposits
+        .filter((d) => d.tokenRaw > 0n)
+        .map((d) => (
+          <View key={`${d.entry.chain.key}-${d.entry.symbol}`} style={styles.depositBanner}>
+            <Text style={styles.depositText}>
+              {`${prettyAmount(formatUnits(d.tokenRaw, d.tokenDecimals))} ${d.entry.symbol}${t("bridgeIn.depositSuffixA")}${d.entry.chain.key === "bsc" ? "BSC" : "Ethereum"}${t("bridgeIn.depositSuffixB")}`}
+            </Text>
+            <Pressable
+              style={styles.depositButton}
+              onPress={() => {
+                setChainKey(d.entry.chain.key);
+                setSymbol(d.entry.symbol);
+              }}
+            >
+              <Text style={styles.depositButtonText}>
+                {t("bridgeIn.depositAction")}
+              </Text>
+            </Pressable>
+          </View>
+        ))}
       <Body>{t("bridgeIn.sourceChain")}</Body>
       <ChipPicker
         options={BRIDGE_SOURCE_CHAINS.map((c) => ({
@@ -274,6 +368,10 @@ export default function BridgeInboundSection({
           ) : (
             <Body>{t("bridgeIn.balanceLoadFailed")}</Body>
           )}
+          {gasPriceMissing ? (
+            <Body>{t("bridgeIn.gasUsdUnavailable")}</Body>
+          ) : null}
+          {gasLowText ? <Text style={styles.error}>{gasLowText}</Text> : null}
           <Body>{t("bridgeIn.recipientLabel")}</Body>
           <Field
             value={recipient}
@@ -325,8 +423,12 @@ export default function BridgeInboundSection({
             <Body>{t("bridge.quoting")}</Body>
           ) : null}
           {sendError ? <Text style={styles.error}>{sendError}</Text> : null}
-          <PrimaryButton label={t("bridge.sendButton")} onPress={handleSend} />
-          <PrimaryButton label={t("common.refresh")} onPress={load} />
+          {gasBlocked ? (
+            <DisabledButton label={t("bridge.sendButton")} />
+          ) : (
+            <PrimaryButton label={t("bridge.sendButton")} onPress={handleSend} />
+          )}
+          <PrimaryButton label={t("common.refresh")} onPress={handleRefresh} />
         </>
       ) : (
         <Body>{t("common.loading")}</Body>
@@ -337,4 +439,25 @@ export default function BridgeInboundSection({
 
 const styles = StyleSheet.create({
   error: { color: colors.dangerText, fontSize: 13, lineHeight: 19 },
+  depositBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(22,139,255,0.14)",
+    borderColor: colors.accent,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginVertical: 6,
+  },
+  depositText: { color: colors.text, fontSize: 14, fontWeight: "600", flexShrink: 1 },
+  depositButton: {
+    backgroundColor: colors.accent,
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    marginLeft: 10,
+  },
+  depositButtonText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
 });
