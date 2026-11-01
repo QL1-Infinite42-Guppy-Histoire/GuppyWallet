@@ -13,6 +13,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import SplashOverlay from "./src/components/SplashOverlay";
+import UnlockWarpOverlay from "./src/components/UnlockWarp";
 import { colors } from "./src/components/ui";
 import { BalancesProvider } from "./src/context/BalancesContext";
 import { ChainSelectionProvider } from "./src/context/ChainSelectionContext";
@@ -185,6 +186,9 @@ export default function App() {
                 <StatusBar style="light" />
                 <TabNavigator />
               </NavigationContainer>
+              {/* Unlock flourish (~1 s): a star-warp + violet flash the
+                  moment a locked wallet unlocks. Visual only. */}
+              <UnlockWarpOverlay />
             </ChainSelectionProvider>
           </BalancesProvider>
         </WalletProvider>

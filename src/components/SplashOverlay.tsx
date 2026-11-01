@@ -1,4 +1,5 @@
 import { useFonts } from "expo-font";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -6,29 +7,32 @@ import {
   Image,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { GUPPY_ART } from "./guppyArt";
-import { colors, GalaxyBackground } from "./ui";
+import { colors } from "./ui";
 
 /**
  * Opening splash, shown once per cold start for ~3 seconds, then
- * fading away to the normal UI (user request, 2026-11-01): the cosmic
- * guppy artwork big and centred — fully visible, never cropped into a
- * strip — with the "GuppyWallet" wordmark in Orbitron (Google Fonts,
- * OFL), given a violet nebula glow. If the font ever fails to load the
- * title simply falls back to the system font with the same styling;
- * the splash never waits on it (1.2 s cap) and never blocks the app:
- * it is a purely visual overlay on top of the root, and the biometric
- * unlock prompt is a system dialog that renders above it.
+ * fading away to the normal UI (user request, 2026-11-01). The cosmic
+ * guppy artwork IS the background: laid full-bleed (cover, centred)
+ * with no panel, frame or visible edge anywhere — deep indigo-violet
+ * veils at the top and bottom melt it into the app's space colours,
+ * with a whisper of violet tint over the whole image to unify the
+ * palette (user feedback, 2026-11-01: the earlier square frame with
+ * its hard border looked pasted-on). The "GuppyWallet" wordmark in
+ * Orbitron (Google Fonts, OFL) sits over the bottom veil, which keeps
+ * it readable. If the font ever fails to load the title simply falls
+ * back to the system font with the same styling; the splash never
+ * waits on it (1.2 s cap) and never blocks the app: it is a purely
+ * visual overlay on top of the root, and the biometric unlock prompt
+ * is a system dialog that renders above it.
  */
 const HOLD_UNTIL_MS = 2600; // fade starts ~2.6 s after mount
 const FADE_MS = 500; // gone at ~3.1 s
 const FONT_WAIT_CAP_MS = 1200;
 
 export default function SplashOverlay() {
-  const { width } = useWindowDimensions();
   const [fontsLoaded] = useFonts({
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     "Orbitron-Black": require("../../assets/fonts/Orbitron-Black.ttf"),
@@ -39,7 +43,9 @@ export default function SplashOverlay() {
   const [gone, setGone] = useState(false);
   const startedAt = useRef(Date.now());
   const opacity = useRef(new Animated.Value(1)).current;
-  const artScale = useRef(new Animated.Value(0.94)).current;
+  // Starts slightly zoomed-in and settles to 1 — never below 1, so the
+  // full-bleed artwork never pulls back far enough to show an edge.
+  const artScale = useRef(new Animated.Value(1.06)).current;
 
   // The title should show in Orbitron, but the splash must not hang
   // on the font: proceed on load OR after a short cap, whichever first.
@@ -56,7 +62,7 @@ export default function SplashOverlay() {
   useEffect(() => {
     const intro = Animated.timing(artScale, {
       toValue: 1,
-      duration: 900,
+      duration: 1400,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     });
@@ -85,22 +91,38 @@ export default function SplashOverlay() {
 
   if (gone) return null;
 
-  const artSize = Math.min(width * 0.84, 400);
-
   return (
     <Animated.View style={[styles.root, { opacity }]}>
-      <GalaxyBackground />
-      <View style={styles.center}>
-        <Animated.View
-          style={[styles.artFrame, { transform: [{ scale: artScale }] }]}
-        >
-          <Image
-            source={GUPPY_ART}
-            style={{ width: artSize, height: artSize, borderRadius: 26 }}
-            resizeMode="cover"
-            accessibilityLabel="GuppyWallet cosmic guppy artwork"
-          />
-        </Animated.View>
+      {/* The artwork is the background itself: full-bleed, cover,
+          centred. No frame, no border, no edge anywhere. */}
+      <Animated.View
+        style={[styles.artWrap, { transform: [{ scale: artScale }] }]}
+      >
+        <Image
+          source={GUPPY_ART}
+          style={styles.art}
+          resizeMode="cover"
+          accessibilityLabel="GuppyWallet cosmic guppy artwork"
+        />
+      </Animated.View>
+      {/* A whisper of violet over the whole image, so its colours sit
+          in the same family as the app's deep-space background. */}
+      <View style={styles.tint} pointerEvents="none" />
+      {/* Deep indigo-violet veils: the image melts into the space
+          colours at the top and bottom instead of ending at an edge,
+          and the bottom veil keeps the wordmark readable. */}
+      <LinearGradient
+        colors={["rgba(7,13,36,0.9)", "rgba(7,13,36,0)"]}
+        style={styles.veilTop}
+        pointerEvents="none"
+      />
+      <LinearGradient
+        colors={["rgba(7,13,36,0)", "rgba(7,13,36,0.55)", "rgba(7,13,36,0.94)"]}
+        locations={[0, 0.55, 1]}
+        style={styles.veilBottom}
+        pointerEvents="none"
+      />
+      <View style={styles.titleWrap} pointerEvents="none">
         <View style={styles.titleBlock}>
           <Text
             style={[
@@ -132,25 +154,46 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: colors.bgDeep,
+    overflow: "hidden",
     zIndex: 9999,
     elevation: 9999,
   },
-  center: {
+  artWrap: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  art: { width: "100%", height: "100%" },
+  tint: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(38,22,84,0.16)",
+  },
+  veilTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "30%",
+  },
+  veilBottom: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "58%",
+  },
+  titleWrap: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-end",
     paddingHorizontal: 24,
-    gap: 30,
-  },
-  artFrame: {
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: "rgba(196,181,253,0.45)",
-    shadowColor: "#8B5CF6",
-    shadowOpacity: 0.55,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 14,
+    paddingBottom: "26%",
   },
   titleBlock: { alignItems: "center", gap: 10 },
   title: {
