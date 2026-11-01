@@ -48,7 +48,12 @@ npx expo start        # または: npm start
 ```
 
 - 型チェック：`npm run typecheck`（`tsc --noEmit`）
-- APK ビルド（EAS Build）：
+- APK ビルド：**GitHub Actions**（`.github/workflows/build-apk.yml`）が標準です。
+  master への push、または Actions 画面からの手動実行（workflow_dispatch）で、
+  ランナー上で EAS のローカルビルド（preview プロファイル）を実行し、
+  APK が artifact「guppy-wallet-apk」として保存されます。
+  署名は EAS 管理のキーストアのまま（`EXPO_TOKEN` は GitHub Secrets で管理）。
+- フォールバックとして、従来どおり EAS クラウドでのビルドも使えます：
 
 ```bash
 eas build -p android --profile preview
