@@ -1,3 +1,4 @@
+import { useFonts } from "expo-font";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo } from "react";
 import {
@@ -395,8 +396,15 @@ export function DontPanic({
   compact?: boolean;
   tone?: "space" | "card";
 }) {
-  const { t } = useI18n();
   const onCard = tone === "card";
+  // Orbitron is the app's space-age display face (same as the splash
+  // wordmark). Loaded here as well so the header renders in it wherever
+  // it appears; until the font arrives the bold system face stands in.
+  // One stylish line only — no tagline under it (2026-11-01, user:
+  // 「カッコいいテキストにして。スペースもあんまり取らないように」).
+  const [fontsLoaded] = useFonts({
+    "Orbitron-Black": require("../../assets/fonts/Orbitron-Black.ttf"),
+  });
   return (
     <View style={styles.dontPanicWrap}>
       <Text
@@ -404,12 +412,12 @@ export function DontPanic({
           styles.dontPanic,
           compact && styles.dontPanicCompact,
           onCard && styles.dontPanicOnCard,
+          fontsLoaded && styles.dontPanicFont,
         ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
       >
         DON'T PANIC
-      </Text>
-      <Text style={[styles.dontPanicSub, onCard && styles.dontPanicSubOnCard]}>
-        {t("common.dontPanicSub")}
       </Text>
     </View>
   );
@@ -472,23 +480,24 @@ const styles = StyleSheet.create({
   },
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: "600" },
   todoItem: { color: colors.muted, fontSize: 14, lineHeight: 20 },
-  dontPanicWrap: { alignItems: "center", paddingVertical: 8, gap: 4 },
+  dontPanicWrap: { alignItems: "center", paddingVertical: 2 },
   dontPanic: {
     color: colors.brandGold,
-    fontSize: 34,
+    fontSize: 30,
     fontWeight: "800",
-    letterSpacing: 3,
+    letterSpacing: 4,
     textAlign: "center",
-    textShadowColor: "rgba(0,0,0,0.55)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 8,
+    // soft gold halo instead of a drop shadow — a glowing guide-book
+    // cover line floating on the galaxy
+    textShadowColor: "rgba(245,197,66,0.55)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 14,
   },
-  dontPanicCompact: { fontSize: 24, letterSpacing: 2 },
-  dontPanicOnCard: { color: colors.accent, textShadowColor: "transparent" },
-  dontPanicSub: {
-    color: colors.onSpaceMuted,
-    fontSize: 12,
-    textAlign: "center",
+  dontPanicFont: { fontFamily: "Orbitron-Black", fontWeight: "normal" },
+  dontPanicCompact: { fontSize: 20, letterSpacing: 4 },
+  dontPanicOnCard: {
+    color: colors.accent,
+    textShadowColor: "transparent",
+    textShadowRadius: 0,
   },
-  dontPanicSubOnCard: { color: colors.muted },
 });

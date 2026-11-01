@@ -69,7 +69,10 @@ export default function HomeScreen() {
       return;
     }
     let cancelled = false;
-    fetchTxHistory(address, 10)
+    // Fetch a wider merged window, then show only the SELECTED chain's
+    // items below (up to 10) — the activity list follows the same chain
+    // switch as the total and the token list.
+    fetchTxHistory(address, 20)
       .then((r) => {
         if (cancelled) return;
         setHistory(r.items);
@@ -99,6 +102,15 @@ export default function HomeScreen() {
   const hasData = results !== null;
   const evm = wallet.info?.evmAddress ?? null;
   const totalJpy = jpyRate !== null ? total * jpyRate : null;
+  // Activity follows the Home chain switch too: only the selected
+  // chain's transactions, and the partial-failure note only when THAT
+  // chain failed (failedChains carries display names).
+  const shownHistory = (history ?? [])
+    .filter((h) => h.chainKey === chainKey)
+    .slice(0, 10);
+  const selectedChainName =
+    CHAINS.find((c) => c.key === chainKey)?.displayName ?? "";
+  const selectedChainFailed = historyFailed.includes(selectedChainName);
 
   return (
     <Screen>
@@ -207,13 +219,24 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           <BalanceResults jpyRate={jpyRate} chainKey={chainKey} />
+          <Pressable
+            style={styles.addTokenBtn}
+            onPress={() =>
+              navigation.navigate("TokenList", {
+                addToken: true,
+                chain: chainKey,
+              })
+            }
+          >
+            <Text style={styles.addTokenText}>＋ {t("home.addToken")}</Text>
+          </Pressable>
 
           {/* ------- activity ------- */}
           <Card>
             <Heading>{t("home.history")}</Heading>
             {history === null ? (
               <Body>{t("common.loading")}</Body>
-            ) : history.length === 0 ? (
+            ) : shownHistory.length === 0 ? (
               <>
                 <View style={styles.mascotCenter}>
                   <GuppyMascot size={76} />
@@ -221,7 +244,7 @@ export default function HomeScreen() {
                 <Body>{t("home.historyEmpty")}</Body>
               </>
             ) : (
-              history.map((h) => (
+              shownHistory.map((h) => (
                 <Pressable
                   key={`${h.chainKey}-${h.hash}`}
                   style={styles.historyRow}
@@ -267,7 +290,7 @@ export default function HomeScreen() {
             )}
             <Body>
               {t("home.historyNote")}
-              {historyFailed.length > 0 ? t("home.partialFailure") : ""}
+              {selectedChainFailed ? t("home.partialFailure") : ""}
             </Body>
           </Card>
         </>
@@ -347,6 +370,15 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: colors.onSpace, fontSize: 17, fontWeight: "800" },
   viewAll: { color: colors.cyanBright, fontSize: 13, fontWeight: "700" },
+  addTokenBtn: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "rgba(255,255,255,0.4)",
+    borderRadius: 14,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  addTokenText: { color: colors.onSpace, fontSize: 14, fontWeight: "700" },
   historyRow: {
     flexDirection: "row",
     alignItems: "center",

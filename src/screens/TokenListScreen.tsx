@@ -1,5 +1,6 @@
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { formatUnits } from "ethers";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   Body,
@@ -21,6 +22,7 @@ import {
   QL1_TOKENS,
   type ChainConfig,
 } from "../config/chains";
+import { useChainSelection } from "../context/ChainSelectionContext";
 import { useI18n } from "../context/LanguageContext";
 import { useBalances } from "../context/BalancesContext";
 import { explorerAddressUrl } from "../lib/balances";
@@ -51,16 +53,36 @@ interface Row {
 export default function TokenListScreen() {
   const { t } = useI18n();
   const balances = useBalances();
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const { chainKey: homeChainKey } = useChainSelection();
   const [query, setQuery] = useState("");
   const [chainFilter, setChainFilter] = useState<string>("all");
   const [openKey, setOpenKey] = useState<string | null>(null);
 
-  // add-custom form
-  const [addChainKey, setAddChainKey] = useState<string>("infinite");
+  // add-custom form. The chain starts from the chain selected on Home
+  // (the switch there drives this form too); the user can still change
+  // it here. Adding is two steps: check (read the token's real info
+  // from the chain and show it) → confirm.
+  const [addChainKey, setAddChainKey] = useState<string>(homeChainKey);
   const [addAddress, setAddAddress] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
   const [addBusy, setAddBusy] = useState(false);
   const [addDone, setAddDone] = useState<string | null>(null);
+  const [preview, setPreview] = useState<CustomToken | null>(null);
+  // Arriving from Home's "add token" entry surfaces the form first.
+  const [focusAdd, setFocusAdd] = useState(false);
+
+  useEffect(() => {
+    const params = route.params ?? {};
+    if (params.addToken) {
+      setFocusAdd(true);
+      if (params.chain === "infinite" || params.chain === "ql1") {
+        setAddChainKey(params.chain);
+      }
+      navigation.setParams({ addToken: undefined, chain: undefined });
+    }
+  }, [route.params, navigation]);
 
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
@@ -122,9 +144,12 @@ export default function TokenListScreen() {
     );
   });
 
-  const handleAdd = async () => {
+  // Step 1: read the token's real info from the chain and show it as a
+  // preview. Nothing is saved yet — the user confirms in step 2.
+  const handleCheck = async () => {
     setAddError(null);
     setAddDone(null);
+    setPreview(null);
     const chain = CHAINS.find((c) => c.key === addChainKey) ?? CHAINS[0];
     const addr = addAddress.trim();
     const listed =
@@ -143,18 +168,34 @@ export default function TokenListScreen() {
     setAddBusy(true);
     try {
       const meta = await fetchTokenMetadata(chain, addr);
-      const token: CustomToken = {
+      setPreview({
         chainKey: chain.key,
         address: addr,
         symbol: meta.symbol,
         name: meta.name,
         decimals: meta.decimals,
-      };
-      await balances.addCustomToken(token);
-      setAddAddress("");
-      setAddDone(
-        `${t("tokens.addedPrefix")}${meta.symbol}${t("tokens.addedMid")}${meta.name}${t("tokens.addedSuffix")}`,
+      });
+    } catch (e) {
+      setAddError(
+        `${t("tokens.addFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
       );
+    } finally {
+      setAddBusy(false);
+    }
+  };
+
+  // Step 2: the user checked the preview and taps add — only now is
+  // the token saved (and its balance starts showing on Home).
+  const handleConfirmAdd = async () => {
+    if (!preview) return;
+    setAddBusy(true);
+    try {
+      await balances.addCustomToken(preview);
+      setAddDone(
+        `${t("tokens.addedPrefix")}${preview.symbol}${t("tokens.addedMid")}${preview.name}${t("tokens.addedSuffix")}`,
+      );
+      setPreview(null);
+      setAddAddress("");
     } catch (e) {
       setAddError(
         `${t("tokens.addFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
@@ -166,21 +207,7 @@ export default function TokenListScreen() {
 
   const addChain = CHAINS.find((c) => c.key === addChainKey) ?? CHAINS[0];
 
-  return (
-    <Screen>
-      <Field
-        value={query}
-        onChangeText={setQuery}
-        placeholder={t("tokens.searchPlaceholder")}
-      />
-      <ChipPicker
-        options={[
-          { key: "all", label: t("tokens.all") },
-          ...CHAINS.map((c) => ({ key: c.key, label: c.displayName })),
-        ]}
-        value={chainFilter}
-        onChange={setChainFilter}
-      />
+  const listCard = (
       <Card>
         {filtered.length === 0 ? (
           <Body>{t("tokens.empty")}</Body>
@@ -269,28 +296,90 @@ export default function TokenListScreen() {
           loading={balances.loading}
         />
       </Card>
+  );
 
+  const addCard = (
       <Card>
         <Heading>{t("tokens.addCustom")}</Heading>
         <Body>{t("tokens.addCustomNote")}</Body>
         <ChipPicker
           options={CHAINS.map((c) => ({ key: c.key, label: c.displayName }))}
           value={addChainKey}
-          onChange={setAddChainKey}
+          onChange={(k) => {
+            setAddChainKey(k);
+            setPreview(null);
+          }}
         />
         <Field
           value={addAddress}
-          onChangeText={setAddAddress}
+          onChangeText={(v) => {
+            setAddAddress(v);
+            setPreview(null);
+            setAddDone(null);
+          }}
           placeholder={t("tokens.contractPlaceholder")}
         />
-        <PrimaryButton
-          label={`${t("tokens.add")}（${addChain.displayName}）`}
-          onPress={handleAdd}
-          loading={addBusy}
-        />
+        {preview ? (
+          <View style={styles.preview}>
+            <Body>
+              {t("tokens.tokenName")}: {preview.name}
+            </Body>
+            <Body>
+              {t("tokens.symbol")}: {preview.symbol}
+            </Body>
+            <Body>
+              {t("tokens.decimals")}: {preview.decimals}
+            </Body>
+            <Body>
+              {t("common.address")}: {preview.address}
+            </Body>
+            <PrimaryButton
+              label={t("tokens.add")}
+              onPress={handleConfirmAdd}
+              loading={addBusy}
+            />
+            <Pressable onPress={() => setPreview(null)}>
+              <Text style={styles.cancel}>{t("tokens.cancel")}</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <PrimaryButton
+            label={`${t("tokens.check")}（${addChain.displayName}）`}
+            onPress={handleCheck}
+            loading={addBusy}
+          />
+        )}
         {addError ? <Text style={styles.error}>{addError}</Text> : null}
         {addDone ? <Text style={styles.done}>{addDone}</Text> : null}
       </Card>
+  );
+
+  return (
+    <Screen>
+      <Field
+        value={query}
+        onChangeText={setQuery}
+        placeholder={t("tokens.searchPlaceholder")}
+      />
+      <ChipPicker
+        options={[
+          { key: "all", label: t("tokens.all") },
+          ...CHAINS.map((c) => ({ key: c.key, label: c.displayName })),
+        ]}
+        value={chainFilter}
+        onChange={setChainFilter}
+      />
+      {focusAdd ? (
+        <>
+          {addCard}
+          {listCard}
+        </>
+      ) : (
+        <>
+          {listCard}
+          {addCard}
+        </>
+      )}
     </Screen>
   );
 }
@@ -314,6 +403,13 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingBottom: 8,
     paddingLeft: 48,
+  },
+  preview: { gap: 6, paddingTop: 2 },
+  cancel: {
+    color: colors.muted,
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: 6,
   },
   link: { color: colors.accent, fontSize: 13 },
   remove: { color: colors.dangerText, fontSize: 13 },
