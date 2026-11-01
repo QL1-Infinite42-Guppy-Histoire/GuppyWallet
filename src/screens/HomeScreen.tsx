@@ -117,13 +117,7 @@ export default function HomeScreen() {
         ) : null}
         {hasWallet ? (
           <Text style={styles.lockState}>
-            {wallet.unlocked
-              ? lang === "en"
-                ? "Unlocked"
-                : "ロック解除中"
-              : lang === "en"
-                ? "Locked"
-                : "ロック中"}
+            {wallet.unlocked ? t("home.unlocked") : t("home.locked")}
           </Text>
         ) : null}
       </View>
@@ -245,21 +239,11 @@ export default function HomeScreen() {
                   <View style={styles.historyMain}>
                     <Text style={styles.historyTitle}>
                       {h.direction === "out"
-                        ? lang === "en"
-                          ? "Sent"
-                          : "送金"
+                        ? t("home.txSent")
                         : h.direction === "in"
-                          ? lang === "en"
-                            ? "Received"
-                            : "受取"
-                          : lang === "en"
-                            ? "To myself"
-                            : "自分への送金"}
-                      {h.ok
-                        ? ""
-                        : lang === "en"
-                          ? " (failed)"
-                          : "（失敗）"}
+                          ? t("home.txReceived")
+                          : t("home.txSelf")}
+                      {h.ok ? "" : t("home.txFailed")}
                     </Text>
                     <Text style={styles.historyMeta}>
                       {new Date(h.timestamp).toLocaleString(
@@ -283,11 +267,7 @@ export default function HomeScreen() {
             )}
             <Body>
               {t("home.historyNote")}
-              {historyFailed.length > 0
-                ? lang === "en"
-                  ? " (Some entries could not be loaded.)"
-                  : "（一部は取得できませんでした）"
-                : ""}
+              {historyFailed.length > 0 ? t("home.partialFailure") : ""}
             </Body>
           </Card>
         </>

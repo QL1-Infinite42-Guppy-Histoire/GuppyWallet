@@ -13,6 +13,8 @@ import {
 } from "../components/controls";
 import { Card, Screen, Title, colors } from "../components/ui";
 import { INFINITE } from "../config/chains";
+import { useI18n } from "../context/LanguageContext";
+import { tr } from "../i18n";
 import { useWallet } from "../context/WalletContext";
 import { useBalances } from "../context/BalancesContext";
 import {
@@ -43,6 +45,7 @@ export default function StakingScreen({
   embedded?: boolean;
 } = {}) {
   const wallet = useWallet();
+  const { t } = useI18n();
   const balances = useBalances();
   const { startTx, modal } = useTxFlow();
   const address = wallet.info?.evmAddress ?? null;
@@ -105,7 +108,7 @@ export default function StakingScreen({
       }
     } catch (e) {
       setValError(
-        `預け先を読み込めませんでした：${e instanceof Error ? e.message : String(e)}`,
+        `${tr("stake.loadValidatorsFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
       setValLoading(false);
@@ -137,33 +140,33 @@ export default function StakingScreen({
       amount = parseUnits(stakeAmount, 18);
       if (amount <= 0n) throw new Error("zero");
     } catch {
-      setValError("数量を確認してください。");
+      setValError(t("err.checkAmount"));
       return null;
     }
     if (!selectedValidator) {
-      setValError("預け先を選んでください。");
+      setValError(t("stake.selectValidator"));
       return null;
     }
     const labels = {
-      delegate: "42を預ける",
-      undelegate: "預けた42を引き出す",
-      redelegate: "預け先を変更する",
+      delegate: t("stake.delegate"),
+      undelegate: t("stake.undelegate"),
+      redelegate: t("stake.redelegate"),
     } as const;
     return {
       title: labels[action],
       chain: INFINITE,
       lines: [
-        { label: "アクション", value: labels[action] },
+        { label: t("label.action"), value: labels[action] },
         {
-          label: "預け先",
+          label: t("label.validator"),
           value: `${selectedValidator.moniker}`,
         },
-        { label: "バリデータアドレス", value: selectedValidator.valoper },
+        { label: t("label.validatorAddress"), value: selectedValidator.valoper },
         ...(action === "redelegate"
-          ? [{ label: "新しい預け先", value: dstValoper }]
+          ? [{ label: t("label.newValidator"), value: dstValoper }]
           : []),
-        { label: "数量", value: `${stakeAmount} 42` },
-        { label: "コントラクト", value: STAKING_PRECOMPILE },
+        { label: t("label.amount"), value: `${stakeAmount} 42` },
+        { label: t("label.contract"), value: STAKING_PRECOMPILE },
       ],
       prepare: async (signer) => {
         const delegator = await signer.getAddress();
@@ -202,11 +205,11 @@ export default function StakingScreen({
   };
 
   const claimRewardsJob = (): TxJob => ({
-    title: "報酬を受け取る",
+    title: t("stake.claimTitle"),
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "報酬の受け取り" },
-      { label: "コントラクト", value: DISTRIBUTION_PRECOMPILE },
+      { label: t("label.action"), value: t("job.claimRewardsAction") },
+      { label: t("label.contract"), value: DISTRIBUTION_PRECOMPILE },
     ],
     prepare: async (signer) => {
       const delegator = await signer.getAddress();
@@ -233,20 +236,20 @@ export default function StakingScreen({
       value = parseUnits(depositAmount, 18);
       if (value <= 0n) throw new Error("zero");
     } catch {
-      setSt42Error("預ける数量を確認してください。");
+      setSt42Error(t("stake.errCheckDepositAmount"));
       return null;
     }
     return {
-      title: "st42に預ける",
+      title: t("st42.jobDepositTitle"),
       chain: INFINITE,
       lines: [
-        { label: "アクション", value: "42を預けてst42を受け取る" },
-        { label: "数量", value: `${depositAmount} 42` },
+        { label: t("label.action"), value: t("st42.jobDepositAction") },
+        { label: t("label.amount"), value: `${depositAmount} 42` },
         {
-          label: "現在レート",
+          label: t("label.currentRate"),
           value: st42?.rate ? `1 st42 ≈ ${st42.rate.toFixed(4)} 42` : "—",
         },
-        { label: "コントラクト", value: ST42_ADDRESS },
+        { label: t("label.contract"), value: ST42_ADDRESS },
       ],
       prepare: async (signer) => {
         const vault = getSt42Vault(signer);
@@ -270,22 +273,22 @@ export default function StakingScreen({
       shares = parseUnits(redeemShares, 18);
       if (shares <= 0n) throw new Error("zero");
     } catch {
-      setSt42Error("引き出す数量を確認してください。");
+      setSt42Error(t("stake.errCheckWithdrawAmount"));
       return null;
     }
     return {
-      title: "st42 引き出しの申し込み",
+      title: t("st42.jobRedeemTitle"),
       chain: INFINITE,
       lines: [
-        { label: "アクション", value: "引き出しの申し込み" },
-        { label: "数量", value: `${redeemShares} st42` },
+        { label: t("label.action"), value: t("st42.redeemButton") },
+        { label: t("label.amount"), value: `${redeemShares} st42` },
         {
-          label: "受け取れるまで",
+          label: t("label.waitTime"),
           value: st42?.unbondingDays
-            ? `約${st42.unbondingDays.toFixed(0)}日`
+            ? `${t("st42.daysPrefix")}${st42.unbondingDays.toFixed(0)}${t("st42.daysSuffix")}`
             : "—",
         },
-        { label: "コントラクト", value: ST42_ADDRESS },
+        { label: t("label.contract"), value: ST42_ADDRESS },
       ],
       prepare: async (signer) => {
         const vault = getSt42Vault(signer);
@@ -308,27 +311,27 @@ export default function StakingScreen({
       shares = parseUnits(exitShares, 18);
       if (shares <= 0n) throw new Error("zero");
     } catch {
-      setSt42Error("引き出す数量を確認してください。");
+      setSt42Error(t("stake.errCheckWithdrawAmount"));
       return null;
     }
     const rate = st42?.rate ?? 1;
     const estOut = Number(exitShares) * rate;
     const minOut = parseUnits((estOut * 0.99).toFixed(18), 18);
     return {
-      title: "st42 すぐ引き出す",
+      title: t("st42.jobExitTitle"),
       chain: INFINITE,
       lines: [
-        { label: "アクション", value: "すぐ引き出す（手数料あり）" },
-        { label: "数量", value: `${exitShares} st42` },
+        { label: t("label.action"), value: t("st42.jobExitAction") },
+        { label: t("label.amount"), value: `${exitShares} st42` },
         {
-          label: "受取見込み（手数料前）",
+          label: t("label.receiveEstBeforeFee"),
           value: `≈ ${estOut.toFixed(6)} 42`,
         },
         {
-          label: "最悪でも受け取れる量",
+          label: t("label.receiveMinAlt"),
           value: `${formatUnits(minOut, 18)} 42`,
         },
-        { label: "コントラクト", value: ST42_ADDRESS },
+        { label: t("label.contract"), value: ST42_ADDRESS },
       ],
       prepare: async (signer) => {
         const vault = getSt42Vault(signer);
@@ -353,26 +356,26 @@ export default function StakingScreen({
     try {
       ticketId = BigInt(ticketIdText);
     } catch {
-      setSt42Error("整理券の番号を確認してください。");
+      setSt42Error(t("stake.errCheckTicket"));
       return null;
     }
     return {
-      title: "st42 受け取り",
+      title: t("st42.jobClaimTitle"),
       chain: INFINITE,
       lines: [
-        { label: "アクション", value: "受け取り" },
-        { label: "整理券の番号", value: ticketIdText },
+        { label: t("label.action"), value: t("st42.claimButton") },
+        { label: t("label.ticketId"), value: ticketIdText },
         {
-          label: "状態",
+          label: t("label.status"),
           value: ticket
             ? ticket.claimed
-              ? "受け取り済み"
+              ? t("st42.statusClaimed")
               : ticket.epochFinalized
-                ? "受け取れます"
-                : "まだ受け取れません"
-            : "未確認",
+                ? t("st42.statusReady")
+                : t("st42.statusNotYet")
+            : t("st42.unchecked"),
         },
-        { label: "コントラクト", value: ST42_ADDRESS },
+        { label: t("label.contract"), value: ST42_ADDRESS },
       ],
       prepare: async (signer) => {
         const vault = getSt42Vault(signer);
@@ -396,35 +399,35 @@ export default function StakingScreen({
     } catch (e) {
       setTicket(null);
       setSt42Error(
-        `整理券を確認できませんでした：${e instanceof Error ? e.message : String(e)}`,
+        `${t("st42.checkTicketFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
       );
     }
   };
 
   return (
     <Screen embedded={embedded}>
-      {embedded ? null : <Title>ステーキング</Title>}
+      {embedded ? null : <Title>{t("defi.staking")}</Title>}
       {modal}
 
       <Card>
-        <Heading>ステーキング（42）</Heading>
-        <Body>42を預けて報酬をもらえます。</Body>
+        <Heading>{t("stake.heading42")}</Heading>
+        <Body>{t("stake.body42")}</Body>
         {valError ? <Text style={styles.errorText}>{valError}</Text> : null}
         {validators ? (
           <>
             <Body>
-              預け先は {validatorTotal ?? validators.length} 件から選べます。
+              {t("stake.validatorsPrefix")}{validatorTotal ?? validators.length}{t("stake.validatorsSuffix")}
             </Body>
             <View style={styles.list}>
               {validators.slice(0, 30).map((v) => (
                 <Text key={v.valoper} style={styles.validatorLine}>
                   • {v.moniker}
-                  {v.jailed ? "（お休み中）" : ""} — みんなの預け額{" "}
+                  {v.jailed ? t("stake.jailed") : ""} — {t("stake.totalStaked")}{" "}
                   {prettyAmount(v.tokensFormatted)} 42
                 </Text>
               ))}
             </View>
-            <Body>預け先</Body>
+            <Body>{t("label.validator")}</Body>
             <ChipPicker
               options={validators.map((v) => ({
                 key: v.valoper,
@@ -433,7 +436,7 @@ export default function StakingScreen({
               value={selectedValoper}
               onChange={setSelectedValoper}
             />
-            <Body>新しい預け先</Body>
+            <Body>{t("label.newValidator")}</Body>
             <ChipPicker
               options={validators.map((v) => ({
                 key: v.valoper,
@@ -445,7 +448,7 @@ export default function StakingScreen({
             <Field
               value={stakeAmount}
               onChangeText={setStakeAmount}
-              placeholder="数量（42）"
+              placeholder={t("stake.amountPlaceholder42")}
               keyboardType="decimal-pad"
             />
             <PercentChips
@@ -453,65 +456,64 @@ export default function StakingScreen({
               disabled={native42Raw === null}
             />
             <Body>
-              残高に対する割合で選べます（MAXのときは手数料分を残します）。
-              引き出すときは、預けている量が上限です。
+              {t("stake.percentNote")}
             </Body>
             <PrimaryButton
-              label="預ける"
+              label={t("stake.depositBtn")}
               onPress={() => {
                 const job = stakingJob("delegate");
                 if (job) startTx(job);
               }}
             />
             <PrimaryButton
-              label="引き出す"
+              label={t("stake.undelegateBtn")}
               onPress={() => {
                 const job = stakingJob("undelegate");
                 if (job) startTx(job);
               }}
             />
             <PrimaryButton
-              label="預け先を変更する"
+              label={t("stake.redelegate")}
               onPress={() => {
                 const job = stakingJob("redelegate");
                 if (job) startTx(job);
               }}
             />
             <PrimaryButton
-              label="報酬を受け取る"
+              label={t("stake.claimTitle")}
               onPress={() => startTx(claimRewardsJob())}
             />
             <Body>
-              引き出すときは、約21日待つ必要があります。
+              {t("stake.unbondingNote")}
             </Body>
           </>
         ) : (
           <PrimaryButton
-            label="預け先を読み込む"
+            label={t("stake.loadValidators")}
             onPress={loadValidators}
             loading={valLoading}
           />
         )}
         {!wallet.info ? (
-          <Body>預けたり引き出したりには、ウォレットの作成／インポートが必要です。</Body>
+          <Body>{t("lp.needWallet")}</Body>
         ) : null}
       </Card>
 
       <Card>
         <Heading>st42</Heading>
-        <Body>42を預けるとst42がもらえます。預けた分は増えて戻ります。</Body>
+        <Body>{t("st42.body")}</Body>
         {st42 ? (
           <>
             <InfoRow
-              label="今のレート"
+              label={t("st42.rateLabel")}
               value={
                 st42.rate
-                  ? `1 st42 ≈ ${st42.rate.toFixed(4)} 42${st42.rateFresh === false ? "（少し前の値かもしれません）" : ""}`
-                  : "取得不可"
+                  ? `1 st42 ≈ ${st42.rate.toFixed(4)} 42${st42.rateFresh === false ? t("st42.rateStaleSuffix") : ""}`
+                  : t("common.unavailable")
               }
             />
             <InfoRow
-              label="みんなの預け額"
+              label={t("stake.totalStaked")}
               value={
                 st42.totalAssetsFormatted
                   ? `${prettyAmount(st42.totalAssetsFormatted)} 42`
@@ -519,40 +521,40 @@ export default function StakingScreen({
               }
             />
             <InfoRow
-              label="年利"
-              value="未取得"
+              label={t("st42.apy")}
+              value={t("common.notAvailable")}
             />
             <InfoRow
-              label="引き出しにかかる日数"
+              label={t("st42.unbondingDays")}
               value={
                 st42.unbondingDays
-                  ? `約${st42.unbondingDays.toFixed(0)}日`
+                  ? `${t("st42.daysPrefix")}${st42.unbondingDays.toFixed(0)}${t("st42.daysSuffix")}`
                   : "—"
               }
             />
             <InfoRow
-              label="あなたのst42"
+              label={t("st42.yours")}
               value={
                 st42.yourSharesFormatted
                   ? `${prettyAmount(st42.yourSharesFormatted)} st42`
-                  : "ウォレットがありません"
+                  : t("common.noWallet")
               }
             />
             {st42.depositsPaused ? (
               <Text style={styles.errorText}>
-                現在、預け入れは一時停止中です。
+                {t("st42.pausedNote")}
               </Text>
             ) : null}
           </>
         ) : (
-          <Body>読み込み中…</Body>
+          <Body>{t("common.loading")}</Body>
         )}
         {st42Error ? <Text style={styles.errorText}>{st42Error}</Text> : null}
-        <PrimaryButton label="更新" onPress={loadSt42} />
+        <PrimaryButton label={t("common.refresh")} onPress={loadSt42} />
         <Field
           value={depositAmount}
           onChangeText={setDepositAmount}
-          placeholder="預ける数量（42）"
+          placeholder={t("st42.depositPlaceholder")}
           keyboardType="decimal-pad"
         />
         <PercentChips
@@ -560,7 +562,7 @@ export default function StakingScreen({
           disabled={native42Raw === null}
         />
         <PrimaryButton
-          label="42を預ける"
+          label={t("stake.delegate")}
           onPress={() => {
             const job = st42DepositJob();
             if (job) startTx(job);
@@ -569,7 +571,7 @@ export default function StakingScreen({
         <Field
           value={redeemShares}
           onChangeText={setRedeemShares}
-          placeholder="引き出す数量（st42）"
+          placeholder={t("st42.redeemPlaceholder")}
           keyboardType="decimal-pad"
         />
         <PercentChips
@@ -579,20 +581,19 @@ export default function StakingScreen({
           disabled={!st42?.yourShares}
         />
         <PrimaryButton
-          label="引き出しを申し込む"
+          label={t("st42.redeemButton")}
           onPress={() => {
             const job = st42RedeemJob();
             if (job) startTx(job);
           }}
         />
         <Body>
-          申し込むと「整理券（チケット）」が出ます。番号を控えてください。
-          約21日たったら、下のボタンで受け取れます。
+          {t("st42.ticketNote")}
         </Body>
         <Field
           value={exitShares}
           onChangeText={setExitShares}
-          placeholder="すぐ引き出す数量（st42・手数料あり）"
+          placeholder={t("st42.instantPlaceholder")}
           keyboardType="decimal-pad"
         />
         <PercentChips
@@ -602,7 +603,7 @@ export default function StakingScreen({
           disabled={!st42?.yourShares}
         />
         <PrimaryButton
-          label="すぐ引き出す"
+          label={t("st42.instantButton")}
           onPress={() => {
             const job = st42InstantExitJob();
             if (job) startTx(job);
@@ -611,25 +612,25 @@ export default function StakingScreen({
         <Field
           value={ticketIdText}
           onChangeText={setTicketIdText}
-          placeholder="整理券の番号"
+          placeholder={t("label.ticketId")}
           keyboardType="decimal-pad"
         />
-        <PrimaryButton label="整理券を確認" onPress={handleCheckTicket} />
+        <PrimaryButton label={t("st42.checkTicket")} onPress={handleCheckTicket} />
         {ticket ? (
           <Body>
-            数量 {ticket.sharesFormatted} st42
+            {t("label.amount")} {ticket.sharesFormatted} st42
             {"\n"}
             {ticket.claimed
-              ? `受け取り済み（${ticket.claimedAmountFormatted} 42）`
+              ? `${t("st42.claimedPrefix")}${ticket.claimedAmountFormatted} 42${t("st42.claimedSuffix")}`
               : ticket.epochFinalized
-                ? "受け取れます"
+                ? t("st42.statusReady")
                 : ticket.epochFinalized === false
-                  ? "まだ受け取れません"
-                  : "状態がわかりません"}
+                  ? t("st42.statusNotYet")
+                  : t("st42.statusUnknown")}
           </Body>
         ) : null}
         <PrimaryButton
-          label="受け取る"
+          label={t("st42.claimButton")}
           onPress={() => {
             const job = st42ClaimJob();
             if (job) startTx(job);
@@ -638,11 +639,11 @@ export default function StakingScreen({
       </Card>
 
       <Card>
-        <Heading>ステーキング（QOM）</Heading>
+        <Heading>{t("qomStaking.heading")}</Heading>
         <Body>
-          QOMのステーキングは、このアプリではまだ使えません（準備中です）。
+          {t("qomStaking.body")}
           {wallet.info
-            ? `あなたのQL1用アドレス: ${wallet.info.qomAddress}`
+            ? `${t("qomStaking.addressPrefix")}${wallet.info.qomAddress}`
             : ""}
         </Body>
       </Card>

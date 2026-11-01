@@ -11,6 +11,8 @@ import {
   PrimaryButton,
 } from "./controls";
 import { Card, colors } from "./ui";
+import { useI18n } from "../context/LanguageContext";
+import { tr } from "../i18n";
 import { useWallet } from "../context/WalletContext";
 import { percentOfBalance, prettyAmount } from "../lib/onchain";
 import {
@@ -40,6 +42,7 @@ import {
  */
 export default function FlukeSection() {
   const wallet = useWallet();
+  const { t } = useI18n();
   const address = wallet.info?.evmAddress ?? null;
   const { startTx, modal } = useTxFlow();
 
@@ -74,7 +77,7 @@ export default function FlukeSection() {
       setStarlight(s);
     } catch (e) {
       setLoadError(
-        `Flukeの情報を読み込めませんでした：${e instanceof Error ? e.message : String(e)}`,
+        `${tr("fluke.loadFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
       );
     }
   }, [address]);
@@ -91,14 +94,14 @@ export default function FlukeSection() {
       id = BigInt(itemIdText.trim());
       if (id < 0n) throw new Error("negative");
     } catch {
-      setItemError("GuideのトークンID（数値）を入力してください。");
+      setItemError(tr("fluke.itemIdError"));
       return;
     }
     try {
       setItem(await fetchGuideItem(id, address));
     } catch (e) {
       setItemError(
-        `Guide #${id.toString()} を取得できませんでした（存在しないIDの可能性があります）：${e instanceof Error ? e.message : String(e)}`,
+        `Guide #${id.toString()}${tr("fluke.itemFetchFailedMid")}${e instanceof Error ? e.message : String(e)}`,
       );
     }
   }, [itemIdText, address]);
@@ -113,14 +116,14 @@ export default function FlukeSection() {
       id = BigInt(recordIdText.trim());
       if (id < 0n) throw new Error("negative");
     } catch {
-      setRecordError("参加番号（数字）を入力してください。");
+      setRecordError(tr("fluke.recordIdError"));
       return;
     }
     try {
       setRecord(await fetchFlukeRecord(id, address));
     } catch (e) {
       setRecordError(
-        `参加番号を確認できませんでした：${e instanceof Error ? e.message : String(e)}`,
+        `${tr("fluke.recordCheckFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
       );
     }
   }, [recordIdText, address]);
@@ -146,7 +149,7 @@ export default function FlukeSection() {
       if (ids.length === 0) throw new Error("empty");
       return ids;
     } catch {
-      setBulkError("Guide IDをカンマ区切りで入力してください（例: 123, 456）。");
+      setBulkError(t("fluke.bulkError"));
       return null;
     }
   };
@@ -158,7 +161,7 @@ export default function FlukeSection() {
       amount = parseUnits(boostAmount, 18);
       if (amount <= 0n) throw new Error("zero");
     } catch {
-      setItemError("ブーストの数量（ZAP）を確認してください。");
+      setItemError(t("fluke.boostAmountError"));
       return;
     }
     startTx(flukeBoostJob(item.id, amount, formatUnits(amount, 18)));
@@ -168,28 +171,27 @@ export default function FlukeSection() {
     <>
       {modal}
       <Card>
-        <Heading>Fluke（くじ引き）</Heading>
+        <Heading>{t("fluke.heading")}</Heading>
         <Body>
-          Guide NFTで遊べる抽選ゲームです。外部サイトを開かず、
-          このアプリの中でそのまま遊べます。
+          {t("fluke.body")}
         </Body>
         {loadError ? <Text style={styles.error}>{loadError}</Text> : null}
         {fluke ? (
           <>
             <InfoRow
-              label="ゲーム状態"
-              value={fluke.paused ? "お休み中" : "開催中"}
+              label={t("fluke.gameState")}
+              value={fluke.paused ? t("fluke.paused") : t("fluke.open")}
             />
             <InfoRow
-              label="参加料"
+              label={t("fluke.entryFee")}
               value={`${prettyAmount(fluke.priceFormatted)} ZAP`}
             />
             <InfoRow
-              label="めくる料金"
-              value={`${prettyAmount(fluke.revealPriceFormatted)}（42で支払い）`}
+              label={t("fluke.revealFee")}
+              value={`${prettyAmount(fluke.revealPriceFormatted)}${t("fluke.revealFeeSuffix")}`}
             />
             <InfoRow
-              label="賞金プールA"
+              label={t("fluke.poolA")}
               value={
                 fluke.poolAFormatted
                   ? `${prettyAmount(fluke.poolAFormatted)} ZAP`
@@ -197,7 +199,7 @@ export default function FlukeSection() {
               }
             />
             <InfoRow
-              label="賞金プールB"
+              label={t("fluke.poolB")}
               value={
                 fluke.poolBFormatted
                   ? `${prettyAmount(fluke.poolBFormatted)} ZAP`
@@ -205,84 +207,82 @@ export default function FlukeSection() {
               }
             />
             <InfoRow
-              label="現在のリーダー"
+              label={t("fluke.leader")}
               value={
                 fluke.leaderId
-                  ? `Guide #${fluke.leaderId}（スコア ${fluke.leaderScoreFormatted ? prettyAmount(fluke.leaderScoreFormatted) : "—"}）`
+                  ? `Guide #${fluke.leaderId}${t("fluke.leaderScorePrefix")}${fluke.leaderScoreFormatted ? prettyAmount(fluke.leaderScoreFormatted) : "—"}${t("fluke.leaderScoreSuffix")}`
                   : "—"
               }
             />
             <InfoRow
-              label="あなたのZAP残高"
+              label={t("fluke.yourZap")}
               value={
                 fluke.zapBalanceFormatted !== null
                   ? `${prettyAmount(fluke.zapBalanceFormatted)} ZAP`
-                  : "ウォレット未作成"
+                  : t("fluke.noWallet")
               }
             />
             <InfoRow
-              label="あなたのGuide保有数"
-              value={fluke.guideBalance ?? "ウォレット未作成"}
+              label={t("fluke.yourGuides")}
+              value={fluke.guideBalance ?? t("fluke.noWallet")}
             />
           </>
         ) : (
-          <Body>読み込み中…</Body>
+          <Body>{t("common.loading")}</Body>
         )}
-        <PrimaryButton label="更新" onPress={load} />
+        <PrimaryButton label={t("common.refresh")} onPress={load} />
         {fluke && !fluke.paused ? (
           <PrimaryButton
-            label={`参加する（${prettyAmount(fluke.priceFormatted)} ZAP）`}
+            label={`${t("fluke.joinPrefix")}${prettyAmount(fluke.priceFormatted)} ZAP${t("fluke.joinSuffix")}`}
             onPress={() => startTx(flukeCommitJob(fluke))}
           />
         ) : null}
         <Body>
-          参加すると参加番号（レコードID）が出ます。精算のときに
-          使うので控えてください。初めての方は、必ず少額でどうぞ。
+          {t("fluke.joinNote")}
         </Body>
       </Card>
 
       <Card>
-        <Heading>Guideを調べる・めくる・ブースト</Heading>
+        <Heading>{t("fluke.lookupHeading")}</Heading>
         <Body>
-          番号を入力すると、持ち主・スコア・報酬の登録状態を
-          表示します。自分のGuideなら、めくったりブーストしたりできます。
+          {t("fluke.lookupBody")}
         </Body>
         <Field
           value={itemIdText}
           onChangeText={setItemIdText}
-          placeholder="Guide トークンID（例: 3326）"
+          placeholder={t("fluke.itemIdPlaceholder")}
           keyboardType="decimal-pad"
         />
-        <PrimaryButton label="調べる" onPress={handleLookupItem} />
+        <PrimaryButton label={t("qns.lookup")} onPress={handleLookupItem} />
         {itemError ? <Text style={styles.error}>{itemError}</Text> : null}
         {item ? (
           <>
-            <InfoRow label="所有者" value={item.owner} />
+            <InfoRow label={t("nftx.owner")} value={item.owner} />
             <InfoRow
-              label="スコア"
+              label={t("guide.score")}
               value={item.scoreFormatted ? prettyAmount(item.scoreFormatted) : "—"}
             />
             <InfoRow
-              label="消した分"
+              label={t("guide.burned")}
               value={item.burnedFormatted ? prettyAmount(item.burnedFormatted) : "—"}
             />
-            <InfoRow label="ティア" value={item.tier !== null ? String(item.tier) : "—"} />
-            <InfoRow label="フォーム数" value={item.formCount ?? "—"} />
+            <InfoRow label={t("guide.tier")} value={item.tier !== null ? String(item.tier) : "—"} />
+            <InfoRow label={t("guide.forms")} value={item.formCount ?? "—"} />
             <InfoRow
-              label="現在のエンブレム"
+              label={t("fluke.emblem")}
               value={item.currentEmblem ?? "—"}
             />
             {item.text ? (
-              <InfoRow label="刻まれたテキスト" value={item.text} />
+              <InfoRow label={t("guide.text")} value={item.text} />
             ) : null}
             {item.starlight ? (
               <>
                 <InfoRow
-                  label="Starlight登録"
-                  value={item.starlight.registered ? "登録済み" : "未登録"}
+                  label={t("fluke.starlightRegistered")}
+                  value={item.starlight.registered ? t("guide.registered") : t("guide.notRegistered")}
                 />
                 <InfoRow
-                  label="ためた報酬"
+                  label={t("guide.earned")}
                   value={`${prettyAmount(item.starlight.earnedFormatted)} [42]`}
                 />
               </>
@@ -290,13 +290,13 @@ export default function FlukeSection() {
             {item.mine && fluke ? (
               <>
                 <PrimaryButton
-                  label={`めくる（${prettyAmount(fluke.revealPriceFormatted)} まで）`}
+                  label={`${t("fluke.flipPrefix")}${prettyAmount(fluke.revealPriceFormatted)}${t("fluke.flipSuffix")}`}
                   onPress={() => startTx(flukeRevealJob(item.id, fluke))}
                 />
                 <Field
                   value={boostAmount}
                   onChangeText={setBoostAmount}
-                  placeholder="ブースト数量（ZAP）"
+                  placeholder={t("fluke.boostPlaceholder")}
                   keyboardType="decimal-pad"
                 />
                 <PercentChips
@@ -309,10 +309,10 @@ export default function FlukeSection() {
                   }}
                   disabled={fluke.zapBalanceRaw === null}
                 />
-                <PrimaryButton label="ブーストする" onPress={boostJob} />
+                <PrimaryButton label={t("fluke.boostButton")} onPress={boostJob} />
                 {item.starlight && !item.starlight.registered ? (
                   <PrimaryButton
-                    label="Starlightに登録する"
+                    label={t("fluke.registerButton")}
                     onPress={() =>
                       startTx(starlightRegisterJob([BigInt(item.id)]))
                     }
@@ -322,7 +322,7 @@ export default function FlukeSection() {
                 item.starlight.registered &&
                 item.starlight.earnedRaw > 0n ? (
                   <PrimaryButton
-                    label="報酬を受け取る"
+                    label={t("stake.claimTitle")}
                     onPress={() =>
                       startTx(starlightClaimJob([BigInt(item.id)]))
                     }
@@ -330,53 +330,51 @@ export default function FlukeSection() {
                 ) : null}
               </>
             ) : item.mine ? null : (
-              <Body>このGuideはあなたのウォレットのものではありません。</Body>
+              <Body>{t("fluke.notYours")}</Body>
             )}
           </>
         ) : null}
       </Card>
 
       <Card>
-        <Heading>Fluke — 精算</Heading>
+        <Heading>{t("job.flukeSettle")}</Heading>
         <Body>
-          参加番号（レコードID）を入力すると、精算できるか確認できます。
-          精算には、公式サイトが出す「合言葉」が必要です。
+          {t("fluke.settleBody")}
         </Body>
         <Field
           value={recordIdText}
           onChangeText={setRecordIdText}
-          placeholder="参加番号（レコードID）"
+          placeholder={t("fluke.recordPlaceholder")}
           keyboardType="decimal-pad"
         />
-        <PrimaryButton label="レコードを確認" onPress={handleLookupRecord} />
+        <PrimaryButton label={t("fluke.checkRecord")} onPress={handleLookupRecord} />
         {recordError ? <Text style={styles.error}>{recordError}</Text> : null}
         {record ? (
           record.exists ? (
             <>
-              <InfoRow label="所有者" value={record.owner} />
-              <InfoRow label="対象Guide" value={`#${record.item}`} />
+              <InfoRow label={t("nftx.owner")} value={record.owner} />
+              <InfoRow label={t("label.targetGuide")} value={`#${record.item}`} />
               <InfoRow
-                label="状態"
-                value={record.settled ? "精算済み" : "未精算"}
+                label={t("label.status")}
+                value={record.settled ? t("fluke.settled") : t("fluke.unsettled")}
               />
               {!record.settled && record.mine ? (
                 <>
                   <PrimaryButton
-                    label="合言葉を受け取る"
+                    label={t("fluke.getPasscode")}
                     onPress={handleFetchSignature}
                   />
                   {sigState === "fetching" ? (
-                    <Body>合言葉を確認しています…</Body>
+                    <Body>{t("fluke.checkingPasscode")}</Body>
                   ) : null}
                   {sigState === "missing" ? (
                     <Text style={styles.todo}>
-                      まだ合言葉が届いていません。時間をおいてもう一度
-                      試すか、公式サイト（fluke.zaphod.one）で精算してください。
+                      {t("fluke.noPasscodeYet")}
                     </Text>
                   ) : null}
                   {sigState === "found" && signature ? (
                     <PrimaryButton
-                      label="精算する"
+                      label={t("fluke.settleButton")}
                       onPress={() =>
                         startTx(flukeSettleJob(record.id, signature))
                       }
@@ -384,29 +382,28 @@ export default function FlukeSection() {
                   ) : null}
                 </>
               ) : !record.settled ? (
-                <Body>このレコードはあなたのウォレットのものではありません。</Body>
+                <Body>{t("fluke.recordNotYours")}</Body>
               ) : null}
             </>
           ) : (
-            <Body>そのIDのレコードは見つかりませんでした。</Body>
+            <Body>{t("fluke.recordNotFound")}</Body>
           )
         ) : null}
       </Card>
 
       <Card>
-        <Heading>Starlight（Guideの報酬）</Heading>
+        <Heading>{t("star.heading")}</Heading>
         <Body>
-          Guide NFTを登録すると、42の報酬が少しずつたまります。
-          複数のGuideをまとめて登録・受け取りできます。
+          {t("star.body")}
         </Body>
         {starlight ? (
           <>
             <InfoRow
-              label="現在の期間"
+              label={t("star.period")}
               value={starlight.currentEpoch ?? "—"}
             />
             <InfoRow
-              label="集まった合計"
+              label={t("star.totalCollected")}
               value={
                 starlight.totalInFormatted
                   ? `${prettyAmount(starlight.totalInFormatted)} 42`
@@ -414,28 +411,28 @@ export default function FlukeSection() {
               }
             />
             <InfoRow
-              label="登録受付"
-              value={starlight.registerPaused ? "停止中" : "受付中"}
+              label={t("star.registration")}
+              value={starlight.registerPaused ? t("star.paused") : t("star.open")}
             />
           </>
         ) : (
-          <Body>読み込み中…</Body>
+          <Body>{t("common.loading")}</Body>
         )}
         <Field
           value={bulkIdsText}
           onChangeText={setBulkIdsText}
-          placeholder="Guide ID（カンマ区切り、例: 123, 456）"
+          placeholder={t("star.idsPlaceholder")}
         />
         {bulkError ? <Text style={styles.error}>{bulkError}</Text> : null}
         <PrimaryButton
-          label="まとめて登録する"
+          label={t("star.registerBulk")}
           onPress={() => {
             const ids = parseBulkIds();
             if (ids) startTx(starlightRegisterJob(ids));
           }}
         />
         <PrimaryButton
-          label="まとめて報酬を受け取る"
+          label={t("star.claimBulk")}
           onPress={() => {
             const ids = parseBulkIds();
             if (ids) startTx(starlightClaimJob(ids));

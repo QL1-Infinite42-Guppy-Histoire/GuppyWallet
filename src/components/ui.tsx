@@ -416,9 +416,10 @@ export function DontPanic({
 }
 
 export function TodoMt({ items }: { items: string[] }) {
+  const { t } = useI18n();
   return (
     <Card>
-      <Text style={styles.cardTitle}>MTさんからの受領待ち（TODO_MT）</Text>
+      <Text style={styles.cardTitle}>{t("ui.todoMt")}</Text>
       {items.map((item) => (
         <Text key={item} style={styles.todoItem}>
           • {item}

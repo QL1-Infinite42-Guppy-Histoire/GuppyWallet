@@ -6,6 +6,7 @@ import {
   QL1_TOKENS,
   type ChainConfig,
 } from "../config/chains";
+import { tr } from "../i18n";
 import { getProvider } from "./onchain";
 import { NATIVE_PLACEHOLDER } from "./prices";
 
@@ -230,12 +231,10 @@ export async function fetchSwapQuote(
   amountText: string,
 ): Promise<SwapQuote> {
   const amountIn = parseUnits(amountText, from.decimals);
-  if (amountIn <= 0n) throw new Error("数量は0より大きくしてください。");
+  if (amountIn <= 0n) throw new Error(tr("dex.amountPositive"));
   const path = await findPath(chain, from, to);
   if (!path) {
-    throw new Error(
-      "この組み合わせでは交換できません。",
-    );
+    throw new Error(tr("dex.noRoute"));
   }
   const router = getRouter(chain);
   let amounts: bigint[];
@@ -245,9 +244,7 @@ export async function fetchSwapQuote(
       path.map((t) => t.address),
     );
   } catch {
-    throw new Error(
-      "見積もりを取得できませんでした（交換用の在庫が足りない可能性があります）。",
-    );
+    throw new Error(tr("dex.quoteFailed"));
   }
   const amountOut = amounts[amounts.length - 1];
   const inNum = Number(formatUnits(amountIn, from.decimals));

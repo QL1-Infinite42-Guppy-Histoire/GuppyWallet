@@ -8,6 +8,7 @@ import {
   QL1_TOKENS,
   type ChainConfig,
 } from "../config/chains";
+import { tr } from "../i18n";
 import { getProvider } from "./onchain";
 
 /**
@@ -111,12 +112,12 @@ export async function fetchInfinitePrices(): Promise<InfinitePrices> {
   const price42 = anchor?.price ?? null;
   prices.set("native", {
     usd: price42,
-    route: price42 ? "42/USDTプール" : null,
+    route: price42 ? tr("price.route42Pool") : null,
     reliable: price42 !== null,
   });
   prices.set(USDT_ADDRESS.toLowerCase(), {
     usd: 1,
-    route: "基準通貨（$1として換算）",
+    route: tr("price.routeBase"),
     reliable: true,
   });
   if (price42 === null) {
@@ -146,7 +147,7 @@ export async function fetchInfinitePrices(): Promise<InfinitePrices> {
         if (ratio > DIVERGENCE_LIMIT) {
           prices.set(key, {
             usd: null,
-            route: "直接USDTルートと42経由ルートで価格が大きく乖離",
+            route: tr("price.routeDiverged"),
             reliable: false,
           });
           return;
@@ -209,12 +210,12 @@ export async function fetchQl1Prices(
   const wqom = QL1_TOKENS.find((t) => t.symbol === "WQOM")!;
   const anchorPrice: TokenPrice =
     qomUsd !== null
-      ? { usd: qomUsd, route: "42 ChainのQOM価格", reliable: true }
+      ? { usd: qomUsd, route: tr("price.routeQom42"), reliable: true }
       : NO_PRICE;
   prices.set("native", anchorPrice);
   prices.set(wqom.address.toLowerCase(), {
     usd: qomUsd,
-    route: qomUsd !== null ? "QOMと同じ価格（包んだQOM）" : null,
+    route: qomUsd !== null ? tr("price.routeWrappedQom") : null,
     reliable: qomUsd !== null,
   });
 
@@ -246,7 +247,7 @@ export async function fetchQl1Prices(
       if (quote) {
         prices.set(key, {
           usd: quote.price * qomUsd,
-          route: `${token.symbol}→QOMプール`,
+          route: `${token.symbol}${tr("price.routeToQomSuffix")}`,
           reliable: true,
         });
       } else {

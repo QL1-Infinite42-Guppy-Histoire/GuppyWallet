@@ -4,65 +4,67 @@ import { Body, Heading } from "../components/controls";
 import { Card, Screen, colors } from "../components/ui";
 import { DAPP_LINKS } from "../config/chains";
 import { useI18n } from "../context/LanguageContext";
+import type { I18nKey } from "../i18n";
 
 interface Entry {
-  label: string;
-  description: string;
+  label?: string;
+  labelKey?: I18nKey;
+  descKey: I18nKey;
   url: string;
 }
 
 // URLs come from DAPP_LINKS / chain config only — no invented links.
 // Descriptions are one plain line each; technical chain status lives
-// in Settings → 詳細情報, not here.
+// in Settings → Details, not here.
 const ENTRIES: Entry[] = [
   {
     label: "42 Chain",
-    description: "プロジェクトの公式リンク集",
+    descKey: "explore.linkHub",
     url: DAPP_LINKS.projectHub,
   },
   {
     label: "Hub",
-    description: "42 Chain のポータルサイト",
+    descKey: "explore.linkPortal",
     url: DAPP_LINKS.hub,
   },
   {
     label: "DontPanic Finance",
-    description: "通貨を交換したり預けたりできるサイト",
+    descKey: "explore.linkDontPanic",
     url: DAPP_LINKS.dontPanicDex,
   },
   {
     label: "Fluke",
-    description: "Guide NFTで遊べるくじ引きゲーム（このアプリでも遊べます）",
+    descKey: "explore.linkFluke",
     url: DAPP_LINKS.flukeGuide,
   },
   {
-    label: "NFT マーケット",
-    description: "NFTを買ったり売ったりできる場所",
+    labelKey: "explore.linkNftMarket",
+    descKey: "explore.linkNftMarketDesc",
     url: DAPP_LINKS.nft,
   },
   {
     label: "Bridge",
-    description: "別のチェーンへ通貨を送るサイト（このアプリでもできます）",
+    descKey: "explore.linkBridge",
     url: DAPP_LINKS.bridge,
   },
   {
     label: "Docs",
-    description: "公式の説明ページ",
+    descKey: "explore.linkDocs",
     url: DAPP_LINKS.docs,
   },
   {
     label: "Console",
-    description: "開発者向けの管理画面",
+    descKey: "explore.linkAdmin",
     url: DAPP_LINKS.console,
   },
   {
     label: "DriveStats",
-    description: "チェーンの利用状況がわかるページ",
+    descKey: "explore.linkStats",
     url: DAPP_LINKS.driveStats,
   },
   {
     label: "FishDisk",
-    description: "関連サービス",
+    descKey: "explore.linkRelated",
     url: DAPP_LINKS.fishDisk,
   },
 ];
@@ -80,13 +82,15 @@ export default function ExploreScreen() {
         <Heading>{t("explore.links")}</Heading>
         {ENTRIES.map((e) => (
           <Pressable
-            key={e.label}
+            key={e.label ?? e.labelKey}
             style={styles.row}
             onPress={() => Linking.openURL(e.url)}
           >
             <View style={styles.rowMain}>
-              <Text style={styles.rowLabel}>{e.label}</Text>
-              <Text style={styles.rowDesc}>{e.description}</Text>
+              <Text style={styles.rowLabel}>
+                {e.labelKey ? t(e.labelKey) : e.label}
+              </Text>
+              <Text style={styles.rowDesc}>{t(e.descKey)}</Text>
             </View>
             <Text style={styles.rowArrow}>↗</Text>
           </Pressable>
@@ -94,17 +98,14 @@ export default function ExploreScreen() {
       </Card>
 
       <Card>
-        <Heading>QNS（.qom ドメイン）</Heading>
+        <Heading>{t("explore.qnsHeading")}</Heading>
         <Body>{t("explore.qnsEnded")}</Body>
       </Card>
 
       <Card>
-        <Heading>このガイドについて</Heading>
+        <Heading>{t("explore.aboutHeading")}</Heading>
         <Body>
-          DON'T PANIC — このウォレットは、42 Chain と QL1 のための
-          銀河ヒッチハイカー向けガイドです。生命、宇宙、そして万物についての
-          答えは 42。タオル（TOWEL）もちゃんとトークン一覧に入っています。
-          慌てず、少額からどうぞ。
+          {t("explore.aboutGuide")}
         </Body>
       </Card>
 

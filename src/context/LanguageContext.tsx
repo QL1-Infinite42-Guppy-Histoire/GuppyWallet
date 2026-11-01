@@ -8,11 +8,13 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
-import { DICT, type I18nKey, type Lang } from "../i18n";
+import { DICT, setCurrentLang, type I18nKey, type Lang } from "../i18n";
 
 /**
  * JA/EN language state, persisted across launches (AsyncStorage).
- * Default: Japanese. Only app chrome is translated (see src/i18n.ts).
+ * Default: Japanese. All user-facing text goes through src/i18n.ts;
+ * the current language is also mirrored into the i18n module so lib
+ * code can localize via tr().
  */
 
 const STORAGE_KEY = "zaphod.lang";
@@ -31,13 +33,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((v) => {
-        if (v === "en" || v === "ja") setLangState(v);
+        if (v === "en" || v === "ja") {
+          setLangState(v);
+          setCurrentLang(v);
+        }
       })
       .catch(() => {});
   }, []);
 
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
+    setCurrentLang(next);
     AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {});
   }, []);
 

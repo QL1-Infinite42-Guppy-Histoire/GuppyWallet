@@ -86,9 +86,7 @@ export default function SendScreen() {
   const openScanner = async () => {
     setScanNote(null);
     if (Platform.OS === "web") {
-      setScanNote(
-        "WebプレビューではQRスキャンは使えません。アドレスを貼り付けてください。",
-      );
+      setScanNote(t("send.qrWebNote"));
       return;
     }
     let granted = cameraPermission?.granted ?? false;
@@ -97,9 +95,7 @@ export default function SendScreen() {
       granted = res.granted;
     }
     if (!granted) {
-      setScanNote(
-        "カメラの許可がないためQRスキャンは使えません。端末の設定で許可するか、アドレスを貼り付けてください。",
-      );
+      setScanNote(t("send.qrNoPermission"));
       return;
     }
     setScannerOpen(true);
@@ -112,9 +108,7 @@ export default function SendScreen() {
       setRecipient(addr);
       setScanNote(null);
     } else {
-      setScanNote(
-        "読み取ったQRは、送金用アドレスではありませんでした。",
-      );
+      setScanNote(t("send.qrNotAddress"));
     }
   };
 
@@ -179,7 +173,7 @@ export default function SendScreen() {
   const handleSend = () => {
     setFormError(null);
     if (!isAddress(recipient.trim())) {
-      setFormError("送り先のアドレスが正しくありません。");
+      setFormError(t("send.errBadAddress"));
       return;
     }
     let value: bigint;
@@ -187,22 +181,22 @@ export default function SendScreen() {
       value = parseUnits(amount, sendToken.decimals);
       if (value <= 0n) throw new Error("zero");
     } catch {
-      setFormError("数量を確認してください。");
+      setFormError(t("err.checkAmount"));
       return;
     }
     const chain = sendChain;
     const token = sendToken;
     const to = recipient.trim();
     const job: TxJob = {
-      title: "送金",
+      title: t("send.title"),
       chain,
       lines: [
-        { label: "アクション", value: `${token.symbol} を送金` },
-        { label: "送信先", value: to },
-        { label: "数量", value: `${amount} ${token.symbol}` },
+        { label: t("label.action"), value: `${t("send.jobActionPrefix")}${token.symbol}${t("send.jobActionSuffix")}` },
+        { label: t("send.jobTo"), value: to },
+        { label: t("label.amount"), value: `${amount} ${token.symbol}` },
         {
-          label: "コントラクト",
-          value: token.address ?? "（ネイティブ送金）",
+          label: t("label.contract"),
+          value: token.address ?? t("send.jobNative"),
         },
       ],
       prepare: async (signer) => {
@@ -251,13 +245,13 @@ export default function SendScreen() {
           ) : null}
           <View style={styles.scannerOverlay}>
             <Text style={styles.scannerHint}>
-              送金先アドレスのQRコードを枠内に合わせてください
+              {t("send.scanHint")}
             </Text>
             <Pressable
               style={styles.scannerClose}
               onPress={() => setScannerOpen(false)}
             >
-              <Text style={styles.scannerCloseText}>キャンセル</Text>
+              <Text style={styles.scannerCloseText}>{t("confirm.cancel")}</Text>
             </Pressable>
           </View>
         </View>
@@ -270,8 +264,8 @@ export default function SendScreen() {
         </Card>
       ) : (
         <Card>
-          <Heading>送金</Heading>
-          <Body>チェーン</Body>
+          <Heading>{t("send.title")}</Heading>
+          <Body>{t("confirm.chain")}</Body>
           <ChipPicker
             options={CHAINS.map((c) => ({ key: c.key, label: c.displayName }))}
             value={sendChainKey}
@@ -280,7 +274,7 @@ export default function SendScreen() {
               setSendTokenKey("native");
             }}
           />
-          <Body>トークン</Body>
+          <Body>{t("label.token")}</Body>
           <ChipPicker
             options={sendTokens.map((tk) => ({ key: tk.key, label: tk.label }))}
             value={sendToken.key}
@@ -291,39 +285,38 @@ export default function SendScreen() {
               <Field
                 value={recipient}
                 onChangeText={setRecipient}
-                placeholder="送り先のアドレス 0x…"
+                placeholder={t("send.toPlaceholder")}
               />
             </View>
             <Pressable style={styles.scanButton} onPress={openScanner}>
-              <Text style={styles.scanButtonText}>QR読取</Text>
+              <Text style={styles.scanButtonText}>{t("send.qrButton")}</Text>
             </Pressable>
           </View>
           {scanNote ? <Text style={styles.scanNote}>{scanNote}</Text> : null}
           <Field
             value={amount}
             onChangeText={setAmount}
-            placeholder={`数量（${sendToken.symbol}）`}
+            placeholder={`${t("bridge.amountPrefix")}${sendToken.symbol}${t("bridge.amountSuffixParen")}`}
             keyboardType="decimal-pad"
           />
           <PercentChips
             onSelect={applySendPercent}
             disabled={!sendBalanceEntry?.ok}
           />
-          <PrimaryButton label="確認画面へ" onPress={handleSend} />
+          <PrimaryButton label={t("send.toConfirm")} onPress={handleSend} />
           <Body>
-            送る前に、次の画面で送り先・金額・手数料を必ず確認してください。
+            {t("send.confirmNote")}
           </Body>
           {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
         </Card>
       )}
 
       <Card>
-        <Heading>QL1のもう一つの送り方（準備中）</Heading>
+        <Heading>{t("send.qomHeading")}</Heading>
         <Body>
-          QL1には別の送金方法もありますが、このアプリではまだ使えません。
-          qom1… / infinite1… で始まるアドレスへの送金は、この画面ではできません。
+          {t("send.qomBody")}
         </Body>
-        <DisabledButton label="この送り方は準備中" />
+        <DisabledButton label={t("send.qomDisabled")} />
       </Card>
     </Screen>
   );

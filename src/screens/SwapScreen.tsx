@@ -30,6 +30,7 @@ import {
 import { Card, Screen, Title, TokenIcon, colors } from "../components/ui";
 import { CHAINS, type ChainConfig } from "../config/chains";
 import { useI18n } from "../context/LanguageContext";
+import { DICT } from "../i18n";
 import { useWallet } from "../context/WalletContext";
 import { useBalances } from "../context/BalancesContext";
 import type { TokenBalance } from "../lib/onchain";
@@ -275,24 +276,24 @@ export default function SwapScreen({
     const minOut = applySlippage(quote.amountOut, slippageBps);
     const path = quote.path.map((t) => t.address);
     const job: TxJob = {
-      title: "通貨の交換",
+      title: t("swap.jobTitle"),
       chain,
       lines: [
-        { label: "アクション", value: "通貨の交換" },
-        { label: "経路", value: quote.routeLabel },
+        { label: t("label.action"), value: t("swap.jobTitle") },
+        { label: t("label.route"), value: quote.routeLabel },
         {
-          label: "入力",
+          label: t("label.amountIn"),
           value: `${formatUnits(quote.amountIn, fromToken.decimals)} ${fromToken.symbol}`,
         },
         {
-          label: "もらえる量（目安）",
+          label: t("label.receiveEst"),
           value: `${quote.amountOutFormatted} ${toToken.symbol}`,
         },
         {
-          label: "最悪でももらえる量",
-          value: `${formatUnits(minOut, toToken.decimals)} ${toToken.symbol}（価格のずれ ${slippage}% まで）`,
+          label: t("label.receiveMin"),
+          value: `${formatUnits(minOut, toToken.decimals)} ${toToken.symbol}${t("swap.slippageNotePrefix")}${slippage}${t("swap.slippageNoteSuffix")}`,
         },
-        { label: "コントラクト", value: routerAddress },
+        { label: t("label.contract"), value: routerAddress },
       ],
       prepare: async (signer) => {
         const to = await signer.getAddress();
@@ -369,13 +370,13 @@ export default function SwapScreen({
     setLpError(null);
     const address = wallet.info?.evmAddress ?? null;
     if (!address) {
-      setLpError("ウォレットが未設定です（作成／インポートしてください）。");
+      setLpError(t("swap.errNoWallet"));
       return;
     }
     const pair = await getPairAddress(chain, lpA.address, lpB.address);
     if (!pair) {
       setLpBalance(null);
-      setLpError("このペアは存在しません。");
+      setLpError(t("swap.errNoPair"));
       return;
     }
     try {
@@ -396,21 +397,21 @@ export default function SwapScreen({
       amountB = parseUnits(lpAmountB, lpB.decimals);
       if (amountA <= 0n || amountB <= 0n) throw new Error("zero");
     } catch {
-      setLpError("数量を確認してください。");
+      setLpError(t("err.checkAmount"));
       return;
     }
     const { router: routerAddress } = dexConfig(chain);
     const minA = applySlippage(amountA, slippageBps);
     const minB = applySlippage(amountB, slippageBps);
     const job: TxJob = {
-      title: "流動性を預ける",
+      title: t("lp.addTitle"),
       chain,
       lines: [
-        { label: "アクション", value: "流動性を預ける" },
-        { label: "ペア", value: `${lpA.symbol} / ${lpB.symbol}` },
-        { label: "数量A", value: `${lpAmountA} ${lpA.symbol}` },
-        { label: "数量B", value: `${lpAmountB} ${lpB.symbol}` },
-        { label: "コントラクト", value: routerAddress },
+        { label: t("label.action"), value: t("lp.addTitle") },
+        { label: t("label.pair"), value: `${lpA.symbol} / ${lpB.symbol}` },
+        { label: t("label.amountA"), value: `${lpAmountA} ${lpA.symbol}` },
+        { label: t("label.amountB"), value: `${lpAmountB} ${lpB.symbol}` },
+        { label: t("label.contract"), value: routerAddress },
       ],
       prepare: async (signer) => {
         const to = await signer.getAddress();
@@ -487,7 +488,7 @@ export default function SwapScreen({
     setLpError(null);
     const pair = await getPairAddress(chain, lpA.address, lpB.address);
     if (!pair) {
-      setLpError("このペアは存在しません。");
+      setLpError(t("swap.errNoPair"));
       return;
     }
     let liquidity: bigint;
@@ -495,19 +496,19 @@ export default function SwapScreen({
       liquidity = parseUnits(lpRemoveAmount, 18);
       if (liquidity <= 0n) throw new Error("zero");
     } catch {
-      setLpError("数量を確認してください。");
+      setLpError(t("err.checkAmount"));
       return;
     }
     const { router: routerAddress } = dexConfig(chain);
     const job: TxJob = {
-      title: "流動性を引き出す",
+      title: t("lp.removeTitle"),
       chain,
       lines: [
-        { label: "アクション", value: "流動性を引き出す" },
-        { label: "ペア", value: `${lpA.symbol} / ${lpB.symbol}` },
-        { label: "量", value: lpRemoveAmount },
-        { label: "ペアコントラクト", value: pair },
-        { label: "コントラクト", value: routerAddress },
+        { label: t("label.action"), value: t("lp.removeTitle") },
+        { label: t("label.pair"), value: `${lpA.symbol} / ${lpB.symbol}` },
+        { label: t("label.amountShort"), value: lpRemoveAmount },
+        { label: t("label.pairContract"), value: pair },
+        { label: t("label.contract"), value: routerAddress },
       ],
       prepare: async (signer) => {
         const to = await signer.getAddress();
@@ -570,22 +571,24 @@ export default function SwapScreen({
   // ------------------------------------------------------------ action state
   const noPair =
     quoteError !== null &&
-    (quoteError.includes("この組み合わせでは交換できません") ||
-      quoteError.includes("在庫が足りない"));
-  let actionLabel = "交換する";
+    (quoteError.includes(DICT.ja["dex.noRoute"]) ||
+      quoteError.includes(DICT.en["dex.noRoute"]) ||
+      quoteError.includes(DICT.ja["dex.quoteFailed"]) ||
+      quoteError.includes(DICT.en["dex.quoteFailed"]));
+  let actionLabel = t("swap.actionSwap");
   let actionEnabled = false;
   if (!wallet.info) {
-    actionLabel = "ウォレットを作成／インポートしてください";
+    actionLabel = t("swap.actionCreateWallet");
   } else if (!amountValid) {
-    actionLabel = "金額を入力";
+    actionLabel = t("swap.actionEnterAmount");
   } else if (quoting) {
-    actionLabel = "見積もり取得中…";
+    actionLabel = t("swap.actionQuoting");
   } else if (noPair) {
-    actionLabel = "ペアがありません";
+    actionLabel = t("swap.actionNoPair");
   } else if (quoteError) {
-    actionLabel = "見積もりを取得できません";
+    actionLabel = t("swap.actionQuoteFailed");
   } else if (quote) {
-    actionLabel = "交換する";
+    actionLabel = t("swap.actionSwap");
     actionEnabled = true;
   }
 
@@ -608,7 +611,7 @@ export default function SwapScreen({
       <Heading>{t("defi.yourLiquidity")}</Heading>
       {!wallet.info ? (
         <Body>
-          ウォレットを作ると、預けている分がここに表示されます。
+          {t("swap.noWalletLpNote")}
         </Body>
       ) : lpPositions === null ? (
         <Body>{t("common.loading")}</Body>
@@ -625,10 +628,10 @@ export default function SwapScreen({
                   {p.tokenA.symbol} / {p.tokenB.symbol}
                 </Text>
                 <InfoRow
-                  label="プールの割合"
+                  label={t("swap.poolShare")}
                   value={
                     p.sharePct > 0 && p.sharePct < 0.01
-                      ? "0.01%未満"
+                      ? t("swap.lessThan001")
                       : `${p.sharePct.toFixed(2)}%`
                   }
                 />
@@ -641,13 +644,13 @@ export default function SwapScreen({
                   value={prettyAmount(p.amountBFormatted)}
                 />
                 <InfoRow
-                  label="預けた分量"
+                  label={t("swap.yourSupplied")}
                   value={prettyAmount(p.lpFormatted)}
                 />
                 {jpy !== null ? (
                   <InfoRow
-                    label="円での目安"
-                    value={`約 ¥${Math.round(jpy).toLocaleString("ja-JP")}`}
+                    label={t("swap.jpyEstimate")}
+                    value={`${t("swap.valueJpyPrefix")}${Math.round(jpy).toLocaleString("ja-JP")}`}
                   />
                 ) : null}
               </View>
@@ -685,8 +688,8 @@ export default function SwapScreen({
       </View>
       <Text style={styles.dexCaption}>
         {chain.key === "infinite"
-          ? "Don't Panic で交換します"
-          : "QomSwap で交換します"}
+          ? t("swap.dexDontPanic")
+          : t("swap.dexQomSwap")}
       </Text>
 
       {/* ------- Uniswap-style swap card ------- */}
@@ -694,7 +697,7 @@ export default function SwapScreen({
       <View style={styles.swapCard}>
         {/* pay panel */}
         <View style={styles.panel}>
-          <Text style={styles.panelLabel}>払う</Text>
+          <Text style={styles.panelLabel}>{t("swap.pay")}</Text>
           <View style={styles.panelRow}>
             <TextInput
               style={styles.bigInput}
@@ -709,11 +712,11 @@ export default function SwapScreen({
           </View>
           <View style={styles.balanceRow}>
             <Text style={styles.balanceText}>
-              残高:{" "}
+              {t("common.balance")}:{" "}
               {fromBalance
                 ? `${prettyAmount(fromBalance.formatted)} ${fromToken.symbol}`
                 : wallet.info
-                  ? "読み込み中"
+                  ? t("swap.loadingWord")
                   : "—"}
             </Text>
             <PercentChips onSelect={setPercent} disabled={!fromBalance} />
@@ -727,7 +730,7 @@ export default function SwapScreen({
 
         {/* receive panel */}
         <View style={styles.panel}>
-          <Text style={styles.panelLabel}>もらえる（目安）</Text>
+          <Text style={styles.panelLabel}>{t("swap.receiveEst")}</Text>
           <View style={styles.panelRow}>
             <Text
               style={[
@@ -751,7 +754,7 @@ export default function SwapScreen({
 
         {/* settings: slippage */}
         <View style={styles.settingsRow}>
-          <Text style={styles.settingsLabel}>スリッページ許容</Text>
+          <Text style={styles.settingsLabel}>{t("swap.slippageLabel")}</Text>
           <View style={styles.pctRow}>
             {SLIPPAGE_PRESETS.map((p) => {
               const active = slippage === p;
@@ -784,26 +787,26 @@ export default function SwapScreen({
         </View>
 
         <Text style={styles.finePrint}>
-          スリッページは「価格のずれの許容範囲」です。大きすぎると損をすることがあります。
+          {t("swap.slippageNote")}
         </Text>
 
         {/* details */}
         {quote ? (
           <View style={styles.details}>
-            <InfoRow label="経路" value={quote.routeLabel} />
+            <InfoRow label={t("label.route")} value={quote.routeLabel} />
             <InfoRow
-              label="レート"
+              label={t("swap.rate")}
               value={`1 ${fromToken.symbol} ≈ ${quote.rate.toPrecision(6)} ${toToken.symbol}`}
             />
             {quote.spotRate !== null ? (
               <InfoRow
-                label="今の相場"
+                label={t("swap.marketRate")}
                 value={`1 ${fromToken.symbol} ≈ ${quote.spotRate.toPrecision(6)} ${toToken.symbol}`}
               />
             ) : null}
             {quote.priceImpactPct !== null ? (
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>価格への影響</Text>
+                <Text style={styles.infoLabel}>{t("swap.priceImpact")}</Text>
                 <Text
                   style={[
                     styles.infoValue,
@@ -819,11 +822,11 @@ export default function SwapScreen({
               </View>
             ) : null}
             <InfoRow
-              label="最悪でももらえる量"
+              label={t("label.receiveMin")}
               value={`${minReceived} ${toToken.symbol}`}
             />
             <Pressable onPress={runQuote}>
-              <Text style={styles.refreshLink}>見積もりを更新 ↻</Text>
+              <Text style={styles.refreshLink}>{t("swap.refreshQuote")}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -858,7 +861,7 @@ export default function SwapScreen({
           )}
         </Pressable>
         <Text style={styles.finePrint}>
-          交換の前に、確認画面で金額と手数料を必ず確認してください。
+          {t("swap.confirmNote")}
         </Text>
       </View>
       ) : null}
@@ -868,9 +871,9 @@ export default function SwapScreen({
         <>
           {lpPositionsPanel}
           <Card>
-        <Heading>流動性を提供</Heading>
-        <Body>2つの通貨を預けて、交換の手数料をもらえます。</Body>
-        <Body>トークンA</Body>
+        <Heading>{t("lp.heading")}</Heading>
+        <Body>{t("lp.body")}</Body>
+        <Body>{t("lp.tokenA")}</Body>
         <ChipPicker
           options={tokens.map((t) => ({
             key: t.address,
@@ -879,7 +882,7 @@ export default function SwapScreen({
           value={lpA.address}
           onChange={setLpAKey}
         />
-        <Body>トークンB</Body>
+        <Body>{t("lp.tokenB")}</Body>
         <ChipPicker
           options={tokens
             .filter((t) => t.address !== lpA.address)
@@ -893,17 +896,16 @@ export default function SwapScreen({
         {lpNativeBlocked ? (
           <>
             <Body>
-              42を含む組み合わせは、預ける方法がまだ確認できていないため
-              使えません。トークン同士の組み合わせは使えます。
+              {t("lp.nativeNotReady")}
             </Body>
-            <DisabledButton label="この組み合わせは準備中" />
+            <DisabledButton label={t("lp.thisPairComingSoon")} />
           </>
         ) : (
           <>
             <Field
               value={lpAmountA}
               onChangeText={setLpAmountA}
-              placeholder={`数量A（${lpA.symbol}）`}
+              placeholder={`${t("lp.amountWordA")}${t("lp.symPrefix")}${lpA.symbol}${t("lp.symSuffix")}`}
               keyboardType="decimal-pad"
             />
             <PercentChips
@@ -913,41 +915,40 @@ export default function SwapScreen({
             <Field
               value={lpAmountB}
               onChangeText={setLpAmountB}
-              placeholder={`数量B（${lpB.symbol}）`}
+              placeholder={`${t("lp.amountWordB")}${t("lp.symPrefix")}${lpB.symbol}${t("lp.symSuffix")}`}
               keyboardType="decimal-pad"
             />
             <PercentChips
               onSelect={(pct) => setLpPercent("B", lpB, pct)}
               disabled={!balanceEntry(lpB)}
             />
-            <PrimaryButton label="預ける" onPress={handleAddLiquidity} />
+            <PrimaryButton label={t("lp.deposit")} onPress={handleAddLiquidity} />
           </>
         )}
-        <PrimaryButton label="預けた量を確認" onPress={fetchLpBalance} />
+        <PrimaryButton label={t("lp.checkSupplied")} onPress={fetchLpBalance} />
         {lpBalance !== null ? (
-          <InfoRow label="あなたが預けた量" value={lpBalance} />
+          <InfoRow label={t("swap.yourSupplied")} value={lpBalance} />
         ) : null}
         {!lpNativeBlocked ? (
           <>
             <Field
               value={lpRemoveAmount}
               onChangeText={setLpRemoveAmount}
-              placeholder="引き出す量"
+              placeholder={t("lp.removePlaceholder")}
               keyboardType="decimal-pad"
             />
             <PrimaryButton
-              label="引き出す"
+              label={t("lp.withdraw")}
               onPress={handleRemoveLiquidity}
             />
             <Body>
-              戻ってくる量は、そのときの相場で変わります。
-              確認画面でよく確認してください。
+              {t("lp.removeNote")}
             </Body>
           </>
         ) : null}
         {lpError ? <Text style={styles.errorText}>{lpError}</Text> : null}
         {!wallet.info ? (
-          <Body>預けたり引き出したりには、ウォレットの作成／インポートが必要です。</Body>
+          <Body>{t("lp.needWallet")}</Body>
         ) : null}
           </Card>
         </>
@@ -965,28 +966,28 @@ export default function SwapScreen({
           onPress={() => setSelectorSide(null)}
         >
           <Pressable style={styles.modalSheet} onPress={() => {}}>
-            <Text style={styles.modalTitle}>トークンを選択</Text>
+            <Text style={styles.modalTitle}>{t("swap.selectToken")}</Text>
             <ScrollView>
-              {tokens.map((t) => {
-                const bal = balanceEntry(t);
+              {tokens.map((tok) => {
+                const bal = balanceEntry(tok);
                 const selected =
                   (selectorSide === "from" ? fromToken : toToken).address ===
-                  t.address;
+                  tok.address;
                 return (
                   <Pressable
-                    key={`${t.address}-${t.isNative ? "native" : "erc20"}`}
+                    key={`${tok.address}-${tok.isNative ? "native" : "erc20"}`}
                     style={[styles.tokenRow, selected && styles.tokenRowSelected]}
-                    onPress={() => pickToken(t)}
+                    onPress={() => pickToken(tok)}
                   >
                     <View style={styles.tokenRowLeft}>
-                      <TokenIcon symbol={t.symbol} size={36} />
+                      <TokenIcon symbol={tok.symbol} size={36} />
                       <View>
                         <Text style={styles.tokenRowSymbol}>
-                          {t.symbol}
+                          {tok.symbol}
                         </Text>
-                        {t.isNative ? (
+                        {tok.isNative ? (
                           <Text style={styles.tokenRowAddr}>
-                            このチェーンの通貨
+                            {t("swap.nativeNote")}
                           </Text>
                         ) : null}
                       </View>

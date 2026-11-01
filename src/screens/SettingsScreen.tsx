@@ -99,11 +99,9 @@ export default function SettingsScreen() {
     <Screen>
       {wallet.pendingPhrase ? (
         <Card>
-          <Heading>リカバリーフレーズ（1回だけ表示）</Heading>
+          <Heading>{t("settings.recoveryTitle")}</Heading>
           <Text style={styles.phraseWarning}>
-            ⚠️ このフレーズはウォレットの全資産への鍵です。紙に書いて安全な場所に保管し、
-            スクリーンショット・クラウド・他人への共有は絶対にしないでください。
-            この画面を閉じると二度と表示されません。
+            {t("settings.recoveryWarning")}
           </Text>
           <Text style={styles.phrase}>{wallet.pendingPhrase}</Text>
           <Pressable
@@ -112,17 +110,17 @@ export default function SettingsScreen() {
           >
             <Text style={styles.checkBox}>{phraseChecked ? "☑" : "☐"}</Text>
             <Text style={styles.bodyFlex}>
-              紙に書き写して保管しました。フレーズを失うと資産を復元できません。
+              {t("settings.recoveryCheck")}
             </Text>
           </Pressable>
           <PrimaryButton
-            label="確認して閉じる"
+            label={t("settings.recoveryClose")}
             onPress={() => {
               if (phraseChecked) wallet.confirmPhraseSaved();
             }}
           />
           {!phraseChecked ? (
-            <Body>チェックを入れると閉じられます。</Body>
+            <Body>{t("settings.recoveryHint")}</Body>
           ) : null}
         </Card>
       ) : null}
@@ -132,34 +130,32 @@ export default function SettingsScreen() {
         {!wallet.info ? (
           <>
             <Body>
-              ウォレットを作成するか、既存のリカバリーフレーズ／秘密鍵をインポートできます。
-              鍵はスマホの中の安全な場所にだけ保存され、
-              外部に送信されることはありません。
+              {t("settings.walletIntro")}
             </Body>
             <PrimaryButton
-              label="新しいウォレットを作成"
+              label={t("settings.createWallet")}
               onPress={handleCreate}
               loading={wallet.busy}
             />
-            <Text style={styles.subHeading}>リカバリーフレーズでインポート</Text>
+            <Text style={styles.subHeading}>{t("settings.importPhraseTitle")}</Text>
             <Field
               value={phraseInput}
               onChangeText={setPhraseInput}
-              placeholder="単語をスペース区切りで入力（12/24語）"
+              placeholder={t("settings.importPhrasePlaceholder")}
             />
             <PrimaryButton
-              label="フレーズをインポート"
+              label={t("settings.importPhrase")}
               onPress={handleImportPhrase}
               loading={wallet.busy}
             />
-            <Text style={styles.subHeading}>秘密鍵でインポート</Text>
+            <Text style={styles.subHeading}>{t("settings.importKeyTitle")}</Text>
             <Field
               value={keyInput}
               onChangeText={setKeyInput}
-              placeholder="0x…（64桁の16進数）"
+              placeholder={t("settings.importKeyPlaceholder")}
             />
             <PrimaryButton
-              label="秘密鍵をインポート"
+              label={t("settings.importKey")}
               onPress={handleImportKey}
               loading={wallet.busy}
             />
@@ -167,46 +163,45 @@ export default function SettingsScreen() {
         ) : (
           <>
             <Body>
-              状態: {wallet.unlocked ? "ロック解除中（5分で自動ロック）" : "ロック中"}
-              {"\n"}種類:{" "}
+              {t("label.status")}: {wallet.unlocked ? t("settings.unlockedNote") : t("settings.locked")}
+              {"\n"}{t("settings.kindLabel")}:{" "}
               {wallet.info.kind === "mnemonic"
-                ? "リカバリーフレーズ"
-                : "秘密鍵"}
+                ? t("settings.kindPhrase")
+                : t("settings.kindKey")}
             </Body>
-            <Text style={styles.addrLabel}>アドレス（42 Chain / QL1 共通）</Text>
+            <Text style={styles.addrLabel}>{t("settings.addressCommon")}</Text>
             <Text style={styles.addr}>{wallet.info.evmAddress}</Text>
-            <Text style={styles.addrLabel}>アドレス（42 Chain・別形式）</Text>
+            <Text style={styles.addrLabel}>{t("settings.address42Alt")}</Text>
             <Text style={styles.addr}>{wallet.info.infiniteAddress}</Text>
-            <Text style={styles.addrLabel}>アドレス（QL1・別形式）</Text>
+            <Text style={styles.addrLabel}>{t("settings.addressQl1Alt")}</Text>
             <Text style={styles.addr}>{wallet.info.qomAddress}</Text>
             {wallet.unlocked ? (
-              <PrimaryButton label="ロックする" onPress={wallet.lock} />
+              <PrimaryButton label={t("settings.lockButton")} onPress={wallet.lock} />
             ) : (
               <PrimaryButton
-                label="生体認証でロック解除"
+                label={t("settings.unlockBio")}
                 onPress={() => wallet.unlock()}
               />
             )}
             {confirmRemove ? (
               <>
                 <Text style={styles.phraseWarning}>
-                  ⚠️ ウォレットをこの端末から削除します。リカバリーフレーズを
-                  保管していない場合、資産に二度とアクセスできなくなります。
+                  {t("settings.deleteWarning")}
                 </Text>
                 <PrimaryButton
-                  label="本当に削除する"
+                  label={t("settings.deleteConfirm")}
                   onPress={async () => {
                     await wallet.removeWallet();
                     setConfirmRemove(false);
                   }}
                 />
                 <Pressable onPress={() => setConfirmRemove(false)}>
-                  <Text style={styles.cancelText}>やめる</Text>
+                  <Text style={styles.cancelText}>{t("settings.cancelWord")}</Text>
                 </Pressable>
               </>
             ) : (
               <Pressable onPress={() => setConfirmRemove(true)}>
-                <Text style={styles.removeText}>ウォレットを削除する</Text>
+                <Text style={styles.removeText}>{t("settings.deleteWallet")}</Text>
               </Pressable>
             )}
           </>
@@ -249,7 +244,7 @@ export default function SettingsScreen() {
             </React.Fragment>
           ))
         )}
-        <Body>追加は「ホーム → トークン一覧」から行えます。</Body>
+        <Body>{t("settings.customTokensNote")}</Body>
       </Card>
 
       <Card>
@@ -264,7 +259,7 @@ export default function SettingsScreen() {
               value={c.cosmosChainId ?? "—"}
             />
             <InfoRow
-              label="ブロック"
+              label={t("explore.block")}
               value={
                 blocks[c.key] === undefined
                   ? t("common.loading")
@@ -275,25 +270,25 @@ export default function SettingsScreen() {
             />
             <Text style={styles.addrLabel}>RPC</Text>
             <Text style={styles.addr}>{c.evmRpcUrls[0]}</Text>
-            <Text style={styles.addrLabel}>エクスプローラー</Text>
+            <Text style={styles.addrLabel}>{t("settings.explorerLabel")}</Text>
             <Text style={styles.addr}>{c.explorerUrl}</Text>
           </View>
         ))}
         <PrimaryButton label={t("common.refresh")} onPress={loadBlocks} />
-        <Text style={styles.subHeading}>主なコントラクト</Text>
+        <Text style={styles.subHeading}>{t("settings.mainContracts")}</Text>
         {[
-          ["Infinite DEX ルーター", INFINITE_CONTRACTS.dexRouter],
-          ["Infinite DEX ファクトリー", INFINITE_CONTRACTS.dexFactory],
-          ["QL1 DEX ルーター（QomSwap）", QL1_CONTRACTS.dexRouter],
-          ["QL1 DEX ファクトリー（QomSwap）", QL1_CONTRACTS.dexFactory],
+          [t("settings.dexRouterInfinite"), INFINITE_CONTRACTS.dexRouter],
+          [t("settings.dexFactoryInfinite"), INFINITE_CONTRACTS.dexFactory],
+          [t("settings.dexRouterQl1"), QL1_CONTRACTS.dexRouter],
+          [t("settings.dexFactoryQl1"), QL1_CONTRACTS.dexFactory],
           ["st42", ST42_ADDRESS],
           ["The Guide / Fluke", INFINITE_NFTS.theGuide],
           ["ZG13", INFINITE_NFTS.zg13],
           ["Starlight", INFINITE_CONTRACTS.starlightLedger],
-          ["Bridge ルーター（QOM）", INFINITE_CONTRACTS.bridgeRouterQom],
-          ["Bridge ルーター（USDT）", INFINITE_CONTRACTS.bridgeRouterUsdt],
-          ["Bridge ルーター（USDC）", INFINITE_CONTRACTS.bridgeRouterUsdc],
-          ["Bridge ルーター（WBTC）", INFINITE_CONTRACTS.bridgeRouterWbtc],
+          [`${t("settings.bridgeRouterPrefix")}QOM${t("settings.bridgeRouterSuffix")}`, INFINITE_CONTRACTS.bridgeRouterQom],
+          [`${t("settings.bridgeRouterPrefix")}USDT${t("settings.bridgeRouterSuffix")}`, INFINITE_CONTRACTS.bridgeRouterUsdt],
+          [`${t("settings.bridgeRouterPrefix")}USDC${t("settings.bridgeRouterSuffix")}`, INFINITE_CONTRACTS.bridgeRouterUsdc],
+          [`${t("settings.bridgeRouterPrefix")}WBTC${t("settings.bridgeRouterSuffix")}`, INFINITE_CONTRACTS.bridgeRouterWbtc],
           ["QNS（.qom）", QL1_CONTRACTS.qnsDomains],
         ].map(([label, addr]) => (
           <React.Fragment key={label}>
@@ -323,12 +318,9 @@ export default function SettingsScreen() {
           </View>
         </View>
         <Body>
-          ひとつのウォレットに、無限の可能性を。
+          {t("home.catchphrase")}
           {"\n"}
-          このウォレットは 42 Chain と QL1 のための
-          銀河ヒッチハイカー向けガイドです。生命、宇宙、そして万物についての
-          答えは 42。タオル（TOWEL）もちゃんとトークン一覧に入っています。
-          慌てず、少額からどうぞ。
+          {t("settings.aboutGuide")}
         </Body>
         <Body>{t("settings.priceNote")}</Body>
       </Card>

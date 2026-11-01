@@ -137,7 +137,7 @@ export default function TokenListScreen() {
           c.address.toLowerCase() === addr.toLowerCase(),
       )
     ) {
-      setAddError("そのトークンは既に一覧にあります。");
+      setAddError(t("tokens.alreadyAdded"));
       return;
     }
     setAddBusy(true);
@@ -152,10 +152,12 @@ export default function TokenListScreen() {
       };
       await balances.addCustomToken(token);
       setAddAddress("");
-      setAddDone(`${meta.symbol}（${meta.name}）を追加しました。`);
+      setAddDone(
+        `${t("tokens.addedPrefix")}${meta.symbol}${t("tokens.addedMid")}${meta.name}${t("tokens.addedSuffix")}`,
+      );
     } catch (e) {
       setAddError(
-        `トークン情報を取得できませんでした：${e instanceof Error ? e.message : String(e)}`,
+        `${t("tokens.addFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
       setAddBusy(false);
@@ -219,7 +221,7 @@ export default function TokenListScreen() {
                   <View style={styles.detail}>
                     <Body>
                       {t("common.address")}:{" "}
-                      {r.address ?? "（このチェーンの通貨）"}
+                      {r.address ?? t("tokens.nativeParens")}
                     </Body>
                     {r.address ? (
                       <Pressable

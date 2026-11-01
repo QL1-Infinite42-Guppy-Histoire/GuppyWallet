@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Contract, isAddress } from "ethers";
 import type { ChainConfig } from "../config/chains";
+import { tr } from "../i18n";
 import { ERC20_READ_ABI, getProvider } from "./onchain";
 
 /**
@@ -55,7 +56,7 @@ export async function fetchTokenMetadata(
   address: string,
 ): Promise<{ name: string; symbol: string; decimals: number }> {
   if (!isAddress(address)) {
-    throw new Error("アドレスの形式が正しくありません（0x…）。");
+    throw new Error(tr("err.invalidAddress"));
   }
   const contract = new Contract(
     address,

@@ -12,6 +12,8 @@ import {
 } from "./controls";
 import { Card, colors } from "./ui";
 import { BRIDGE_SOURCE_CHAINS } from "../config/chains";
+import { useI18n } from "../context/LanguageContext";
+import { tr } from "../i18n";
 import { useWallet } from "../context/WalletContext";
 import { percentOfBalance, prettyAmount } from "../lib/onchain";
 import {
@@ -44,6 +46,7 @@ export default function BridgeInboundSection({
   startTx: (job: TxJob) => void;
 }) {
   const wallet = useWallet();
+  const { t } = useI18n();
   const address = wallet.info?.evmAddress ?? null;
 
   const [chainKey, setChainKey] = useState<string>("bsc");
@@ -98,7 +101,7 @@ export default function BridgeInboundSection({
       }
     } catch (e) {
       setLoadError(
-        `情報を読み込めませんでした：${e instanceof Error ? e.message : String(e)}`,
+        `${tr("bridge.loadFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,7 +148,7 @@ export default function BridgeInboundSection({
       } catch (e) {
         if (!cancelled) {
           setQuoteError(
-            `見積もりに失敗しました：${e instanceof Error ? e.message : String(e)}`,
+            `${tr("bridge.quoteFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
           );
         }
       }
@@ -159,20 +162,20 @@ export default function BridgeInboundSection({
     setSendError(null);
     if (!state || !entry) return;
     if (state.paused) {
-      setSendError("今はお休み中です。");
+      setSendError(t("bridge.pausedError"));
       return;
     }
     if (!isValidRecipient(recipient)) {
-      setSendError("送り先アドレスの形式が正しくありません。");
+      setSendError(t("bridge.badRecipient"));
       return;
     }
     if (amountRaw === null) {
-      setSendError("数量を確認してください。");
+      setSendError(t("err.checkAmount"));
       return;
     }
     if (state.minRaw !== null && amountRaw < state.minRaw) {
       setSendError(
-        `最小数量は ${state.minFormatted} ${state.tokenSymbol} です。`,
+        `${t("bridge.minPrefix")}${state.minFormatted} ${state.tokenSymbol}${t("bridge.amountSuffix")}`,
       );
       return;
     }
@@ -182,18 +185,16 @@ export default function BridgeInboundSection({
       amountRaw > state.maxRaw
     ) {
       setSendError(
-        `最大数量は ${state.maxFormatted} ${state.tokenSymbol} です。`,
+        `${t("bridge.maxPrefix")}${state.maxFormatted} ${state.tokenSymbol}${t("bridge.amountSuffix")}`,
       );
       return;
     }
     if (!quote) {
-      setSendError("見積もりの取得を待ってください。");
+      setSendError(t("bridge.waitQuote"));
       return;
     }
     if (quote.forwardRaw <= 0n) {
-      setSendError(
-        "手数料を差し引くと到着数量が0になります。数量を増やしてください。",
-      );
+      setSendError(t("bridge.zeroArrival"));
       return;
     }
     if (
@@ -201,7 +202,7 @@ export default function BridgeInboundSection({
       quote.totalNativeRaw > sourceBalances.nativeRaw
     ) {
       setSendError(
-        `手数料に使う ${chain.nativeSymbol} が足りません。`,
+        `${t("bridgeIn.feeShortPrefix")}${chain.nativeSymbol}${t("bridgeIn.feeShortSuffix")}`,
       );
       return;
     }
@@ -220,11 +221,9 @@ export default function BridgeInboundSection({
   return (
     <Card>
       <Body>
-        BSCとEthereumから、42 Chainへ通貨を送ります。届くまで少し
-        時間がかかることがあります。これは片道の送信です。初めての
-        方は、必ず少額でテストしてください。
+        {t("bridgeIn.intro")}
       </Body>
-      <Body>送り元のチェーン</Body>
+      <Body>{t("bridgeIn.sourceChain")}</Body>
       <ChipPicker
         options={BRIDGE_SOURCE_CHAINS.map((c) => ({
           key: c.key,
@@ -234,10 +233,9 @@ export default function BridgeInboundSection({
         onChange={setChainKey}
       />
       <Body>
-        手数料は {chain.nativeSymbol} でかかります（送り元のチェーンの
-        通貨です）。
+        {t("bridgeIn.feeNotePrefix")}{chain.nativeSymbol}{t("bridgeIn.feeNoteSuffix")}
       </Body>
-      <Body>トークン</Body>
+      <Body>{t("label.token")}</Body>
       <ChipPicker
         options={chainEntries
           .filter((e) => e.verified)
@@ -248,45 +246,45 @@ export default function BridgeInboundSection({
       {chainEntries
         .filter((e) => !e.verified)
         .map((e) => (
-          <InfoRow key={e.symbol} label={e.symbol} value="準備中" />
+          <InfoRow key={e.symbol} label={e.symbol} value={t("bridgeIn.preparing")} />
         ))}
       {loadError ? <Text style={styles.error}>{loadError}</Text> : null}
       {state ? (
         <>
-          <InfoRow label="トークン" value={state.tokenSymbol} />
+          <InfoRow label={t("label.token")} value={state.tokenSymbol} />
           <InfoRow
-            label="状態"
-            value={state.paused ? "お休み中" : "使えます"}
+            label={t("label.status")}
+            value={state.paused ? t("bridge.paused") : t("bridge.available")}
           />
           <InfoRow
-            label="送れる量"
-            value={`${state.minFormatted ?? "—"} 〜 ${state.maxFormatted ?? "上限なし"}`}
+            label={t("bridge.sendable")}
+            value={`${state.minFormatted ?? "—"} 〜 ${state.maxFormatted ?? t("bridge.noLimit")}`}
           />
           {sourceBalances ? (
             <>
               <InfoRow
-                label="あなたの残高"
+                label={t("bridgeIn.yourBalance")}
                 value={`${prettyAmount(formatUnits(sourceBalances.tokenRaw, state.tokenDecimals))} ${state.tokenSymbol}`}
               />
               <InfoRow
-                label={`手数料用（${chain.nativeSymbol}）`}
+                label={`${t("bridgeIn.feeBalancePrefix")}${chain.nativeSymbol}${t("bridgeIn.feeBalanceSuffix")}`}
                 value={`${prettyAmount(formatUnits(sourceBalances.nativeRaw, chain.nativeDecimals))} ${chain.nativeSymbol}`}
               />
             </>
           ) : (
-            <Body>残高を読み込めませんでした</Body>
+            <Body>{t("bridgeIn.balanceLoadFailed")}</Body>
           )}
-          <Body>送り先のアドレス（42 Chain）</Body>
+          <Body>{t("bridgeIn.recipientLabel")}</Body>
           <Field
             value={recipient}
             onChangeText={setRecipient}
             placeholder="0x…"
           />
-          <Body>数量（{state.tokenSymbol}）</Body>
+          <Body>{t("bridge.amountPrefix")}{state.tokenSymbol}{t("bridge.amountSuffixParen")}</Body>
           <Field
             value={amount}
             onChangeText={setAmount}
-            placeholder={`数量（${state.tokenSymbol}）`}
+            placeholder={`${t("bridge.amountPrefix")}${state.tokenSymbol}${t("bridge.amountSuffixParen")}`}
             keyboardType="decimal-pad"
           />
           <PercentChips
@@ -307,31 +305,31 @@ export default function BridgeInboundSection({
           {quote ? (
             <>
               <InfoRow
-                label="届く量"
+                label={t("bridge.arrival")}
                 value={`${prettyAmount(quote.forwardFormatted)} ${state.tokenSymbol}`}
               />
               <InfoRow
-                label="手数料"
+                label={t("bridge.fee")}
                 value={`${prettyAmount(quote.feeFormatted)} ${state.tokenSymbol}`}
               />
               <InfoRow
-                label="別途の手数料"
+                label={t("bridge.extraFeeRow")}
                 value={
                   quote.nativeQuoteOk && quote.totalNativeRaw > 0n
                     ? `${prettyAmount(quote.totalNativeFormatted)} ${chain.nativeSymbol}`
-                    : "なし"
+                    : t("bridge.none")
                 }
               />
             </>
           ) : amountRaw !== null ? (
-            <Body>見積もりを取得しています…</Body>
+            <Body>{t("bridge.quoting")}</Body>
           ) : null}
           {sendError ? <Text style={styles.error}>{sendError}</Text> : null}
-          <PrimaryButton label="送る" onPress={handleSend} />
-          <PrimaryButton label="更新" onPress={load} />
+          <PrimaryButton label={t("bridge.sendButton")} onPress={handleSend} />
+          <PrimaryButton label={t("common.refresh")} onPress={load} />
         </>
       ) : (
-        <Body>読み込み中…</Body>
+        <Body>{t("common.loading")}</Body>
       )}
     </Card>
   );

@@ -7,6 +7,7 @@ import {
   type Wallet,
 } from "ethers";
 import type { TxJob } from "../components/ConfirmTx";
+import { tr } from "../i18n";
 import {
   BRIDGE_PAIRS_QL1,
   BRIDGE_SOURCE_CHAINS,
@@ -369,15 +370,15 @@ export async function fetchStarlightState(): Promise<StarlightState> {
 export function flukeCommitJob(state: FlukeState): TxJob {
   const price = state.priceRaw;
   return {
-    title: "Fluke — 参加",
+    title: tr("job.flukeJoin"),
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "参加" },
-      { label: "支払い", value: `${state.priceFormatted} ZAP` },
-      { label: "コントラクト", value: FLUKE_CORE_ADDRESS },
+      { label: tr("label.action"), value: tr("job.flukeJoinAction") },
+      { label: tr("label.payment"), value: `${state.priceFormatted} ZAP` },
+      { label: tr("label.contract"), value: FLUKE_CORE_ADDRESS },
       {
-        label: "注意",
-        value: "ZAPは参加料として使われます。少額でどうぞ。",
+        label: tr("label.note"),
+        value: tr("job.flukeJoinNote"),
       },
     ],
     prepare: async (signer: Wallet) => {
@@ -408,16 +409,16 @@ export function flukeCommitJob(state: FlukeState): TxJob {
 export function flukeRevealJob(itemId: string, state: FlukeState): TxJob {
   const maxCost = state.revealPriceRaw;
   return {
-    title: "Fluke — めくる",
+    title: tr("job.flukeReveal"),
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "めくる" },
-      { label: "対象Guide", value: `#${itemId}` },
+      { label: tr("label.action"), value: tr("job.flukeRevealAction") },
+      { label: tr("label.targetGuide"), value: `#${itemId}` },
       {
-        label: "コスト上限",
+        label: tr("label.costCap"),
         value: `${state.revealPriceFormatted}（revealPrice）`,
       },
-      { label: "コントラクト", value: FLUKE_CORE_ADDRESS },
+      { label: tr("label.contract"), value: FLUKE_CORE_ADDRESS },
     ],
     prepare: async (signer: Wallet) => {
       const core = getFlukeCore(signer);
@@ -441,14 +442,14 @@ export function flukeBoostJob(
   amountFormatted: string,
 ): TxJob {
   return {
-    title: "Fluke — ブースト",
+    title: tr("job.flukeBoost"),
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "ブースト" },
-      { label: "対象Guide", value: `#${itemId}` },
-      { label: "支払い", value: `${amountFormatted} ZAP` },
-      { label: "コントラクト", value: FLUKE_CORE_ADDRESS },
-      { label: "注意", value: "ZAPは消費（バーン）されます。" },
+      { label: tr("label.action"), value: tr("job.flukeBoostAction") },
+      { label: tr("label.targetGuide"), value: `#${itemId}` },
+      { label: tr("label.payment"), value: `${amountFormatted} ZAP` },
+      { label: tr("label.contract"), value: FLUKE_CORE_ADDRESS },
+      { label: tr("label.note"), value: tr("job.flukeBoostNote") },
     ],
     prepare: async (signer: Wallet) => {
       const approval = await planExactApproval(
@@ -480,13 +481,13 @@ export function flukeBoostJob(
 
 export function flukeSettleJob(recordId: string, signature: string): TxJob {
   return {
-    title: "Fluke — 精算",
+    title: tr("job.flukeSettle"),
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "精算" },
-      { label: "レコードID", value: recordId },
-      { label: "署名", value: "公式サイト発行" },
-      { label: "コントラクト", value: FLUKE_CORE_ADDRESS },
+      { label: tr("label.action"), value: tr("job.flukeSettleAction") },
+      { label: tr("label.recordId"), value: recordId },
+      { label: tr("label.signature"), value: tr("job.flukeSignatureValue") },
+      { label: tr("label.contract"), value: FLUKE_CORE_ADDRESS },
     ],
     prepare: async (signer: Wallet) => {
       const core = getFlukeCore(signer);
@@ -506,18 +507,18 @@ export function flukeSettleJob(recordId: string, signature: string): TxJob {
 
 export function starlightRegisterJob(ids: bigint[]): TxJob {
   return {
-    title: "Starlight — Guideを登録",
+    title: tr("job.starRegister"),
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "登録" },
+      { label: tr("label.action"), value: tr("job.registerAction") },
       {
-        label: "対象Guide",
+        label: tr("label.targetGuide"),
         value: ids.map((i) => `#${i.toString()}`).join(", "),
       },
-      { label: "コントラクト", value: STARLIGHT_ADDRESS },
+      { label: tr("label.contract"), value: STARLIGHT_ADDRESS },
       {
-        label: "注意",
-        value: "登録中は42の報酬が少しずつたまります。",
+        label: tr("label.note"),
+        value: tr("job.starRegisterNote"),
       },
     ],
     prepare: async (signer: Wallet) => {
@@ -537,15 +538,15 @@ export function starlightRegisterJob(ids: bigint[]): TxJob {
 
 export function starlightClaimJob(ids: bigint[]): TxJob {
   return {
-    title: "Starlight — 報酬の受け取り",
+    title: tr("job.starClaim"),
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "報酬の受け取り" },
+      { label: tr("label.action"), value: tr("job.claimRewardsAction") },
       {
-        label: "対象Guide",
+        label: tr("label.targetGuide"),
         value: ids.map((i) => `#${i.toString()}`).join(", "),
       },
-      { label: "コントラクト", value: STARLIGHT_ADDRESS },
+      { label: tr("label.contract"), value: STARLIGHT_ADDRESS },
     ],
     prepare: async (signer: Wallet) => {
       const ledger = getStarlight(signer);
@@ -739,18 +740,17 @@ export function bridgeSendJob(args: {
   const recipient = getAddress(args.recipient);
   const recipientBytes32 = zeroPadValue(recipient, 32);
   return {
-    title: `ブリッジ — ${args.tokenSymbol} を送る`,
+    title: `${tr("job.bridgeSendPrefix")}${args.tokenSymbol}${tr("job.bridgeSendSuffix")}`,
     chain: INFINITE,
     lines: [
-      { label: "アクション", value: "別のチェーンへ送る" },
-      { label: "トークン", value: `${args.amountFormatted} ${args.tokenSymbol}` },
-      { label: "送信先チェーン", value: args.destinationLabel },
-      { label: "送り先", value: recipient },
-      { label: "ルーター", value: args.routerAddress },
+      { label: tr("label.action"), value: tr("job.bridgeActionOut") },
+      { label: tr("label.token"), value: `${args.amountFormatted} ${args.tokenSymbol}` },
+      { label: tr("label.destinationChain"), value: args.destinationLabel },
+      { label: tr("label.recipient"), value: recipient },
+      { label: tr("label.router"), value: args.routerAddress },
       {
-        label: "注意",
-        value:
-          "片道の送信です。届くまで時間がかかる場合があります。",
+        label: tr("label.note"),
+        value: tr("job.bridgeNote"),
       },
     ],
     prepare: async (signer: Wallet) => {
@@ -871,21 +871,20 @@ export function bridgeInboundSendJob(args: {
   const recipientBytes32 = zeroPadValue(recipient, 32);
   const amount = truncateToDstDecimals(args.amountRaw, args.tokenDecimals);
   return {
-    title: `ブリッジ — ${entry.symbol} を 42 Chain へ送る`,
+    title: `${tr("job.bridgeSendPrefix")}${entry.symbol}${tr("job.bridgeTo42Suffix")}`,
     chain: entry.chain,
     lines: [
-      { label: "アクション", value: "42 Chainへ送る" },
+      { label: tr("label.action"), value: tr("job.bridgeActionIn") },
       {
-        label: "トークン",
+        label: tr("label.token"),
         value: `${args.amountFormatted} ${entry.symbol}`,
       },
-      { label: "送り元", value: entry.chain.displayName },
-      { label: "送り先", value: recipient },
-      { label: "ルーター", value: entry.router },
+      { label: tr("label.sourceChain"), value: entry.chain.displayName },
+      { label: tr("label.recipient"), value: recipient },
+      { label: tr("label.router"), value: entry.router },
       {
-        label: "注意",
-        value:
-          "片道の送信です。届くまで時間がかかる場合があります。",
+        label: tr("label.note"),
+        value: tr("job.bridgeNote"),
       },
     ],
     prepare: async (signer: Wallet) => {

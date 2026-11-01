@@ -2,6 +2,7 @@ import { formatUnits } from "ethers";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useBalances } from "../context/BalancesContext";
+import { useI18n } from "../context/LanguageContext";
 import { priceOf } from "../lib/prices";
 import { prettyAmount } from "../lib/onchain";
 import { TokenIcon, colors } from "./ui";
@@ -39,6 +40,7 @@ export function BalanceResults({
   chainKey: "infinite" | "ql1";
 }) {
   const { results, tokenResults, prices, ql1Prices } = useBalances();
+  const { t } = useI18n();
   if (!results) return null;
 
   const rows: RowData[] = [];
@@ -116,11 +118,11 @@ export function BalanceResults({
       ))}
       {failedChains.map((name) => (
         <Text key={name} style={styles.note}>
-          {name} の残高を読み込めませんでした
+          {t("balance.loadFailedPrefix")}{name}{t("balance.loadFailedSuffix")}
         </Text>
       ))}
       {anyTokenError ? (
-        <Text style={styles.note}>一部のトークンを読み込めませんでした</Text>
+        <Text style={styles.note}>{t("balance.someFailed")}</Text>
       ) : null}
     </View>
   );

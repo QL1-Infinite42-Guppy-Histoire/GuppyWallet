@@ -100,7 +100,7 @@ export default function NftScreen() {
     try {
       id = BigInt(idText.trim());
     } catch {
-      setGuideError("トークンID（数値）を入力してください。");
+      setGuideError(t("nftx.idError"));
       return;
     }
     setGuideBusy(true);
@@ -109,7 +109,7 @@ export default function NftScreen() {
     } catch (e) {
       setGuideItem(null);
       setGuideError(
-        `取得できませんでした：${e instanceof Error ? e.message : String(e)}`,
+        `${t("nftx.fetchFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
       setGuideBusy(false);
@@ -178,11 +178,11 @@ export default function NftScreen() {
                   />
                   <InfoRow
                     label={t("nft.totalSupply")}
-                    value={n.totalSupply ?? "わかりません"}
+                    value={n.totalSupply ?? t("nftx.unknown")}
                   />
                   <InfoRow
                     label={t("nft.ownedCount")}
-                    value={n.owned ?? "ウォレットがありません"}
+                    value={n.owned ?? t("common.noWallet")}
                   />
                 </React.Fragment>
               ))
@@ -230,11 +230,11 @@ export default function NftScreen() {
             {starlight ? (
               <>
                 <InfoRow
-                  label="現在の期間"
+                  label={t("star.period")}
                   value={starlight.currentEpoch ?? "—"}
                 />
                 <InfoRow
-                  label="これまでの合計"
+                  label={t("nftx.totalCollected")}
                   value={
                     starlight.totalInFormatted
                       ? `${starlight.totalInFormatted} 42`
@@ -242,13 +242,13 @@ export default function NftScreen() {
                   }
                 />
                 <InfoRow
-                  label="登録受付"
+                  label={t("star.registration")}
                   value={
                     starlight.registerPaused === null
                       ? "—"
                       : starlight.registerPaused
-                        ? "停止中"
-                        : "受付中"
+                        ? t("star.paused")
+                        : t("star.open")
                   }
                 />
               </>
@@ -260,11 +260,11 @@ export default function NftScreen() {
 
           {address && myGuides.length > 0 ? (
             <Card>
-              <Heading>あなたの Guide</Heading>
+              <Heading>{t("nftx.yourGuides")}</Heading>
               {myGuides.map((g) => (
                 <PrimaryButton
                   key={g.tokenId}
-                  label={`#${g.tokenId} の詳細を見る`}
+                  label={`${t("nftx.viewDetailPrefix")}#${g.tokenId}${t("nftx.viewDetailSuffix")}`}
                   onPress={() => {
                     setGuideIdInput(g.tokenId);
                     loadGuide(g.tokenId);
@@ -275,15 +275,15 @@ export default function NftScreen() {
           ) : null}
 
           <Card>
-            <Heading>Guideを調べる</Heading>
+            <Heading>{t("nftx.lookupHeading")}</Heading>
             <Field
               value={guideIdInput}
               onChangeText={setGuideIdInput}
-              placeholder="トークンID（数値）"
+              placeholder={t("nftx.idPlaceholder")}
               keyboardType="decimal-pad"
             />
             <PrimaryButton
-              label="調べる"
+              label={t("qns.lookup")}
               onPress={() => loadGuide(guideIdInput)}
               loading={guideBusy}
             />
@@ -292,7 +292,7 @@ export default function NftScreen() {
             ) : null}
             {guideItem ? (
               <>
-                <InfoRow label="所有者" value={guideItem.owner} />
+                <InfoRow label={t("nftx.owner")} value={guideItem.owner} />
                 <InfoRow
                   label={t("guide.score")}
                   value={guideItem.scoreFormatted ?? "—"}
@@ -334,7 +334,7 @@ export default function NftScreen() {
                     />
                     {guideItem.mine && !guideItem.starlight.registered ? (
                       <PrimaryButton
-                        label="Starlightに登録する"
+                        label={t("fluke.registerButton")}
                         onPress={() =>
                           startTx(starlightRegisterJob([BigInt(guideItem.id)]))
                         }
@@ -342,7 +342,7 @@ export default function NftScreen() {
                     ) : null}
                     {guideItem.mine && guideItem.starlight.registered ? (
                       <PrimaryButton
-                        label="報酬を受け取る"
+                        label={t("stake.claimTitle")}
                         onPress={() =>
                           startTx(starlightClaimJob([BigInt(guideItem.id)]))
                         }
@@ -371,7 +371,7 @@ export default function NftScreen() {
             ) : (
               domains.map((d) => (
                 <Body key={d.tokenId}>
-                  {d.name ?? `（名前未取得）`} — ID {d.tokenId.slice(0, 12)}…
+                  {d.name ?? t("nftx.nameUnknown")} — ID {d.tokenId.slice(0, 12)}…
                 </Body>
               ))
             )}
@@ -393,7 +393,7 @@ export default function NftScreen() {
             {qnsError ? <Text style={styles.error}>{qnsError}</Text> : null}
             {qnsResult ? (
               <>
-                <InfoRow label="ドメイン" value={qnsResult.name} />
+                <InfoRow label={t("nftx.domainLabel")} value={qnsResult.name} />
                 <InfoRow
                   label={t("qns.owner")}
                   value={qnsResult.owner ?? t("qns.available")}

@@ -10,7 +10,9 @@ import {
   Text,
   View,
 } from "react-native";
+import { useI18n } from "../context/LanguageContext";
 import { useWallet } from "../context/WalletContext";
+import { tr } from "../i18n";
 import type { ProviderChainLike } from "../lib/onchain";
 import {
   authenticate,
@@ -43,13 +45,19 @@ export interface TxChainLike extends ProviderChainLike {
   nativeSymbol: string;
 }
 
-/** Line labels that are technical detail, shown behind the toggle. */
+/** Line labels that are technical detail, shown behind the toggle.
+ *  Job builders localize labels, so both languages are listed. */
 const DETAIL_LABELS = new Set([
   "コントラクト",
   "ルーター",
   "ペアコントラクト",
   "バリデータアドレス",
   "署名",
+  "Contract",
+  "Router",
+  "Pair contract",
+  "Validator address",
+  "Signature",
 ]);
 
 export interface TxLine {
@@ -85,6 +93,7 @@ export function ConfirmTxModal({
   onClose: () => void;
 }) {
   const wallet = useWallet();
+  const { t } = useI18n();
   const [phase, setPhase] = useState<Phase>("locked");
   const [prepared, setPrepared] = useState<PreparedTx | null>(null);
   const [hashes, setHashes] = useState<string[]>([]);
@@ -145,11 +154,9 @@ export function ConfirmTxModal({
     // Signing-time biometric gate (auth model #2): authenticate fresh,
     // immediately before executing — regardless of session unlock state.
     setAuthError(null);
-    const ok = await authenticate("送信の確認");
+    const ok = await authenticate(tr("confirm.authReasonSend"));
     if (!ok) {
-      setAuthError(
-        "指紋認証ができなかったため、送信をやめました。もう一度お試しください。",
-      );
+      setAuthError(tr("confirm.authFailed"));
       return; // stay in review; nothing was sent
     }
     setPhase("sending");
@@ -174,7 +181,7 @@ export function ConfirmTxModal({
           <Text style={styles.title}>{job.title}</Text>
           <ScrollView style={styles.scroll}>
             <View style={styles.lineRow}>
-              <Text style={styles.lineLabel}>チェーン</Text>
+              <Text style={styles.lineLabel}>{t("confirm.chain")}</Text>
               <Text style={styles.lineValue}>{chain.displayName}</Text>
             </View>
             {job.lines
@@ -187,7 +194,7 @@ export function ConfirmTxModal({
               ))}
             {phase === "review" || phase === "sending" || phase === "done" ? (
               <View style={styles.lineRow}>
-                <Text style={styles.lineLabel}>手数料の目安</Text>
+                <Text style={styles.lineLabel}>{t("confirm.feeEstimate")}</Text>
                 <Text style={styles.lineValue}>
                   {prepared?.gasEstimateText ?? "—"}
                 </Text>
@@ -197,7 +204,7 @@ export function ConfirmTxModal({
               <>
                 <Pressable onPress={() => setShowDetails((v) => !v)}>
                   <Text style={styles.detailToggle}>
-                    {showDetails ? "詳細を閉じる" : "詳細を見る"}
+                    {showDetails ? t("confirm.hideDetails") : t("confirm.showDetails")}
                   </Text>
                 </Pressable>
                 {showDetails
@@ -215,33 +222,33 @@ export function ConfirmTxModal({
             {firstSend && phase !== "done" ? (
               <View style={styles.firstSend}>
                 <Text style={styles.firstSendText}>
-                  ⚠️ 初めての送信です。間違いを防ぐため、まずは少額でテストしてください。
+                  {t("confirm.firstSend")}
                 </Text>
               </View>
             ) : null}
 
             {phase === "locked" ? (
               <Text style={styles.note}>
-                送るには、指紋などでロックを解除してください。
+                {t("confirm.lockedNote")}
               </Text>
             ) : null}
             {phase === "preparing" ? (
               <View style={styles.center}>
                 <ActivityIndicator color={colors.accent} />
-                <Text style={styles.note}>手数料を計算しています…</Text>
+                <Text style={styles.note}>{t("confirm.preparing")}</Text>
               </View>
             ) : null}
             {phase === "sending" ? (
               <View style={styles.center}>
                 <ActivityIndicator color={colors.accent} />
                 <Text style={styles.note}>
-                  送信しました。結果が反映されるまで少しお待ちください…
+                  {t("confirm.sending")}
                 </Text>
               </View>
             ) : null}
             {phase === "done" ? (
               <>
-                <Text style={styles.success}>✅ 送信が完了しました</Text>
+                <Text style={styles.success}>{t("confirm.done")}</Text>
                 {hashes.map((h) => (
                   <Pressable
                     key={h}
@@ -250,14 +257,14 @@ export function ConfirmTxModal({
                     }
                   >
                     <Text style={styles.hash}>
-                      取引の詳細を見る ↗
+                      {t("confirm.viewTx")}
                     </Text>
                   </Pressable>
                 ))}
               </>
             ) : null}
             {phase === "error" ? (
-              <Text style={styles.errorText}>送信できませんでした：{error}</Text>
+              <Text style={styles.errorText}>{t("confirm.failedPrefix")}{error}</Text>
             ) : null}
             {phase === "review" && authError ? (
               <Text style={styles.errorText}>{authError}</Text>
@@ -266,12 +273,12 @@ export function ConfirmTxModal({
 
           {phase === "locked" ? (
             <Pressable style={styles.button} onPress={handleUnlock}>
-              <Text style={styles.buttonText}>ロックを解除する</Text>
+              <Text style={styles.buttonText}>{t("confirm.unlockButton")}</Text>
             </Pressable>
           ) : null}
           {phase === "review" ? (
             <Pressable style={styles.button} onPress={handleConfirm}>
-              <Text style={styles.buttonText}>この内容で送る</Text>
+              <Text style={styles.buttonText}>{t("confirm.confirmButton")}</Text>
             </Pressable>
           ) : null}
           <Pressable
@@ -280,7 +287,7 @@ export function ConfirmTxModal({
             disabled={phase === "sending"}
           >
             <Text style={styles.cancelText}>
-              {phase === "done" ? "閉じる" : "キャンセル"}
+              {phase === "done" ? t("common.close") : t("confirm.cancel")}
             </Text>
           </Pressable>
         </View>

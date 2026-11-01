@@ -15,6 +15,8 @@ import {
 } from "./controls";
 import { Card, colors } from "./ui";
 import { useBalances } from "../context/BalancesContext";
+import { useI18n } from "../context/LanguageContext";
+import { tr } from "../i18n";
 import { useWallet } from "../context/WalletContext";
 import { percentOfBalance, prettyAmount } from "../lib/onchain";
 import {
@@ -38,6 +40,7 @@ import {
  */
 export default function BridgeSection() {
   const wallet = useWallet();
+  const { t } = useI18n();
   const balances = useBalances();
   const address = wallet.info?.evmAddress ?? null;
   const { startTx, modal } = useTxFlow();
@@ -72,7 +75,7 @@ export default function BridgeSection() {
       );
     } catch (e) {
       setLoadError(
-        `情報を読み込めませんでした：${e instanceof Error ? e.message : String(e)}`,
+        `${tr("bridge.loadFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -115,7 +118,7 @@ export default function BridgeSection() {
       } catch (e) {
         if (!cancelled) {
           setQuoteError(
-            `見積もりに失敗しました：${e instanceof Error ? e.message : String(e)}`,
+            `${tr("bridge.quoteFailedPrefix")}${e instanceof Error ? e.message : String(e)}`,
           );
         }
       }
@@ -143,41 +146,39 @@ export default function BridgeSection() {
     setSendError(null);
     if (!state || !entry) return;
     if (state.paused) {
-      setSendError("今はお休み中です。");
+      setSendError(t("bridge.pausedError"));
       return;
     }
     if (domain === null) {
-      setSendError("送信先チェーンを選んでください。");
+      setSendError(t("bridge.selectDest"));
       return;
     }
     if (!isValidRecipient(recipient)) {
-      setSendError("送り先アドレスの形式が正しくありません。");
+      setSendError(t("bridge.badRecipient"));
       return;
     }
     if (amountRaw === null) {
-      setSendError("数量を確認してください。");
+      setSendError(t("err.checkAmount"));
       return;
     }
     if (state.minRaw !== null && amountRaw < state.minRaw) {
       setSendError(
-        `最小数量は ${state.minFormatted} ${state.tokenSymbol} です。`,
+        `${t("bridge.minPrefix")}${state.minFormatted} ${state.tokenSymbol}${t("bridge.amountSuffix")}`,
       );
       return;
     }
     if (state.maxRaw !== null && state.maxFormatted !== null && amountRaw > state.maxRaw) {
       setSendError(
-        `最大数量は ${state.maxFormatted} ${state.tokenSymbol} です。`,
+        `${t("bridge.maxPrefix")}${state.maxFormatted} ${state.tokenSymbol}${t("bridge.amountSuffix")}`,
       );
       return;
     }
     if (!quote) {
-      setSendError("見積もりの取得を待ってください。");
+      setSendError(t("bridge.waitQuote"));
       return;
     }
     if (quote.forwardRaw <= 0n) {
-      setSendError(
-        "手数料を差し引くと到着数量が0になります。数量を増やしてください。",
-      );
+      setSendError(t("bridge.zeroArrival"));
       return;
     }
     startTx(
@@ -199,11 +200,11 @@ export default function BridgeSection() {
     <>
       {modal}
       <Card>
-        <Heading>ブリッジ</Heading>
+        <Heading>{t("bridge.heading")}</Heading>
         <SegmentedTabs
           options={[
-            { key: "out", label: "42 Chainから送る" },
-            { key: "in", label: "42 Chainへ送る" },
+            { key: "out", label: t("bridge.tabOut") },
+            { key: "in", label: t("bridge.tabIn") },
           ]}
           value={direction}
           onChange={(k) => setDirection(k as "out" | "in")}
@@ -216,10 +217,7 @@ export default function BridgeSection() {
       <>
       <Card>
         <Body>
-          別のチェーンへ通貨を送ります。届くまで少し時間が
-          かかることがあります。これは片道の送信です。送ったあとの
-          状況は、完了画面のリンクから確認できます。初めての方は、
-          必ず少額でテストしてください。
+          {t("bridge.intro")}
         </Body>
         <ChipPicker
           options={BRIDGE_ROUTERS_INFINITE.map((r) => ({
@@ -232,24 +230,24 @@ export default function BridgeSection() {
         {loadError ? <Text style={styles.error}>{loadError}</Text> : null}
         {state ? (
           <>
-            <InfoRow label="トークン" value={state.tokenSymbol} />
+            <InfoRow label={t("label.token")} value={state.tokenSymbol} />
             <InfoRow
-              label="状態"
-              value={state.paused ? "お休み中" : "使えます"}
+              label={t("label.status")}
+              value={state.paused ? t("bridge.paused") : t("bridge.available")}
             />
             <InfoRow
-              label="手数料"
+              label={t("bridge.fee")}
               value={
                 state.feeFlatRaw !== null && state.feeFlatRaw > 0n
-                  ? `固定 ${prettyAmount(state.feeFlatFormatted ?? "")} ${state.tokenSymbol}`
-                  : "なし"
+                  ? `${t("bridge.feeFlatPrefix")}${prettyAmount(state.feeFlatFormatted ?? "")} ${state.tokenSymbol}`
+                  : t("bridge.none")
               }
             />
             <InfoRow
-              label="送れる量"
-              value={`${state.minFormatted ?? "—"} 〜 ${state.maxFormatted ?? "上限なし"}`}
+              label={t("bridge.sendable")}
+              value={`${state.minFormatted ?? "—"} 〜 ${state.maxFormatted ?? t("bridge.noLimit")}`}
             />
-            <Body>送信先チェーン</Body>
+            <Body>{t("label.destinationChain")}</Body>
             <ChipPicker
               options={state.destinations.map((d) => ({
                 key: String(d.domain),
@@ -262,24 +260,24 @@ export default function BridgeSection() {
             />
             {domain !== null ? (
               <InfoRow
-                label="別途かかる手数料（目安）"
+                label={t("bridge.extraFee")}
                 value={`${prettyAmount(
                   state.destinations.find((d) => d.domain === domain)
                     ?.totalNativeFormatted ?? "—",
                 )} 42`}
               />
             ) : null}
-            <Body>送り先のアドレス</Body>
+            <Body>{t("bridge.recipientLabel")}</Body>
             <Field
               value={recipient}
               onChangeText={setRecipient}
               placeholder="0x…"
             />
-            <Body>数量（{state.tokenSymbol}）</Body>
+            <Body>{t("bridge.amountPrefix")}{state.tokenSymbol}{t("bridge.amountSuffixParen")}</Body>
             <Field
               value={amount}
               onChangeText={setAmount}
-              placeholder={`数量（${state.tokenSymbol}）`}
+              placeholder={`${t("bridge.amountPrefix")}${state.tokenSymbol}${t("bridge.amountSuffixParen")}`}
               keyboardType="decimal-pad"
             />
             <PercentChips
@@ -298,35 +296,34 @@ export default function BridgeSection() {
             {quote ? (
               <>
                 <InfoRow
-                  label="届く量"
+                  label={t("bridge.arrival")}
                   value={`${prettyAmount(quote.forwardFormatted)} ${state.tokenSymbol}`}
                 />
                 <InfoRow
-                  label="手数料"
+                  label={t("bridge.fee")}
                   value={`${prettyAmount(quote.feeFormatted)} ${state.tokenSymbol}`}
                 />
                 <InfoRow
-                  label="別途の手数料"
+                  label={t("bridge.extraFeeRow")}
                   value={`${prettyAmount(quote.totalNativeFormatted)} 42`}
                 />
               </>
             ) : amountRaw !== null ? (
-              <Body>見積もりを取得しています…</Body>
+              <Body>{t("bridge.quoting")}</Body>
             ) : null}
             {sendError ? <Text style={styles.error}>{sendError}</Text> : null}
-            <PrimaryButton label="送る" onPress={handleSend} />
-            <PrimaryButton label="更新" onPress={load} />
+            <PrimaryButton label={t("bridge.sendButton")} onPress={handleSend} />
+            <PrimaryButton label={t("common.refresh")} onPress={load} />
           </>
         ) : (
-          <Body>読み込み中…</Body>
+          <Body>{t("common.loading")}</Body>
         )}
       </Card>
 
       <Card>
-        <Heading>QL1から送る（準備中）</Heading>
+        <Heading>{t("bridge.qomOutHeading")}</Heading>
         <Body>
-          QL1から送る方法は、ちゃんと届くか少額で試してから
-          使えるようにします。今はまだ送れません。
+          {t("bridge.qomOutBody")}
         </Body>
       </Card>
       </>

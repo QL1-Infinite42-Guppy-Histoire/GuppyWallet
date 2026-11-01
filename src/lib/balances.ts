@@ -1,5 +1,6 @@
 import { JsonRpcProvider, formatUnits, isAddress } from "ethers";
 import { CHAINS, type ChainConfig } from "../config/chains";
+import { tr } from "../i18n";
 
 /**
  * Read-only balance fetching.
@@ -65,7 +66,7 @@ async function fetchOne(chain: ChainConfig, address: string): Promise<BalanceRes
 export async function fetchNativeBalances(address: string): Promise<BalanceResult[]> {
   const trimmed = address.trim();
   if (!isValidEvmAddress(trimmed)) {
-    throw new Error("EVMアドレス（0x…）の形式ではありません。");
+    throw new Error(tr("err.invalidEvmAddress"));
   }
   return Promise.all(CHAINS.map((chain) => fetchOne(chain, trimmed)));
 }

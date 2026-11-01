@@ -1,5 +1,6 @@
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
+import { tr } from "../i18n";
 
 /**
  * Wallet secret storage.
@@ -48,7 +49,7 @@ export async function isBiometricAvailable(): Promise<boolean> {
 
 /** Gate a sensitive action behind device biometrics / device PIN. */
 export async function authenticate(
-  reason = "ウォレットのロックを解除",
+  reason = tr("auth.unlockWallet"),
 ): Promise<boolean> {
   const result = await LocalAuthentication.authenticateAsync({
     promptMessage: reason,

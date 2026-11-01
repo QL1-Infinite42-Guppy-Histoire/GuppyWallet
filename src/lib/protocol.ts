@@ -4,6 +4,7 @@ import {
   INFINITE_NFTS,
   INFINITE_TOKENS,
 } from "../config/chains";
+import { tr } from "../i18n";
 import { getProvider } from "./onchain";
 import { valoperFromHex } from "./walletCrypto";
 
@@ -81,7 +82,7 @@ export async function fetchValidators(): Promise<{
     const operator: string = v.operatorAddress ?? v[0];
     const description = v.description ?? v[6];
     return {
-      moniker: description?.moniker ?? description?.[0] ?? "(名称なし)",
+      moniker: description?.moniker ?? description?.[0] ?? tr("protocol.noName"),
       operatorAddress: operator,
       valoper: operator.startsWith("0x")
         ? valoperFromHex(operator, "infinitevaloper")

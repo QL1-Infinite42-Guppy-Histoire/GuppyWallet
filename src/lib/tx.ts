@@ -4,6 +4,7 @@ import {
   type TransactionRequest,
   type Wallet,
 } from "ethers";
+import { tr } from "../i18n";
 import { ERC20_WRITE_ABI } from "./onchain";
 
 /**
@@ -35,9 +36,9 @@ export async function gasCostNative(
   try {
     const feeData = await signer.provider!.getFeeData();
     const price = feeData.gasPrice ?? feeData.maxFeePerGas ?? 0n;
-    return `${formatUnits(gasUnits * price, 18)} ${nativeSymbol}（目安）`;
+    return `${formatUnits(gasUnits * price, 18)} ${nativeSymbol}${tr("tx.feeSuffix")}`;
   } catch {
-    return "取得できませんでした";
+    return tr("tx.feeUnavailable");
   }
 }
 

@@ -9,6 +9,7 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
+import { tr } from "../i18n";
 import { getProvider, type ProviderChainLike } from "../lib/onchain";
 import {
   cosmosAddressFromPrivateKey,
@@ -132,9 +133,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const importPhrase = useCallback(
     async (phrase: string) => {
       if (!isValidPhrase(phrase)) {
-        throw new Error(
-          "リカバリーフレーズが正しくありません。単語の並びを確認してください。",
-        );
+        throw new Error(tr("err.badPhrase"));
       }
       setBusy(true);
       try {
@@ -155,7 +154,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const importPrivateKey = useCallback(
     async (key: string) => {
       if (!isValidPrivateKey(key)) {
-        throw new Error("秘密鍵の形式が正しくありません。");
+        throw new Error(tr("err.badPrivateKey"));
       }
       setBusy(true);
       try {
@@ -175,7 +174,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     const stored = await loadWalletSecret();
     if (!stored) return false;
-    const ok = await authenticate("ウォレットのロックを解除");
+    const ok = await authenticate(tr("auth.unlockWallet"));
     if (!ok) return false;
     try {
       const pk =

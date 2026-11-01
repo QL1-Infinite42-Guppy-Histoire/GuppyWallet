@@ -9,6 +9,8 @@ import {
   View,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
+import { useI18n } from "../context/LanguageContext";
+import type { I18nKey } from "../i18n";
 import { useWallet } from "../context/WalletContext";
 import { colors } from "./ui";
 
@@ -22,11 +24,11 @@ import { colors } from "./ui";
 
 type RecvKind = "evm-infinite" | "evm-ql1" | "cosmos-infinite" | "cosmos-ql1";
 
-const OPTIONS: { key: RecvKind; label: string }[] = [
+const OPTIONS: { key: RecvKind; label?: string; labelKey?: I18nKey }[] = [
   { key: "evm-infinite", label: "42 Chain" },
   { key: "evm-ql1", label: "QL1" },
-  { key: "cosmos-infinite", label: "42 Chain（別形式）" },
-  { key: "cosmos-ql1", label: "QL1（別形式）" },
+  { key: "cosmos-infinite", labelKey: "receive.format42" },
+  { key: "cosmos-ql1", labelKey: "receive.formatQl1" },
 ];
 
 export function ReceiveModal({
@@ -37,6 +39,7 @@ export function ReceiveModal({
   onClose: () => void;
 }) {
   const wallet = useWallet();
+  const { t } = useI18n();
   const [kind, setKind] = useState<RecvKind>("evm-infinite");
   const [copied, setCopied] = useState(false);
 
@@ -61,7 +64,7 @@ export function ReceiveModal({
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           <View style={styles.headerRow}>
-            <Text style={styles.title}>受取</Text>
+            <Text style={styles.title}>{t("home.receive")}</Text>
             <Pressable onPress={onClose} hitSlop={10}>
               <Text style={styles.closeText}>✕</Text>
             </Pressable>
@@ -69,8 +72,7 @@ export function ReceiveModal({
           <ScrollView style={styles.scroll}>
             {!info || !address ? (
               <Text style={styles.note}>
-                ウォレットを作成／インポートすると、受取用アドレスとQRコードが
-                ここに表示されます。
+                {t("receive.noWalletBody")}
               </Text>
             ) : (
               <>
@@ -89,7 +91,7 @@ export function ReceiveModal({
                             active && styles.chipTextActive,
                           ]}
                         >
-                          {o.label}
+                          {o.labelKey ? t(o.labelKey) : o.label}
                         </Text>
                       </Pressable>
                     );
@@ -97,8 +99,8 @@ export function ReceiveModal({
                 </View>
                 <Text style={styles.note}>
                   {kind.startsWith("evm")
-                    ? "このアドレスは 42 Chain / QL1 のどちらにも使えます。送るチェーンを間違えないでください。"
-                    : "別形式のアドレスです。ふつうの送金には、上の「42 Chain / QL1」のアドレスを使ってください。"}
+                    ? t("receive.sameAddressNote")
+                    : t("receive.altFormatNote")}
                 </Text>
                 <View style={styles.qrWrap}>
                   <QRCode
@@ -108,11 +110,11 @@ export function ReceiveModal({
                     backgroundColor="#FFFFFF"
                   />
                 </View>
-                <Text style={styles.addrLabel}>アドレス</Text>
+                <Text style={styles.addrLabel}>{t("common.address")}</Text>
                 <Text style={styles.addr}>{address}</Text>
                 <Pressable style={styles.copyButton} onPress={handleCopy}>
                   <Text style={styles.copyButtonText}>
-                    {copied ? "コピーしました ✓" : "アドレスをコピー"}
+                    {copied ? t("receive.copied") : t("receive.copy")}
                   </Text>
                 </Pressable>
               </>
