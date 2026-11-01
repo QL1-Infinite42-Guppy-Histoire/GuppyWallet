@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   Body,
   ChipPicker,
@@ -9,6 +9,7 @@ import {
   PrimaryButton,
 } from "../components/controls";
 import { GuppyMascot } from "../components/GuppyMascot";
+import { GUPPY_ART } from "../components/guppyArt";
 import {
   Card,
   DontPanic,
@@ -310,6 +311,11 @@ export default function SettingsScreen() {
 
       <Card>
         <Heading>{t("settings.about")}</Heading>
+        <Image
+          source={GUPPY_ART}
+          style={styles.aboutArt}
+          resizeMode="cover"
+        />
         <DontPanic compact tone="card" />
         <View style={styles.aboutRow}>
           <GuppyMascot size={58} />
@@ -337,6 +343,7 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  aboutArt: { width: "100%", height: 120, borderRadius: 14 },
   aboutRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   aboutNameCol: { flex: 1, gap: 2 },
   aboutName: {

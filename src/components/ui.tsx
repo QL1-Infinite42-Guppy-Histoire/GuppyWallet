@@ -179,11 +179,15 @@ const NEBULAE: {
   rgb: string;
   peak: number;
 }[] = [
-  { fx: 0.88, fy: 0.1, size: 560, rgb: "155,53,255", peak: 0.5 }, // purple, top right
-  { fx: 0.05, fy: 0.34, size: 620, rgb: "22,139,255", peak: 0.46 }, // blue, left middle
-  { fx: 0.95, fy: 0.72, size: 540, rgb: "255,77,121", peak: 0.4 }, // pink, bottom right
-  { fx: 0.18, fy: 0.92, size: 500, rgb: "48,223,255", peak: 0.34 }, // cyan, bottom left
-  { fx: 0.55, fy: 0.5, size: 680, rgb: "90,60,220", peak: 0.36 }, // violet heart
+  // Palette retuned 2026-11-01 toward the guppy artwork's hues
+  // (sampled: deep indigo #1C2248/#2A366E, indigo-violet #49428C,
+  // lavender #896EC2/#A490D8, with magenta-pink tail light and cyan
+  // crystal glints) so backdrop and artwork read as one world.
+  { fx: 0.88, fy: 0.1, size: 560, rgb: "139,92,246", peak: 0.5 }, // violet, top right
+  { fx: 0.05, fy: 0.34, size: 620, rgb: "76,84,214", peak: 0.46 }, // indigo, left middle
+  { fx: 0.95, fy: 0.72, size: 540, rgb: "217,70,190", peak: 0.4 }, // magenta, bottom right
+  { fx: 0.18, fy: 0.92, size: 500, rgb: "56,200,248", peak: 0.34 }, // cyan glint, bottom left
+  { fx: 0.55, fy: 0.5, size: 680, rgb: "104,58,205", peak: 0.36 }, // violet heart
 ];
 
 function buildStars(width: number, height: number): StarSpec[] {
@@ -260,7 +264,7 @@ export const GalaxyBackground = React.memo(function GalaxyBackground() {
   return (
     <View style={styles.galaxy} pointerEvents="none">
       <LinearGradient
-        colors={["#03040C", "#050914", "#0A1230", "#0E1748"]}
+        colors={["#02030A", "#0B1124", "#1C2248", "#241B54"]}
         locations={[0, 0.35, 0.72, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0.7, y: 1 }}
@@ -279,10 +283,10 @@ export const GalaxyBackground = React.memo(function GalaxyBackground() {
       >
         <LinearGradient
           colors={[
-            "rgba(150,175,255,0)",
-            "rgba(150,175,255,0.13)",
+            "rgba(164,144,216,0)",
+            "rgba(148,150,255,0.13)",
             "rgba(190,160,255,0.10)",
-            "rgba(150,175,255,0)",
+            "rgba(164,144,216,0)",
           ]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}

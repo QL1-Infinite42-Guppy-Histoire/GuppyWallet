@@ -14,6 +14,7 @@ Android 先行で、React Native + Expo + TypeScript で作っています（iPh
 - **現在版： v0.1.0** — APK は [Releases](https://github.com/nepicobsv-hash/GuppyWallet/releases) からダウンロード可能
 - **ビルド：** GitHub Actions が標準経路。master へ push するたびに APK がビルドされ、成果物（Artifacts）に上がります（署名は EAS 管理のものと同一＝上書き更新可能）
 - **状態：** 主要機能は実装済みでメインネット動作。最新ビルド（改名＋グッピーマスコット）は端末での最終確認待ち
+- **UI：** ユーザー提供の「宇宙グッピー」アートをホームのヒーロー／ようこそ画面／設定に採用し、銀河背景の色味もアートの藍・紫系に合わせて調整
 - **残タスク：** MT 回答待ち4件（下記セクション）と、既知の制約の解消
 
 ## できること（実装済み・メインネットで動作）
