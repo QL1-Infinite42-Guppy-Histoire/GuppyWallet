@@ -454,6 +454,76 @@ const ja = {
   "bridgeIn.gasUsdUnavailable":
     "ドル換算が取得できませんでした（ガス代の目安チェックは省略しています）",
 
+  // ---- Cross-chain deposit (ChangeNOW via proxy) ----
+  "deposit.entryTitle": "他のチェーンから入金",
+  "deposit.entryBody":
+    "ステラ（XLM）などを送ると、BNBに替えてこのウォレットに届きます。",
+  "deposit.openButton": "入金をはじめる",
+  "deposit.heading": "他のチェーンから入金",
+  "deposit.back": "もどる",
+  "deposit.preparingBody":
+    "この機能は準備中です。交換サービスとの連携ができたら使えるようになります。",
+  "deposit.intro":
+    "ステラ（XLM）を、交換サービス（ChangeNOW）を通してBNBに替え、あなたのBSCアドレスへ届けます。XLMは、あなたの別のウォレットから送ります。このアプリがあなたのXLMを扱うことはありません。",
+  "deposit.sourceLabel": "送る通貨",
+  "deposit.sourceXlm": "XLM（ステラ）",
+  "deposit.sourceSolSoon": "SOL（対応予定）",
+  "deposit.amountXlm": "数量（XLM）",
+  "deposit.usdApproxPrefix": "目安：約 $",
+  "deposit.usdApproxSuffix": "",
+  "deposit.minLoading": "最低額を確認しています…",
+  "deposit.minLoadFailed": "最低額を確認できませんでした",
+  "deposit.minPrefix": "最低 ",
+  "deposit.minSuffix": " XLM から送れます",
+  "deposit.tooSmallPrefix": "量が足りません。最低 ",
+  "deposit.tooSmallSuffix": " XLM 以上にしてください。",
+  "deposit.expectedLabel": "届く量の目安",
+  "deposit.expectedSuffix": " BNB",
+  "deposit.estimateFailed": "見積もりが取得できませんでした",
+  "deposit.keepGasNote":
+    "届いたBNBの一部は、このあと42 Chainへ送るときのガス代として残ります。",
+  "deposit.rateNote":
+    "金額は目安です。実際に届く量は、入金が届いた時点のレートで決まります。",
+  "deposit.payoutNote": "届け先は、このウォレットのアドレス（BSC）です。",
+  "deposit.createButton": "手続きをはじめる",
+  "deposit.creating": "作成しています…",
+  "deposit.createFailedPrefix": "作成できませんでした：",
+  "deposit.sendHeading": "XLMの送り先",
+  "deposit.sendIntroPrefix": "あなたのステラのウォレットから、",
+  "deposit.sendIntroSuffix": " XLM を、次の送り先へ送ってください。",
+  "deposit.amountToSend": "送る量",
+  "deposit.addressLabel": "送り先アドレス",
+  "deposit.memoLabel": "メモ",
+  "deposit.copy": "コピー",
+  "deposit.copied": "コピーしました",
+  "deposit.memoWarning":
+    "メモは必ず入れてください。メモがないと、送ったXLMがあなたのもとに届かず、このアプリからも取り戻せません。",
+  "deposit.memoForgotten":
+    "メモを入れ忘れたときは、ChangeNOWのサポート（公式サイト）に、下の交換IDを伝えて相談してください。このアプリからは取り戻せません。",
+  "deposit.exchangeId": "交換ID",
+  "deposit.statusHeading": "進み具合",
+  "deposit.stepWaiting": "入金待ち",
+  "deposit.stepConfirming": "確認中",
+  "deposit.stepExchanging": "交換中",
+  "deposit.stepSending": "送金中",
+  "deposit.stepDone": "完了",
+  "deposit.statusFailed":
+    "うまくいきませんでした。ChangeNOWのサポートに、下の交換IDを伝えて相談してください。",
+  "deposit.statusRefunded":
+    "返金されました。詳しくはChangeNOWのサポートに確認してください。",
+  "deposit.statusVerifying":
+    "交換サービスの確認のため止まっています。お金は交換サービスの側にあります。案内はChangeNOWのサポートから届きます。",
+  "deposit.doneBody":
+    "BNBがあなたのアドレスに届きました。ブリッジの画面で確認できます。",
+  "deposit.goBridge": "ブリッジ画面へ",
+  "deposit.ordersHeading": "入金の手続き",
+  "deposit.rowFailed": "うまくいきませんでした",
+  "deposit.rowRefunded": "返金されました",
+  "deposit.rowVerifying": "確認のため停止中",
+  "deposit.newDeposit": "新しく入金する",
+  "deposit.errProxyOff": "入金の連携は準備中です。",
+  "deposit.errNetwork": "通信できませんでした。",
+
   // ---- Send ----
   "send.qrWebNote": "WebプレビューではQRスキャンは使えません。アドレスを貼り付けてください。",
   "send.qrNoPermission":
@@ -1082,6 +1152,76 @@ const en: Record<I18nKey, string> = {
   "bridgeIn.gasLowSuffix": ")",
   "bridgeIn.gasUsdUnavailable":
     "Couldn't get the dollar rate, so the gas guide check is skipped.",
+
+  // ---- Cross-chain deposit (ChangeNOW via proxy) ----
+  "deposit.entryTitle": "Deposit from another chain",
+  "deposit.entryBody":
+    "Send Stellar (XLM) and it arrives in this wallet as BNB.",
+  "deposit.openButton": "Start a deposit",
+  "deposit.heading": "Deposit from another chain",
+  "deposit.back": "Back",
+  "deposit.preparingBody":
+    "This feature is being prepared. It will become available once the exchange service connection is ready.",
+  "deposit.intro":
+    "Your Stellar (XLM) is exchanged to BNB through an exchange service (ChangeNOW) and delivered to your BSC address. You send the XLM from your own other wallet — this app never handles your XLM.",
+  "deposit.sourceLabel": "You send",
+  "deposit.sourceXlm": "XLM (Stellar)",
+  "deposit.sourceSolSoon": "SOL (coming soon)",
+  "deposit.amountXlm": "Amount (XLM)",
+  "deposit.usdApproxPrefix": "About $",
+  "deposit.usdApproxSuffix": "",
+  "deposit.minLoading": "Checking the minimum…",
+  "deposit.minLoadFailed": "Couldn't check the minimum",
+  "deposit.minPrefix": "Minimum: ",
+  "deposit.minSuffix": " XLM",
+  "deposit.tooSmallPrefix": "That's too small. Please send at least ",
+  "deposit.tooSmallSuffix": " XLM.",
+  "deposit.expectedLabel": "You should receive about",
+  "deposit.expectedSuffix": " BNB",
+  "deposit.estimateFailed": "Couldn't get an estimate",
+  "deposit.keepGasNote":
+    "Part of the BNB that arrives stays as gas money for sending on to 42 Chain afterwards.",
+  "deposit.rateNote":
+    "Amounts are estimates. What you actually receive is set by the rate when your deposit arrives.",
+  "deposit.payoutNote": "It will be delivered to this wallet's address (BSC).",
+  "deposit.createButton": "Start the deposit",
+  "deposit.creating": "Creating…",
+  "deposit.createFailedPrefix": "Couldn't create it: ",
+  "deposit.sendHeading": "Where to send your XLM",
+  "deposit.sendIntroPrefix": "From your Stellar wallet, send ",
+  "deposit.sendIntroSuffix": " XLM to the address below.",
+  "deposit.amountToSend": "Amount to send",
+  "deposit.addressLabel": "Deposit address",
+  "deposit.memoLabel": "Memo",
+  "deposit.copy": "Copy",
+  "deposit.copied": "Copied",
+  "deposit.memoWarning":
+    "You must include the memo. Without it, your XLM cannot be matched to you, and this app cannot get it back.",
+  "deposit.memoForgotten":
+    "If you sent without the memo, contact ChangeNOW support (on their official site) and give them the exchange ID below. This app cannot recover it.",
+  "deposit.exchangeId": "Exchange ID",
+  "deposit.statusHeading": "Progress",
+  "deposit.stepWaiting": "Waiting for deposit",
+  "deposit.stepConfirming": "Confirming",
+  "deposit.stepExchanging": "Exchanging",
+  "deposit.stepSending": "Sending to you",
+  "deposit.stepDone": "Done",
+  "deposit.statusFailed":
+    "Something went wrong. Contact ChangeNOW support and give them the exchange ID below.",
+  "deposit.statusRefunded":
+    "It was refunded. Please check with ChangeNOW support for details.",
+  "deposit.statusVerifying":
+    "The exchange service has paused this for a check. Your money is with the service, not in this app. Follow the guidance from ChangeNOW support.",
+  "deposit.doneBody":
+    "Your BNB has arrived at your address. You can check it on the Bridge screen.",
+  "deposit.goBridge": "Go to Bridge",
+  "deposit.ordersHeading": "Your deposits",
+  "deposit.rowFailed": "Failed",
+  "deposit.rowRefunded": "Refunded",
+  "deposit.rowVerifying": "Paused for a check",
+  "deposit.newDeposit": "New deposit",
+  "deposit.errProxyOff": "Deposits are being prepared.",
+  "deposit.errNetwork": "Couldn't connect.",
 
   // ---- Send ----
   "send.qrWebNote": "QR scanning isn't available in the web preview. Paste the address instead.",

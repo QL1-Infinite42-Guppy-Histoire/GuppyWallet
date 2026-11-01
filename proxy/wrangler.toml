@@ -1,0 +1,11 @@
+name = "guppy-deposit-proxy"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+# Kill switch: set KILL_SWITCH to "1" (here or in the Cloudflare
+# dashboard) and redeploy to make every route answer 503 without an
+# app release. The ChangeNOW API key is NOT a var — it is a secret,
+# set with: npx wrangler secret put CHANGENOW_API_KEY
+[vars]
+KILL_SWITCH = "0"

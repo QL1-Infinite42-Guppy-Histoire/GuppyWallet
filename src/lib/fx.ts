@@ -39,6 +39,53 @@ export interface NativeUsdPrices {
   bnbUsd: number | null;
 }
 
+export interface SourceUsdPrices {
+  xlmUsd: number | null;
+  solUsd: number | null;
+}
+
+/**
+ * XLM / SOL reference prices in USD, same CoinGecko endpoint family
+ * and caching discipline as fetchEthBnbUsd. Used only to show a
+ * dollar estimate next to the amount on the cross-chain deposit
+ * screen — null when unfetchable, never a fabricated number.
+ */
+const COINGECKO_SOURCE_URL =
+  "https://api.coingecko.com/api/v3/simple/price?ids=stellar,solana&vs_currencies=usd";
+
+let sourceCache: { prices: SourceUsdPrices; at: number } | null = null;
+let sourceInflight: Promise<SourceUsdPrices> | null = null;
+
+export async function fetchXlmSolUsd(): Promise<SourceUsdPrices> {
+  if (sourceCache && Date.now() - sourceCache.at < CACHE_MS) {
+    return sourceCache.prices;
+  }
+  if (sourceInflight) return sourceInflight;
+  sourceInflight = (async () => {
+    const stale: SourceUsdPrices = sourceCache?.prices ?? {
+      xlmUsd: null,
+      solUsd: null,
+    };
+    try {
+      const res = await fetch(COINGECKO_SOURCE_URL);
+      if (!res.ok) return stale;
+      const data: any = await res.json();
+      const prices: SourceUsdPrices = {
+        xlmUsd: saneUsd(data?.stellar?.usd),
+        solUsd: saneUsd(data?.solana?.usd),
+      };
+      if (prices.xlmUsd === null && prices.solUsd === null) return stale;
+      sourceCache = { prices, at: Date.now() };
+      return prices;
+    } catch {
+      return stale;
+    } finally {
+      sourceInflight = null;
+    }
+  })();
+  return sourceInflight;
+}
+
 /**
  * ETH / BNB reference prices in USD from CoinGecko's public
  * simple/price endpoint (no key required). Used only for the bridge's

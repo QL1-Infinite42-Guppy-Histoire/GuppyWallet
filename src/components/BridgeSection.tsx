@@ -2,6 +2,7 @@ import { formatUnits, parseUnits } from "ethers";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text } from "react-native";
 import BridgeInboundSection from "./BridgeInboundSection";
+import DepositSection from "./DepositSection";
 import { useTxFlow } from "./ConfirmTx";
 import {
   Body,
@@ -45,6 +46,7 @@ export default function BridgeSection() {
   const address = wallet.info?.evmAddress ?? null;
   const { startTx, modal } = useTxFlow();
   const [direction, setDirection] = useState<"out" | "in">("out");
+  const [showDeposit, setShowDeposit] = useState(false);
 
   const [symbol, setSymbol] = useState<string>(
     BRIDGE_ROUTERS_INFINITE[0].symbol,
@@ -210,10 +212,21 @@ export default function BridgeSection() {
           onChange={(k) => setDirection(k as "out" | "in")}
         />
       </Card>
-      {direction === "in" ? (
+      <Card>
+        <Heading>{t("deposit.entryTitle")}</Heading>
+        <Body>{t("deposit.entryBody")}</Body>
+        <PrimaryButton
+          label={t("deposit.openButton")}
+          onPress={() => setShowDeposit(true)}
+        />
+      </Card>
+      {showDeposit ? (
+        <DepositSection onBack={() => setShowDeposit(false)} />
+      ) : null}
+      {!showDeposit && direction === "in" ? (
         <BridgeInboundSection startTx={startTx} />
       ) : null}
-      {direction === "out" ? (
+      {!showDeposit && direction === "out" ? (
       <>
       <Card>
         <Body>
