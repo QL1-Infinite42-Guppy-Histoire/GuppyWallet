@@ -35,6 +35,12 @@ export interface DepositOrder {
   payoutAddress: string;
   /** Raw provider status string, mapped for display by depositPhase. */
   status: string;
+  /**
+   * ChangeNOW flow recorded at creation ("standard" = classic rate).
+   * Optional: orders stored before this field existed have none and
+   * are treated as classic — the proxy only ever creates classic.
+   */
+  flow?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -179,6 +185,9 @@ export async function createDepositOrder(
         : null,
     payoutAddress,
     status: typeof data.status === "string" ? data.status : "waiting",
+    // The proxy creates classic ("standard") flow orders only; honor
+    // a flow string from the provider if one is ever returned.
+    flow: typeof data.flow === "string" ? data.flow : "standard",
     createdAt: now,
     updatedAt: now,
   };
@@ -245,4 +254,47 @@ export const DEPOSIT_STEP_PHASES: DepositPhase[] = [
 
 export function isDepositFinal(phase: DepositPhase): boolean {
   return phase === "finished" || phase === "failed" || phase === "refunded";
+}
+
+// ---- Deposit window (how long the provider waits for the deposit) ----
+
+/**
+ * ChangeNOW only recognizes a deposit that arrives within a window
+ * after the order is created: about 24 hours for the classic
+ * ("standard") flow this app uses, 20 minutes for fixed-rate orders
+ * (per ChangeNOW's support documentation). The provider status of an
+ * unfunded order can stay "waiting" forever, so expiry is computed
+ * from createdAt here — never from the status alone.
+ */
+export const DEPOSIT_WINDOW_CLASSIC_MS = 24 * 60 * 60 * 1000;
+export const DEPOSIT_WINDOW_FIXED_MS = 20 * 60 * 1000;
+
+export function depositWindowMs(order: DepositOrder): number {
+  return order.flow === "fixed"
+    ? DEPOSIT_WINDOW_FIXED_MS
+    : DEPOSIT_WINDOW_CLASSIC_MS;
+}
+
+/**
+ * When the deposit window closes, or null when createdAt is unusable
+ * (in that case we never hide the destination — fail open).
+ */
+export function depositExpiresAt(order: DepositOrder): number | null {
+  if (!Number.isFinite(order.createdAt) || order.createdAt <= 0) return null;
+  return order.createdAt + depositWindowMs(order);
+}
+
+/**
+ * True only when the order is still awaiting its deposit AND its
+ * window has closed. An order whose deposit already arrived
+ * (confirming and beyond, or any final state) is never "expired" —
+ * its money is already with the provider and must stay visible.
+ */
+export function isDepositExpired(
+  order: DepositOrder,
+  now: number = Date.now(),
+): boolean {
+  if (depositPhase(order.status) !== "waiting") return false;
+  const expiresAt = depositExpiresAt(order);
+  return expiresAt !== null && now > expiresAt;
 }

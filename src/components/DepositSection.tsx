@@ -20,10 +20,12 @@ import { prettyAmount } from "../lib/onchain";
 import {
   createDepositOrder,
   DEPOSIT_STEP_PHASES,
+  depositExpiresAt,
   depositPhase,
   fetchDepositEstimate,
   fetchDepositMin,
   fetchDepositStatus,
+  isDepositExpired,
   isDepositFinal,
   loadDepositOrders,
   saveDepositOrders,
@@ -227,6 +229,32 @@ export default function DepositSection({
     }
   }, [address, amount, amountValid, belowMin, minAmount, sourceKey, persist, t]);
 
+  /** Drop a stored order (used for expired ones, which can never be
+   *  funded again and would otherwise be polled forever). */
+  const dismissOrder = useCallback(
+    (id: string) => {
+      persist(ordersRef.current.filter((o) => o.id !== id));
+      setOpenId(null);
+    },
+    [persist],
+  );
+
+  /** "入金期限まで あと◯時間◯分" — recomputed on every render, and
+   *  renders happen on the existing 20s status poll, so no extra
+   *  timer is needed. */
+  const formatRemaining = useCallback(
+    (ms: number): string => {
+      const totalMin = Math.floor(ms / 60_000);
+      if (totalMin < 1) return t("deposit.remainingSoon");
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      return h > 0
+        ? `${t("deposit.remainingPrefix")}${h}${t("deposit.remainingHours")}${m}${t("deposit.remainingMinutes")}`
+        : `${t("deposit.remainingPrefix")}${m}${t("deposit.remainingMinutes")}`;
+    },
+    [t],
+  );
+
   const openOrder = orders.find((o) => o.id === openId) ?? null;
 
   const copyButton = (key: string, value: string) => (
@@ -284,6 +312,58 @@ export default function DepositSection({
   const renderOrderDetail = (order: DepositOrder) => {
     const phase = depositPhase(order.status);
     const sym = order.source === "xlm" ? "XLM" : "SOL";
+    const expired = isDepositExpired(order);
+    const expiresAt = depositExpiresAt(order);
+    const remainingMs = expiresAt !== null ? expiresAt - Date.now() : null;
+
+    // Deposit window closed while still unfunded: the payin address
+    // and memo must never be shown again — ChangeNOW stops recognizing
+    // deposits after the window, so sending here can strand funds.
+    if (expired) {
+      return (
+        <>
+          <Card>
+            <Heading>{t("deposit.expiredTitle")}</Heading>
+            <View style={styles.warning}>
+              <Text style={styles.warningText}>{t("deposit.expiredBody")}</Text>
+            </View>
+            <InfoRow
+              label={t("deposit.amountToSend")}
+              value={`${prettyAmount(order.fromAmount)} ${sym}`}
+            />
+            <PrimaryButton
+              label={t("deposit.newDeposit")}
+              onPress={() => setOpenId(null)}
+            />
+            <Pressable
+              style={styles.dismissButton}
+              onPress={() => dismissOrder(order.id)}
+            >
+              <Text style={styles.dismissText}>
+                {t("deposit.expiredDismiss")}
+              </Text>
+            </Pressable>
+          </Card>
+          <Card>
+            <Heading>{t("deposit.statusHeading")}</Heading>
+            <InfoRow label={t("deposit.exchangeId")} value={order.id} />
+            <PrimaryButton
+              label={t("common.refresh")}
+              onPress={() => void refreshOrders()}
+            />
+          </Card>
+          <Card>
+            <Body>{t("deposit.memoForgotten")}</Body>
+            <InfoRow label={t("deposit.exchangeId")} value={order.id} />
+          </Card>
+          <PrimaryButton
+            label={t("deposit.back")}
+            onPress={() => setOpenId(null)}
+          />
+        </>
+      );
+    }
+
     return (
       <>
         <Card>
@@ -313,6 +393,9 @@ export default function DepositSection({
             <View style={styles.warning}>
               <Text style={styles.warningText}>{t("deposit.memoWarning")}</Text>
             </View>
+          ) : null}
+          {phase === "waiting" && remainingMs !== null ? (
+            <Body>{formatRemaining(remainingMs)}</Body>
           ) : null}
         </Card>
         <Card>
@@ -459,7 +542,9 @@ export default function DepositSection({
                   {`${prettyAmount(o.fromAmount)} ${sym} → BNB`}
                 </Text>
                 <Text style={styles.orderStatus}>
-                  {t(ROW_LABEL[phase])}
+                  {isDepositExpired(o)
+                    ? t("deposit.rowExpired")
+                    : t(ROW_LABEL[phase])}
                 </Text>
               </Pressable>
             );
@@ -526,4 +611,6 @@ const styles = StyleSheet.create({
   },
   orderMain: { color: colors.text, fontSize: 14, fontWeight: "600" },
   orderStatus: { color: colors.muted, fontSize: 13, flexShrink: 1 },
+  dismissButton: { alignSelf: "center", paddingVertical: 10, marginTop: 2 },
+  dismissText: { color: colors.muted, fontSize: 13 },
 });
