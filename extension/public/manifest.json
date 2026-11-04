@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "GuppyWallet",
+  "version": "0.1.0",
+  "description": "42 Chain（Infinite）と QL1 のためのウォレット。スマホアプリ版と同じ復旧フレーズで同じウォレットが開けます。",
+  "icons": { "128": "icon.png" },
+  "action": { "default_popup": "index.html", "default_icon": "icon.png" },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://evm-rpc.infinitedrive.xyz/*",
+    "https://evm-rpc-infinite.mschihuahua.org/*",
+    "https://evm-rpc.infinitepanda.xyz/*",
+    "https://evm-rpc-ql1.mschihuahua.org/*",
+    "https://scan.qom.network/*",
+    "https://scan.infinitedrive.xyz/*",
+    "https://open.er-api.com/*",
+    "https://api.drand.sh/*",
+    "https://drand.cloudflare.com/*"
+  ]
+}

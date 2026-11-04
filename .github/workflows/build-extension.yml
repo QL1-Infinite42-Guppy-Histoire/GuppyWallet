@@ -1,0 +1,35 @@
+name: Build Extension
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "extension/**"
+      - "src/**"
+      - ".github/workflows/build-extension.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: extension
+        run: npm ci
+      - name: Typecheck
+        working-directory: extension
+        run: npm run typecheck
+      - name: Build
+        working-directory: extension
+        run: npm run build
+      - name: Zip
+        working-directory: extension/dist
+        run: zip -qr ../guppy-wallet-extension.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guppy-wallet-extension
+          path: extension/guppy-wallet-extension.zip
