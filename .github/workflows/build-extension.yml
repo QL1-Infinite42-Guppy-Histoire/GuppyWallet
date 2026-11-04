@@ -17,6 +17,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Install app dependencies
+        # The extension imports the app's shared TS sources; vite's
+        # esbuild step resolves the app tsconfig chain (expo base),
+        # so the app tree must be installed too.
+        run: npm ci
       - name: Install dependencies
         working-directory: extension
         run: npm ci
