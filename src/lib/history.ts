@@ -71,20 +71,57 @@ export interface HistoryResult {
   failedChains: string[];
 }
 
+/**
+ * Short-lived cache + in-flight dedup: Home re-asks for history
+ * whenever balances refresh, and the explorer APIs are the slowest
+ * calls in that path. A 20-second window removes duplicate fetches
+ * from rapid refresh cycles while keeping the activity list
+ * effectively live (a just-sent transaction appears within ~20 s;
+ * balances themselves are never cached and always update first).
+ */
+const HISTORY_CACHE_MS = 20_000;
+const historyCache = new Map<
+  string,
+  { at: number; result: HistoryResult }
+>();
+const historyInflight = new Map<string, Promise<HistoryResult>>();
+
 /** Merged, newest-first history across both chains (top `limit`). */
 export async function fetchTxHistory(
   address: string,
   limit = 10,
 ): Promise<HistoryResult> {
-  const settled = await Promise.allSettled(
-    CHAINS.map((c) => fetchChainHistory(c, address)),
-  );
-  const items: TxHistoryItem[] = [];
-  const failedChains: string[] = [];
-  settled.forEach((r, i) => {
-    if (r.status === "fulfilled") items.push(...r.value);
-    else failedChains.push(CHAINS[i].displayName);
-  });
-  items.sort((a, b) => b.timestamp - a.timestamp);
-  return { items: items.slice(0, limit), failedChains };
+  const key = `${address.toLowerCase()}:${limit}`;
+  const hit = historyCache.get(key);
+  if (hit && Date.now() - hit.at < HISTORY_CACHE_MS) return hit.result;
+  const pending = historyInflight.get(key);
+  if (pending) return pending;
+  const run = (async (): Promise<HistoryResult> => {
+    const settled = await Promise.allSettled(
+      CHAINS.map((c) => fetchChainHistory(c, address)),
+    );
+    const items: TxHistoryItem[] = [];
+    const failedChains: string[] = [];
+    settled.forEach((r, i) => {
+      if (r.status === "fulfilled") items.push(...r.value);
+      else failedChains.push(CHAINS[i].displayName);
+    });
+    items.sort((a, b) => b.timestamp - a.timestamp);
+    const result: HistoryResult = {
+      items: items.slice(0, limit),
+      failedChains,
+    };
+    // Only cache a fully successful read; a partial failure should
+    // be retried on the next ask rather than pinned for the window.
+    if (failedChains.length === 0) {
+      historyCache.set(key, { at: Date.now(), result });
+    }
+    return result;
+  })();
+  historyInflight.set(key, run);
+  try {
+    return await run;
+  } finally {
+    if (historyInflight.get(key) === run) historyInflight.delete(key);
+  }
 }

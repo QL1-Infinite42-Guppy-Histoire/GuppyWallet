@@ -1,5 +1,5 @@
 import { formatUnits } from "ethers";
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useBalances } from "../context/BalancesContext";
 import { useI18n } from "../context/LanguageContext";
@@ -41,13 +41,17 @@ export function BalanceResults({
 }) {
   const { results, tokenResults, prices, ql1Prices } = useBalances();
   const { t } = useI18n();
-  if (!results) return null;
 
-  const rows: RowData[] = [];
-  const failedChains: string[] = [];
-  let anyTokenError = false;
+  // Row building (price lookups + unit formatting for every token)
+  // is memoized: it only re-runs when balances, prices, the JPY rate
+  // or the selected chain actually change, not on every Home render.
+  const built = useMemo(() => {
+    if (!results) return null;
+    const rows: RowData[] = [];
+    const failedChains: string[] = [];
+    let anyTokenError = false;
 
-  for (const r of results) {
+    for (const r of results) {
     if (r.chain.key !== chainKey) continue;
     if (!r.ok) {
       failedChains.push(r.chain.displayName);
@@ -95,7 +99,12 @@ export function BalanceResults({
         jpyValue: usd !== null && jpyRate !== null ? usd * jpyRate : null,
       });
     }
-  }
+    }
+    return { rows, failedChains, anyTokenError };
+  }, [results, tokenResults, prices, ql1Prices, jpyRate, chainKey]);
+
+  if (!built) return null;
+  const { rows, failedChains, anyTokenError } = built;
 
   return (
     <View style={styles.list}>

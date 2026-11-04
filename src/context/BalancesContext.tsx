@@ -9,7 +9,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { CHAINS, INFINITE_TOKENS } from "../config/chains";
-import { fetchNativeBalances, type BalanceResult } from "../lib/balances";
+import type { BalanceResult } from "../lib/balances";
 import {
   loadCustomTokens,
   saveCustomTokens,
@@ -69,7 +69,12 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
     loadCustomTokens().then(setCustomTokens).catch(() => {});
   }, []);
 
-  const refresh = useCallback(async () => {
+  // In-flight dedup: overlapping refresh() calls (refresh button taps,
+  // add/remove-token, the address-change effect) share ONE fetch pass
+  // instead of each launching a full duplicate RPC sweep.
+  const inFlightRef = useRef<Promise<void> | null>(null);
+
+  const doRefresh = useCallback(async () => {
     const target = addressRef.current;
     if (!target) {
       setResults(null);
@@ -83,8 +88,7 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const extras = customTokensRef.current;
-      const [native, perChain, priceMap] = await Promise.all([
-        fetchNativeBalances(target),
+      const [perChain, priceMap] = await Promise.all([
         Promise.all(
           CHAINS.map((c) =>
             fetchChainBalances(
@@ -96,6 +100,34 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
         ),
         fetchInfinitePrices().catch(() => null),
       ]);
+      // The native-coin BalanceResults are DERIVED from the same pass:
+      // fetchChainBalances already fetches each chain's native balance,
+      // so the old separate native fetch only duplicated RPC traffic.
+      const native: BalanceResult[] = CHAINS.map((c, i) => {
+        const list = perChain[i] ?? [];
+        const okNative = list.find(
+          (r) => r.ok && r.balance.address === null,
+        );
+        if (okNative && okNative.ok) {
+          return {
+            ok: true,
+            chain: c,
+            rpcUrl: c.evmRpcUrls[0],
+            formatted: okNative.balance.formatted,
+            symbol: c.nativeSymbol,
+          };
+        }
+        const failNative = list.find(
+          (r) => !r.ok && r.symbol === c.nativeSymbol,
+        );
+        return {
+          ok: false,
+          chain: c,
+          rpcUrl: c.evmRpcUrls[0],
+          error:
+            failNative && !failNative.ok ? failNative.error : "unknown",
+        };
+      });
       // QL1 pricing anchors to the bridged-QOM price on 42 Chain (same
       // asset): derive QOM's reliable USD price from the Infinite map.
       const qomToken = INFINITE_TOKENS.find((t) => t.symbol === "QOM");
@@ -122,6 +154,17 @@ export function BalancesProvider({ children }: { children: ReactNode }) {
       if (addressRef.current === target) setLoading(false);
     }
   }, []);
+
+  const refresh = useCallback(async (): Promise<void> => {
+    if (inFlightRef.current) return inFlightRef.current;
+    const run = doRefresh();
+    inFlightRef.current = run;
+    try {
+      await run;
+    } finally {
+      if (inFlightRef.current === run) inFlightRef.current = null;
+    }
+  }, [doRefresh]);
 
   // Fetch automatically whenever the stored wallet (address) changes.
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { formatUnits } from "ethers";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { BalanceResults, formatJpy } from "../components/BalanceResults";
 import { GuppyMascot } from "../components/GuppyMascot";
@@ -90,15 +90,18 @@ export default function HomeScreen() {
   // price only. Unpriced / unreliable tokens are excluded (never faked
   // as $0). QL1 prices anchor to the bridged-QOM price on 42 Chain.
   const priceMap = chainKey === "infinite" ? prices : ql1Prices;
-  let total = 0;
-  if (tokenResults) {
-    for (const tk of tokenResults) {
-      if (!tk.ok || tk.balance.chainKey !== chainKey) continue;
-      const p = priceOf(priceMap, tk.balance.address);
-      const amount = Number(formatUnits(tk.balance.raw, tk.balance.decimals));
-      if (p.usd !== null && p.reliable) total += amount * p.usd;
+  const total = useMemo(() => {
+    let sum = 0;
+    if (tokenResults) {
+      for (const tk of tokenResults) {
+        if (!tk.ok || tk.balance.chainKey !== chainKey) continue;
+        const p = priceOf(priceMap, tk.balance.address);
+        const amount = Number(formatUnits(tk.balance.raw, tk.balance.decimals));
+        if (p.usd !== null && p.reliable) sum += amount * p.usd;
+      }
     }
-  }
+    return sum;
+  }, [tokenResults, priceMap, chainKey]);
   const hasData = results !== null;
   const evm = wallet.info?.evmAddress ?? null;
   const totalJpy = jpyRate !== null ? total * jpyRate : null;

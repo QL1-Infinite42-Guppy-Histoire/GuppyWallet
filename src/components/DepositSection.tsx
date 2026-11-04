@@ -139,7 +139,12 @@ export default function DepositSection({
       ordersRef.current = saved;
       void refreshOrders();
     });
-    const timer = setInterval(() => void refreshOrders(), POLL_MS);
+    // Poll only while the app is in the foreground — background
+    // ticks would burn battery/data for a screen nobody is looking
+    // at; the AppState listener below refreshes on return anyway.
+    const timer = setInterval(() => {
+      if (AppState.currentState === "active") void refreshOrders();
+    }, POLL_MS);
     const sub = AppState.addEventListener("change", (s) => {
       if (s === "active") void refreshOrders();
     });

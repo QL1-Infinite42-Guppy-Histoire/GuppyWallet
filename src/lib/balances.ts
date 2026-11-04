@@ -1,12 +1,16 @@
-import { JsonRpcProvider, formatUnits, isAddress } from "ethers";
-import { CHAINS, type ChainConfig } from "../config/chains";
-import { tr } from "../i18n";
+import { isAddress } from "ethers";
+import type { ChainConfig } from "../config/chains";
 
 /**
- * Read-only balance fetching.
+ * Shared balance result types + address helpers.
  *
- * This module ONLY reads from public RPCs. It never signs, never sends,
- * and never touches private keys — safe for the prototype phase.
+ * The actual fetching lives in lib/onchain.ts (fetchChainBalances),
+ * which returns the native coin AND every ERC-20 in one pass.
+ * BalancesContext derives the per-chain native `BalanceResult`s from
+ * that single pass — until v0.3.0 a second, separate native fetch
+ * (fresh providers + getBalance + getBlockNumber per chain) ran on
+ * every refresh purely to fill this shape, doubling the native RPC
+ * traffic for no new information.
  */
 
 export interface ChainBalance {
@@ -15,7 +19,8 @@ export interface ChainBalance {
   /** Human-readable native balance, e.g. "1.2345" (string to avoid float loss) */
   formatted: string;
   symbol: string;
-  blockNumber: number;
+  /** Block height at fetch time, when the fetch path reports one. */
+  blockNumber?: number;
 }
 
 export interface ChainBalanceError {
@@ -30,45 +35,6 @@ export type BalanceResult =
 
 export function isValidEvmAddress(value: string): boolean {
   return isAddress(value.trim());
-}
-
-async function fetchOne(chain: ChainConfig, address: string): Promise<BalanceResult> {
-  const rpcUrl = chain.evmRpcUrls[0];
-  try {
-    // Network is pinned from our verified config, not auto-detected, so a
-    // hostile / wrong RPC answering with a different chain id is visible.
-    const provider = new JsonRpcProvider(rpcUrl, chain.evmChainId, {
-      staticNetwork: true,
-    });
-    const [raw, blockNumber] = await Promise.all([
-      provider.getBalance(address),
-      provider.getBlockNumber(),
-    ]);
-    return {
-      ok: true,
-      chain,
-      rpcUrl,
-      formatted: formatUnits(raw, chain.nativeDecimals),
-      symbol: chain.nativeSymbol,
-      blockNumber,
-    };
-  } catch (e) {
-    return {
-      ok: false,
-      chain,
-      rpcUrl,
-      error: e instanceof Error ? e.message : String(e),
-    };
-  }
-}
-
-/** Fetch the native balance (42 / QOM) of `address` on every configured chain. */
-export async function fetchNativeBalances(address: string): Promise<BalanceResult[]> {
-  const trimmed = address.trim();
-  if (!isValidEvmAddress(trimmed)) {
-    throw new Error(tr("err.invalidEvmAddress"));
-  }
-  return Promise.all(CHAINS.map((chain) => fetchOne(chain, trimmed)));
 }
 
 /** Link to the address page on the chain's explorer (URL pattern per Blockscout). */

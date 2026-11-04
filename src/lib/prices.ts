@@ -58,6 +58,16 @@ interface PairQuote {
   depthUsd: number;
 }
 
+/**
+ * Immutable-fact caches (module-level, survive refreshes): a pair's
+ * token0 and a factory's pair address for a token duo can never
+ * change once created, so re-asking the chain for them on every
+ * balance refresh is pure waste. Reserves are NOT cached — they are
+ * the live price signal and are fetched fresh every time.
+ */
+const pairToken0Cache = new Map<string, string>();
+const pairAddressCache = new Map<string, string>();
+
 async function pairQuote(
   chain: ChainConfig,
   pairAddress: string,
@@ -69,8 +79,15 @@ async function pairQuote(
 ): Promise<PairQuote | null> {
   try {
     const pair = new Contract(pairAddress, PAIR_ABI, getProvider(chain)) as any;
+    const token0Key = `${chain.key}:${pairAddress.toLowerCase()}`;
+    const cachedToken0 = pairToken0Cache.get(token0Key);
     const [token0, reserves] = await Promise.all([
-      pair.token0() as Promise<string>,
+      cachedToken0
+        ? Promise.resolve(cachedToken0)
+        : (pair.token0() as Promise<string>).then((t0) => {
+            pairToken0Cache.set(token0Key, t0);
+            return t0;
+          }),
       pair.getReserves(),
     ]);
     const baseIs0Pre = token0.toLowerCase() === base.toLowerCase();
@@ -89,10 +106,25 @@ async function pairQuote(
   }
 }
 
-async function getPair(factory: any, a: string, b: string): Promise<string | null> {
+async function getPair(
+  factory: any,
+  scope: string,
+  a: string,
+  b: string,
+): Promise<string | null> {
+  // getPair is symmetric and, once a pair exists, its address is
+  // immutable — cache positive results only. A "no pair" answer is
+  // NOT cached, so a pair created later is picked up on the next
+  // refresh exactly as before.
+  const [x, y] = [a.toLowerCase(), b.toLowerCase()].sort();
+  const key = `${scope}:${x}:${y}`;
+  const cached = pairAddressCache.get(key);
+  if (cached) return cached;
   try {
     const pair: string = await factory.getPair(a, b);
-    return pair && pair !== ZeroAddress ? pair : null;
+    const result = pair && pair !== ZeroAddress ? pair : null;
+    if (result) pairAddressCache.set(key, result);
+    return result;
   } catch {
     return null;
   }
@@ -130,8 +162,8 @@ export async function fetchInfinitePrices(): Promise<InfinitePrices> {
       const key = token.address.toLowerCase();
       if (key === USDT_ADDRESS.toLowerCase()) return;
       const [directPair, viaPair] = await Promise.all([
-        getPair(factory, token.address, USDT_ADDRESS),
-        getPair(factory, token.address, NATIVE_PLACEHOLDER),
+        getPair(factory, "infinite", token.address, USDT_ADDRESS),
+        getPair(factory, "infinite", token.address, NATIVE_PLACEHOLDER),
       ]);
       const direct = directPair
         ? await pairQuote(INFINITE, directPair, token.address, USDT_ADDRESS, 1)
@@ -240,7 +272,7 @@ export async function fetchQl1Prices(
   await Promise.all(
     targets.map(async (token) => {
       const key = token.address.toLowerCase();
-      const pair = await getPair(factory, token.address, wqom.address);
+      const pair = await getPair(factory, "ql1", token.address, wqom.address);
       const quote = pair
         ? await pairQuote(QL1, pair, token.address, wqom.address, qomUsd, token.decimals, 18)
         : null;

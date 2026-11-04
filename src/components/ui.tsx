@@ -1,6 +1,7 @@
 import { useFonts } from "expo-font";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo } from "react";
+import Svg, { Circle, Rect } from "react-native-svg";
 import {
   Dimensions,
   ScrollView,
@@ -325,21 +326,40 @@ export const GalaxyBackground = React.memo(function GalaxyBackground() {
           </View>
         );
       })}
-      {stars.map((s, i) => (
-        <View
-          key={i}
-          style={{
-            position: "absolute",
-            left: s.left,
-            top: s.top,
-            width: s.size,
-            height: s.size,
-            borderRadius: s.round ? s.size / 2 : 0,
-            backgroundColor: s.color,
-            opacity: s.opacity,
-          }}
-        />
-      ))}
+      {/* The whole starfield is ONE SVG layer: the same ~450 stars,
+          same positions/colors/opacities as before, but a single
+          native node instead of ~450 tiny Views per mounted screen
+          (every tab keeps its Screen mounted, so this was the
+          heaviest static cost in the app). */}
+      <Svg
+        width={width}
+        height={height}
+        style={{ position: "absolute", left: 0, top: 0 }}
+        pointerEvents="none"
+      >
+        {stars.map((s, i) =>
+          s.round ? (
+            <Circle
+              key={i}
+              cx={s.left + s.size / 2}
+              cy={s.top + s.size / 2}
+              r={s.size / 2}
+              fill={s.color}
+              opacity={s.opacity}
+            />
+          ) : (
+            <Rect
+              key={i}
+              x={s.left}
+              y={s.top}
+              width={s.size}
+              height={s.size}
+              fill={s.color}
+              opacity={s.opacity}
+            />
+          ),
+        )}
+      </Svg>
       {/* vignette */}
       <LinearGradient
         colors={["rgba(2,3,10,0.38)", "rgba(2,3,10,0)"]}
