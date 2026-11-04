@@ -57,13 +57,25 @@ Core write functions (ABI in `research/abi-fluke.json` → `core`):
   (emblem) for the item.
 - `seed(uint256 a, uint256 b)` — seeds the revealed roll (frontend flow:
   approve ZAP → `seed` → "seeded").
-- `settle(uint256 id, bytes sig)` — settles a revealed item and pays out
-  from the prize pools. **Requires a signature**: the frontend obtains it
-  from its own backend (`GET https://fluke.zaphod.one/api/leaderboard`,
-  entries carry `signature`/`sigHex` keyed by the commit record `rn`).
-  The API is public (no auth — probed 2026-10-30, returned live data),
-  so the wallet *can* call it the same way, but Fluke gameplay is not
-  100% trustless/on-chain: if that API dies, settle cannot complete.
+- `settle(uint256 id, bytes sig)` — settles a record AND MINTS the new
+  Guide NFT to the player (issuance = settle; proven on-chain
+  2026-11-04: supply 3,876 → 3,983 in 5 days, sampled mint logs all
+  from settle txs). **Signature source — CORRECTED 2026-11-04** (the
+  original reading in this section was wrong): the signature is the
+  **drand quicknet** BLS signature for the record's round `rn`,
+  fetched from the public drand API
+  (`https://api.drand.sh/52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971/public/{rn}`,
+  fallback drand.cloudflare.com) — NOT from the leaderboard API,
+  which never carried signatures; the frontend converts the drand
+  signature client-side (G1 decompress → affine (x, y), each
+  hex-padded to 128 chars → 128-byte `sig`) and merely caches the
+  result next to its entries, which is what the first extraction
+  misread. Fully public, no Zaphod backend: if fluke.zaphod.one
+  dies, settle still works. Verified end-to-end 2026-11-04:
+  converted a real unsettled entry's (id 418) drand signature and
+  its `settle` eth_call succeeded. Also corrected: `seed(a, b)`
+  funds prize pools A/B with ZAP — it is NOT part of the player
+  flow (commit → reveal → settle only).
 - `boost(uint256 item, uint256 amount)` — spend ZAP to boost an item
   toward `leader()` (verified: leader = token 3326, score 684 [42]-units,
   matches the live leaderboard API rank #1 — strong cross-check).
@@ -104,14 +116,15 @@ anyone can fund the stream (`publicFund: true` in config).
 
 Deploy blocks (for event indexing): core 3,051,279; ledger 3,800,202.
 
-### Fluke readiness verdict: **READY (with 1 dependency)**
+### Fluke readiness verdict: **READY (fully, since 2026-11-04)**
 Addresses + full ABIs recovered and verified on-chain; the game is
 active (pools funded, leaderboard live, not paused). Native integration
-is straightforward ethers/viem calls from the in-app wallet. The one
-dependency is the settle signature from fluke.zaphod.one's public
-`/api/leaderboard` — plan the UX so a settle can be retried later if the
-API is unreachable, and keep the "ended service" pattern in mind (this
-team has retired services before).
+is straightforward ethers/viem calls from the in-app wallet. The
+settle signature turned out to be public drand data (see the settle
+bullet above), so there is NO remaining backend dependency; the app
+implements the complete commit → reveal → settle (= new Guide
+issuance) flow in `src/lib/drand.ts` + `zaphod.ts`, with an
+oripa-style reveal presentation on a successful settle.
 
 ---
 

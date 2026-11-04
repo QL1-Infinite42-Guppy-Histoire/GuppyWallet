@@ -22,6 +22,7 @@ import {
   getProvider,
   type ProviderChainLike,
 } from "./onchain";
+import { fetchSettleSignatureFromDrand } from "./drand";
 import {
   estimateOrFallback,
   gasCostNative,
@@ -67,6 +68,7 @@ export const FLUKE_CORE_ABI = [
   "function supply() view returns (uint256)",
   "function ownerOf(uint256 id) view returns (address)",
   "function balanceOf(address owner) view returns (uint256)",
+  "function tokenURI(uint256 id) view returns (string)",
   "function recs(uint256 id) view returns (address o, uint64 rn, bool s, uint256 oi)",
   "function commit(uint256 maxCost) returns (uint256 id)",
   "function reveal(uint256 item, uint256 maxCost) returns (bytes32)",
@@ -301,32 +303,102 @@ export async function fetchFlukeRecord(
 }
 
 /**
- * Settle signatures are issued by the official Fluke API — the frontend
- * reads them from GET /api/leaderboard (entries may carry `signature` /
- * `sigHex`, keyed by the commit record `rn`, per the recovered page
- * code). Probed live 2026-10-30: the public response currently contains
- * leaderboard stats only, with NO signature fields — so this returns
- * null and the UI stays in the「公式APIの署名待ち」state. If the API
- * starts serving signatures, settle lights up without an app update to
- * this function. Never invents an endpoint or parameter.
+ * The settle signature is the drand public-randomness signature for
+ * the record's round `rn` — see lib/drand.ts for the full story
+ * (recovered 2026-11-04 from the official frontend's code and proven
+ * by an eth_call dry-run of a real entry's settle). It is public
+ * data: no Zaphod backend, no key, and the leaderboard API was never
+ * its source (that was an earlier misreading). Returns null only
+ * when the round has not published yet or drand is unreachable.
  */
 export async function fetchSettleSignature(
   rn: string,
 ): Promise<string | null> {
+  return fetchSettleSignatureFromDrand(rn);
+}
+
+export interface GuideArt {
+  /** Raw SVG markup when tokenURI inlines one (on-chain renderer). */
+  svg: string | null;
+  /** http(s) or data: image URL when provided instead of raw SVG. */
+  imageUrl: string | null;
+  name: string | null;
+}
+
+/**
+ * The Guide's artwork via tokenURI. The metadata is generated
+ * on-chain (research/ZAPHOD_FRONTEND.md): usually a
+ * data:application/json;base64 document whose `image` is an inline
+ * SVG data URI. Returns nulls when anything is unparsable — the UI
+ * then falls back to a text card; art is never invented.
+ */
+export async function fetchGuideArt(id: bigint): Promise<GuideArt> {
+  const empty: GuideArt = { svg: null, imageUrl: null, name: null };
   try {
-    const res = await fetch(FLUKE_LEADERBOARD_API);
-    if (!res.ok) return null;
-    const data: any = await res.json();
-    const pools: any[] = [
-      ...(Array.isArray(data?.entries) ? data.entries : []),
-      ...(Array.isArray(data?.pending) ? data.pending : []),
-      ...(Array.isArray(data?.records) ? data.records : []),
-    ];
-    for (const e of pools) {
-      const key = e?.rn ?? e?.recordRn ?? e?.record;
-      if (key !== undefined && String(key) === rn) {
-        const sig = e?.signature ?? e?.sigHex ?? e?.sig;
-        if (typeof sig === "string" && sig.startsWith("0x")) return sig;
+    const provider = getProvider(INFINITE as ProviderChainLike);
+    const core = new Contract(FLUKE_CORE_ADDRESS, FLUKE_CORE_ABI, provider);
+    const uri: string = await core.tokenURI(id);
+    let meta: any = null;
+    if (uri.startsWith("data:application/json;base64,")) {
+      const binary = globalThis.atob(uri.slice("data:application/json;base64,".length));
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      meta = JSON.parse(new TextDecoder().decode(bytes));
+    } else if (uri.startsWith("data:application/json;utf8,")) {
+      meta = JSON.parse(decodeURIComponent(uri.slice("data:application/json;utf8,".length)));
+    } else if (uri.startsWith("data:application/json,")) {
+      meta = JSON.parse(decodeURIComponent(uri.slice("data:application/json,".length)));
+    }
+    if (!meta) return empty;
+    const image: unknown = meta.image ?? meta.image_data;
+    const name = typeof meta.name === "string" ? meta.name : null;
+    if (typeof image !== "string") return { ...empty, name };
+    if (image.startsWith("data:image/svg+xml;base64,")) {
+      const binary = globalThis.atob(image.slice("data:image/svg+xml;base64,".length));
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      return { svg: new TextDecoder().decode(bytes), imageUrl: null, name };
+    }
+    if (image.startsWith("data:image/svg+xml;utf8,")) {
+      return { svg: decodeURIComponent(image.slice("data:image/svg+xml;utf8,".length)), imageUrl: null, name };
+    }
+    if (image.startsWith("data:image/svg+xml,")) {
+      return { svg: decodeURIComponent(image.slice("data:image/svg+xml,".length)), imageUrl: null, name };
+    }
+    if (image.trimStart().startsWith("<svg")) return { svg: image, imageUrl: null, name };
+    return { svg: null, imageUrl: image, name };
+  } catch {
+    return empty;
+  }
+}
+
+/**
+ * After a settle() tx, find the Guide it minted: the ERC-721
+ * Transfer(from = 0x0, to = owner) log in the receipt carries the
+ * new tokenId. Returns null when not found (receipt unavailable,
+ * pruned, or no mint log) — the caller then skips the reveal
+ * presentation rather than guessing an id.
+ */
+export async function fetchMintedGuideId(
+  txHash: string,
+  ownerAddress: string,
+): Promise<string | null> {
+  try {
+    const provider = getProvider(INFINITE as ProviderChainLike);
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (!receipt) return null;
+    const transferTopic =
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+    const zeroTopic = `0x${"0".repeat(64)}`;
+    const ownerTopic = `0x${"0".repeat(24)}${ownerAddress.toLowerCase().replace(/^0x/, "")}`;
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== FLUKE_CORE_ADDRESS.toLowerCase()) continue;
+      const topics = log.topics;
+      if (
+        topics.length === 4 &&
+        topics[0] === transferTopic &&
+        topics[1] === zeroTopic &&
+        topics[2].toLowerCase() === ownerTopic
+      ) {
+        return BigInt(topics[3]).toString();
       }
     }
     return null;
@@ -479,8 +551,13 @@ export function flukeBoostJob(
   };
 }
 
-export function flukeSettleJob(recordId: string, signature: string): TxJob {
+export function flukeSettleJob(
+  recordId: string,
+  signature: string,
+  onDone?: (hashes: string[]) => void,
+): TxJob {
   return {
+    ...(onDone ? { onDone } : {}),
     title: tr("job.flukeSettle"),
     chain: INFINITE,
     lines: [

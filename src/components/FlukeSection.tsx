@@ -18,7 +18,9 @@ import { percentOfBalance, prettyAmount } from "../lib/onchain";
 import {
   fetchFlukeRecord,
   fetchFlukeState,
+  fetchGuideArt,
   fetchGuideItem,
+  fetchMintedGuideId,
   fetchSettleSignature,
   fetchStarlightState,
   flukeBoostJob,
@@ -29,16 +31,20 @@ import {
   starlightRegisterJob,
   type FlukeRecord,
   type FlukeState,
+  type GuideArt,
   type GuideItemState,
   type StarlightState,
 } from "../lib/zaphod";
+import OripaReveal from "./OripaReveal";
 
 /**
  * Fluke + Starlight, run natively in-app against The Guide contract
  * itself (research/ZAPHOD_FRONTEND.md). No external site, no
- * WalletConnect. settle is the one step that needs a signature issued
- * by the official API — until the API serves one, the UI honestly
- * stays in the「公式APIの署名待ち」state.
+ * WalletConnect. Settling is the step that MINTS a new Guide to the
+ * player; its signature is the drand public-randomness signature for
+ * the entry's round (lib/drand.ts — public data, fetched in-app, no
+ * official backend involved), and a successful settle opens the
+ * oripa-style pack reveal (OripaReveal) with the minted Guide.
  */
 export default function FlukeSection() {
   const wallet = useWallet();
@@ -65,6 +71,36 @@ export default function FlukeSection() {
 
   const [bulkIdsText, setBulkIdsText] = useState("");
   const [bulkError, setBulkError] = useState<string | null>(null);
+
+  // Oripa pack reveal, filled in once a settle tx confirms: the
+  // minted Guide (from the tx receipt's mint log) + its real data.
+  const [oripa, setOripa] = useState<{
+    item: GuideItemState;
+    art: GuideArt | null;
+  } | null>(null);
+
+  const handleSettled = useCallback(
+    async (hashes: string[]) => {
+      const hash = hashes.find((h) => h && h.startsWith("0x"));
+      if (!hash || !address) return;
+      try {
+        const mintedId = await fetchMintedGuideId(hash, address);
+        if (!mintedId) return;
+        const id = BigInt(mintedId);
+        const [mintedItem, mintedArt] = await Promise.all([
+          fetchGuideItem(id, address),
+          fetchGuideArt(id),
+        ]);
+        setOripa({ item: mintedItem, art: mintedArt });
+        // The record card should now read as settled.
+        setRecord((prev) => (prev ? { ...prev, settled: true } : prev));
+      } catch {
+        // Reveal presentation is a bonus — a failure here must not
+        // obscure that the settle itself succeeded on-chain.
+      }
+    },
+    [address],
+  );
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -170,6 +206,13 @@ export default function FlukeSection() {
   return (
     <>
       {modal}
+      {oripa ? (
+        <OripaReveal
+          item={oripa.item}
+          art={oripa.art}
+          onClose={() => setOripa(null)}
+        />
+      ) : null}
       <Card>
         <Heading>{t("fluke.heading")}</Heading>
         <Body>
@@ -376,7 +419,9 @@ export default function FlukeSection() {
                     <PrimaryButton
                       label={t("fluke.settleButton")}
                       onPress={() =>
-                        startTx(flukeSettleJob(record.id, signature))
+                        startTx(
+                          flukeSettleJob(record.id, signature, handleSettled),
+                        )
                       }
                     />
                   ) : null}

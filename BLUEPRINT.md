@@ -70,7 +70,7 @@ bridge.zaphod.one, dontpanic.finance (Infinite DEX), fishdisk.com
 - [x] QNS / st QOM / ZapStaking — サービス終了のため不要になった
 
 実際に MT 受領待ちのもの（これだけ）:
-- [ ] Fluke の settle 署名の発行方法（公式 API が現在署名を配っていない。エンドポイントの有無／settle が現行運用かどうか）
+- [x] Fluke の settle 署名の発行方法 — **自己解決（2026-11-04）**：署名の実体は公式 API ではなく公開の乱数ネットワーク drand（quicknet）がラウンドごとに自動公開する BLS 署名だった。公式フロントのコードから特定し、実在の未確定レコードで eth_call のドライラン成功まで検証。アプリに実装済み（src/lib/drand.ts）。settle ＝ 新規 Guide の発行そのもの、という点もオンチェーンで証明済み
 - [ ] QL1 → 42 Chain ブリッジの実配送が稼働しているかの確認（公式統計で QL1 発の配送が 0 件のため、確認が取れるまでアプリ側は送信停止中）
 - [ ] QL1 での ZAP の交換ルート（QomSwap に直接ペアが無い）
 - [ ] テスト用アカウント/テストトークン、テストネットの有無
