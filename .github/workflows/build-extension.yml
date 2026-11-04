@@ -20,9 +20,10 @@ jobs:
       - name: Install dependencies
         working-directory: extension
         run: npm ci
-      - name: Typecheck
-        working-directory: extension
-        run: npm run typecheck
+      # NOTE: no tsc step in CI — the extension's typecheck follows
+      # type-only imports into the app's RN sources and needs the
+      # app's full node_modules. The vite build is the CI gate; run
+      # `npm run typecheck` locally where the app deps exist.
       - name: Build
         working-directory: extension
         run: npm run build
