@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GuppyWallet — Android Wallet for 42 Chain &amp; QL1</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" type="image/png" href="icon.png">
+<script>
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem('guppywallet-lang'); } catch (e) {}
+    var lang = saved || ((navigator.language || 'en').toLowerCase().indexOf('ja') === 0 ? 'ja' : 'en');
+    location.replace((lang === 'ja' ? 'ja.html' : 'en.html') + location.search + location.hash);
+  })();
+</script>
+</head>
+<body>
+<p>GuppyWallet — Android wallet for 42 Chain &amp; QL1 — <a href="en.html">English</a> / <a href="ja.html">日本語</a></p>
+</body>
+</html>
