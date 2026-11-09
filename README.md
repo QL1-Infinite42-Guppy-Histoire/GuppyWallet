@@ -6,8 +6,11 @@
 Android 先行で、React Native + Expo + TypeScript で作っています（iPhone版は後から同じコードで追加予定）。
 設計の全体像は [BLUEPRINT.md](./BLUEPRINT.md) を見てください。
 
-> ⚠️ **未監査の開発版です。** 署名・送金機能は実装済みですが、第三者監査は受けていません。
-> 実資金で使う場合は自己責任で、必ず少額から試してください。
+> ⚠️ **【注意】このアプリは開発段階です。**
+> 予期しない不具合により、資産を失うリスクがあります。第三者監査も受けていません。
+> 利用は自己責任でお願いします。大切な資産の保管には使わず、必ず少額から試してください。
+>
+> ⚠️ **Warning:** This app is still in development. Unexpected bugs may cause a loss of assets, and it has not been audited by a third party. Please use it at your own risk — do not use it to store assets you cannot afford to lose, and always start with a small amount.
 
 ## 開発状況（2026-11-04 時点）
 
