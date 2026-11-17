@@ -3,16 +3,23 @@
 ![build](https://github.com/QL1-Infinite42-Guppy-Histoire/GuppyWallet/actions/workflows/build-apk.yml/badge.svg)
 
 42 Chain（旧 Infinite Drivechain）と QL1 の専用ウォレットアプリです。
-Android 先行で、React Native + Expo + TypeScript で作っています（iPhone版は後から同じコードで追加予定）。
+Android 先行で、React Native + Expo + TypeScript で作っています。
 設計の全体像は [BLUEPRINT.md](./BLUEPRINT.md) を見てください。
 
-> ⚠️ **【注意】このアプリは開発段階です。**
+> 🛑 **【開発中止のお知らせ（2026-11-17）】GuppyWallet は中止しました。今後は Zaphod のアプリ化に力を集めます。計画サイト： https://ql1-infinite42-guppy-histoire.github.io/zaphod-app-plan/ja.html**
+> v0.4.0 の APK は現状のままダウンロードできますが、今後の開発は行いません。
+>
+> 🛑 **Discontinued (Nov 17, 2026):** GuppyWallet has been discontinued. The effort now goes into bringing Zaphod to an app — plan site: https://ql1-infinite42-guppy-histoire.github.io/zaphod-app-plan/ The v0.4.0 APK remains available as-is, with no further development.
+>
+> ⚠️ **【注意】このアプリは開発段階のビルドで、開発は終了しています。**
 > 予期しない不具合により、資産を失うリスクがあります。第三者監査も受けていません。
 > 利用は自己責任でお願いします。大切な資産の保管には使わず、必ず少額から試してください。
 >
-> ⚠️ **Warning:** This app is still in development. Unexpected bugs may cause a loss of assets, and it has not been audited by a third party. Please use it at your own risk — do not use it to store assets you cannot afford to lose, and always start with a small amount.
+> ⚠️ **Warning:** This app is a development-stage build and is no longer being developed. Unexpected bugs may cause a loss of assets, and it has not been audited by a third party. Please use it at your own risk — do not use it to store assets you cannot afford to lose, and always start with a small amount.
 
-## 開発状況（2026-11-04 時点）
+## 開発状況（2026-11-17 時点）
+
+- **【中止】 2026-11-17 に開発中止を決定。** 今後は Zaphod のアプリ化に力を集めます（計画サイトは上記）。以下の記録は v0.4.0 までの開発履歴です
 
 - **現在版： v0.4.0** — APK は [Releases](https://github.com/QL1-Infinite42-Guppy-Histoire/GuppyWallet/releases) からダウンロード可能
 - **ブラウザ拡張機能版：** v0.1.0 を別途リリース（Chrome / Edge、MV3）。アプリと同じ復旧フレーズで同じウォレットが開ける。残高・送受信・Fluke（参加→めくる→確定＝Guide新規発行＋開封演出）まで実装。金庫はパスワード暗号化（PBKDF2+AES-GCM）、鍵はポップアップ表示中のみメモリ保持。配布は Release `ext-v0.1.0` の zip（開発者モードで読み込む）。ソースは `extension/`、ビルドは Actions の Build Extension ワークフロー
